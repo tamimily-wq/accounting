@@ -699,10 +699,10 @@
         </div>
         <div class="form-group">
           <label>طريقة الدفع</label>
-          <div class="toggle-group" style="margin-top:4px;">
-            <button class="toggle-btn active" id="pay-cash-btn" onclick="setPayType('cash')">نقدي</button>
-            <button class="toggle-btn" id="pay-credit-btn" onclick="setPayType('credit')">آجل</button>
-          </div>
+          <select id="pay-type-select" onchange="setPayType(this.value)">
+            <option value="cash">نقدي</option>
+            <option value="credit">آجل</option>
+          </select>
         </div>
       </div>
 
@@ -1404,8 +1404,6 @@ let currentPayType = 'cash';
 
 function setPayType(type) {
   currentPayType = type;
-  document.getElementById('pay-cash-btn').classList.toggle('active', type === 'cash');
-  document.getElementById('pay-credit-btn').classList.toggle('active', type === 'credit');
   document.getElementById('credit-fields').classList.toggle('hidden', type === 'cash');
 }
 
@@ -1435,6 +1433,7 @@ function addPurchase() {
   document.getElementById('pur-note').value = '';
   document.getElementById('pur-supplier').value = '';
   document.getElementById('pur-due').value = '';
+  document.getElementById('pay-type-select').value = 'cash';
   setPayType('cash');
   renderPurchaseTable();
 }
