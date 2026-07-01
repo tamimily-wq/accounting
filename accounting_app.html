@@ -1,0 +1,1480 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>برنامج المحاسبة اليومي</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap');
+
+  :root {
+    --primary: #1B4F72;
+    --primary-light: #2E86C1;
+    --accent: #E67E22;
+    --accent-light: #F39C12;
+    --success: #1E8449;
+    --danger: #C0392B;
+    --bg: #F0F4F8;
+    --card: #FFFFFF;
+    --text: #1A202C;
+    --text-muted: #718096;
+    --border: #E2E8F0;
+    --sidebar-w: 220px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Tajawal', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+  }
+
+  /* SIDEBAR */
+  #sidebar {
+    width: var(--sidebar-w);
+    background: var(--primary);
+    min-height: 100vh;
+    position: fixed;
+    right: 0;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+  }
+
+  .sidebar-logo {
+    padding: 24px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.15);
+  }
+
+  .sidebar-logo h2 {
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  .sidebar-logo span {
+    color: var(--accent-light);
+    font-size: 12px;
+    font-weight: 400;
+  }
+
+  .nav-section {
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .nav-label {
+    color: rgba(255,255,255,0.45);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 4px 16px 8px;
+    text-transform: uppercase;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    color: rgba(255,255,255,0.8);
+    cursor: pointer;
+    font-size: 13.5px;
+    font-weight: 500;
+    transition: all 0.2s;
+    border-right: 3px solid transparent;
+  }
+
+  .nav-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
+  .nav-item.active { background: rgba(255,255,255,0.12); color: #fff; border-right-color: var(--accent-light); }
+  .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+
+  /* MAIN */
+  #main {
+    margin-right: var(--sidebar-w);
+    flex: 1;
+    padding: 24px;
+    min-height: 100vh;
+  }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+
+  .page-title { font-size: 22px; font-weight: 800; color: var(--primary); }
+  .page-date { font-size: 13px; color: var(--text-muted); }
+
+  /* CARDS */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 4px;
+    height: 100%;
+  }
+
+  .stat-card.income::before { background: var(--success); }
+  .stat-card.expense::before { background: var(--danger); }
+  .stat-card.purchase::before { background: var(--accent); }
+  .stat-card.profit::before { background: var(--primary-light); }
+
+  .stat-label { font-size: 12px; color: var(--text-muted); font-weight: 500; margin-bottom: 8px; }
+  .stat-value { font-size: 24px; font-weight: 800; }
+  .stat-card.income .stat-value { color: var(--success); }
+  .stat-card.expense .stat-value { color: var(--danger); }
+  .stat-card.purchase .stat-value { color: var(--accent); }
+  .stat-card.profit .stat-value { color: var(--primary-light); }
+  .stat-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+  /* FORMS */
+  .card {
+    background: var(--card);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+
+  .card-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+
+  label { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+
+  input, select, textarea {
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-family: 'Tajawal', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    background: #FAFAFA;
+    transition: border 0.2s;
+    width: 100%;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--primary-light);
+    background: #fff;
+  }
+
+  textarea { resize: vertical; min-height: 60px; }
+
+  .btn {
+    padding: 9px 20px;
+    border-radius: 8px;
+    border: none;
+    font-family: 'Tajawal', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: var(--primary-light); }
+  .btn-success { background: var(--success); color: #fff; }
+  .btn-success:hover { opacity: 0.88; }
+  .btn-danger { background: var(--danger); color: #fff; font-size: 12px; padding: 6px 12px; }
+  .btn-danger:hover { opacity: 0.88; }
+  .btn-accent { background: var(--accent); color: #fff; }
+  .btn-sm { padding: 5px 12px; font-size: 12px; }
+
+  /* TABLE */
+  .table-wrap { overflow-x: auto; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+  }
+
+  th {
+    background: var(--bg);
+    color: var(--text-muted);
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 10px 12px;
+    text-align: right;
+    border-bottom: 2px solid var(--border);
+  }
+
+  td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #F7FAFC; }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .badge-success { background: #D4EDDA; color: var(--success); }
+  .badge-danger { background: #F8D7DA; color: var(--danger); }
+  .badge-warning { background: #FFF3CD; color: #856404; }
+  .badge-info { background: #D1ECF1; color: #0C5460; }
+
+  /* TABS */
+  .tabs { display: flex; gap: 4px; margin-bottom: 20px; background: var(--bg); border-radius: 10px; padding: 4px; width: fit-content; }
+
+  .tab {
+    padding: 8px 18px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.2s;
+    border: none;
+    background: transparent;
+    font-family: 'Tajawal', sans-serif;
+  }
+
+  .tab.active { background: var(--card); color: var(--primary); box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+
+  /* TOGGLE */
+  .toggle-group { display: flex; gap: 8px; }
+  .toggle-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 2px solid var(--border);
+    background: #fff;
+    font-family: 'Tajawal', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.2s;
+  }
+  .toggle-btn.active { border-color: var(--primary); background: var(--primary); color: #fff; }
+
+  /* HIDDEN */
+  .hidden { display: none !important; }
+
+  /* ALERT */
+  .alert {
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+  .alert-success { background: #D4EDDA; color: var(--success); }
+  .alert-info { background: #D1ECF1; color: #0C5460; }
+
+  /* REPORT SECTION */
+  .report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+  .report-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px dashed var(--border);
+    font-size: 14px;
+  }
+  .report-row:last-child { border-bottom: none; }
+  .report-row.total {
+    font-weight: 800;
+    font-size: 16px;
+    border-top: 2px solid var(--border);
+    border-bottom: none;
+    padding-top: 12px;
+    margin-top: 4px;
+  }
+  .report-row .lbl { color: var(--text-muted); }
+  .report-row .val { font-weight: 700; }
+  .val.green { color: var(--success); }
+  .val.red { color: var(--danger); }
+  .val.orange { color: var(--accent); }
+  .val.blue { color: var(--primary-light); }
+
+  .filter-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 16px; }
+
+  /* RESPONSIVE */
+  @media(max-width: 768px) {
+    :root { --sidebar-w: 0px; }
+    #sidebar { display: none; }
+    #main { margin-right: 0; padding: 16px; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .report-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="sidebar-logo">
+    <h2>📊 برنامج المحاسبة</h2>
+    <span>الإدارة اليومية</span>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">الرئيسية</div>
+    <div class="nav-item active" onclick="showPage('dashboard')">
+      <span class="icon">🏠</span> لوحة التحكم
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">العمليات اليومية</div>
+    <div class="nav-item" onclick="showPage('income')">
+      <span class="icon">💰</span> الإيرادات
+    </div>
+    <div class="nav-item" onclick="showPage('expenses')">
+      <span class="icon">📤</span> المصروفات
+    </div>
+    <div class="nav-item" onclick="showPage('purchases')">
+      <span class="icon">🛒</span> المشتريات
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">الموظفون</div>
+    <div class="nav-item" onclick="showPage('employees')">
+      <span class="icon">👥</span> الموظفون
+    </div>
+    <div class="nav-item" onclick="showPage('salaries')">
+      <span class="icon">💵</span> الرواتب والسلف
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">التقارير</div>
+    <div class="nav-item" onclick="showPage('suppliers')">
+      <span class="icon">🏪</span> ديون الموردين
+    </div>
+    <div class="nav-item" onclick="showPage('reports')">
+      <span class="icon">📈</span> التقارير
+    </div>
+  </div>
+</nav>
+
+<!-- MAIN CONTENT -->
+<main id="main">
+
+  <!-- ===== DASHBOARD ===== -->
+  <div id="page-dashboard" class="page active">
+    <div class="page-header">
+      <div>
+        <div class="page-title">لوحة التحكم</div>
+        <div class="page-date" id="today-date"></div>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card income">
+        <div class="stat-label">إيراد اليوم</div>
+        <div class="stat-value" id="dash-today-income">0.00</div>
+        <div class="stat-sub">ريال</div>
+      </div>
+      <div class="stat-card expense">
+        <div class="stat-label">مصروفات اليوم</div>
+        <div class="stat-value" id="dash-today-expense">0.00</div>
+        <div class="stat-sub">ريال</div>
+      </div>
+      <div class="stat-card purchase">
+        <div class="stat-label">مشتريات الأسبوع</div>
+        <div class="stat-value" id="dash-week-purchase">0.00</div>
+        <div class="stat-sub">ريال</div>
+      </div>
+      <div class="stat-card profit">
+        <div class="stat-label">صافي هذا الشهر</div>
+        <div class="stat-value" id="dash-month-net">0.00</div>
+        <div class="stat-sub">ريال</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+      <div class="card">
+        <div class="card-title">⚠️ ديون موردين قريبة الاستحقاق</div>
+        <div id="dash-debts-list"><p style="color:var(--text-muted);font-size:13px;">لا توجد ديون مستحقة قريباً</p></div>
+      </div>
+      <div class="card">
+        <div class="card-title">📅 صرف رواتب قريب</div>
+        <div id="dash-salary-alert"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== INCOME ===== -->
+  <div id="page-income" class="page">
+    <div class="page-header">
+      <div class="page-title">💰 الإيرادات اليومية</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">➕ تسجيل إيراد جديد</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>التاريخ</label>
+          <input type="date" id="income-date">
+        </div>
+        <div class="form-group">
+          <label>المبلغ (ريال)</label>
+          <input type="number" id="income-amount" placeholder="0.00" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>ملاحظات</label>
+          <input type="text" id="income-note" placeholder="اختياري">
+        </div>
+      </div>
+      <button class="btn btn-success" onclick="addIncome()">✔ تسجيل الإيراد</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📋 سجل الإيرادات</div>
+      <div class="filter-row">
+        <div class="form-group">
+          <label>من</label>
+          <input type="date" id="income-filter-from">
+        </div>
+        <div class="form-group">
+          <label>إلى</label>
+          <input type="date" id="income-filter-to">
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="renderIncomeTable()">🔍 بحث</button>
+        <button class="btn btn-sm" style="background:var(--bg);color:var(--text-muted)" onclick="clearIncomeFilter()">مسح</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>التاريخ</th><th>المبلغ</th><th>ملاحظات</th><th></th></tr></thead>
+          <tbody id="income-tbody"></tbody>
+        </table>
+      </div>
+      <div id="income-total" style="text-align:left;padding-top:12px;font-weight:700;color:var(--success);font-size:15px;"></div>
+    </div>
+  </div>
+
+  <!-- ===== EXPENSES ===== -->
+  <div id="page-expenses" class="page">
+    <div class="page-header">
+      <div class="page-title">📤 المصروفات اليومية</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">➕ تسجيل مصروف</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>التاريخ</label>
+          <input type="date" id="exp-date">
+        </div>
+        <div class="form-group">
+          <label>البند</label>
+          <input type="text" id="exp-desc" placeholder="وصف المصروف">
+        </div>
+        <div class="form-group">
+          <label>المبلغ (ريال)</label>
+          <input type="number" id="exp-amount" placeholder="0.00" step="0.01">
+        </div>
+      </div>
+      <button class="btn btn-danger" style="font-size:14px;padding:9px 20px;" onclick="addExpense()">✔ تسجيل المصروف</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📋 سجل المصروفات</div>
+      <div class="filter-row">
+        <div class="form-group"><label>من</label><input type="date" id="exp-filter-from"></div>
+        <div class="form-group"><label>إلى</label><input type="date" id="exp-filter-to"></div>
+        <button class="btn btn-primary btn-sm" onclick="renderExpenseTable()">🔍 بحث</button>
+        <button class="btn btn-sm" style="background:var(--bg);color:var(--text-muted)" onclick="clearExpFilter()">مسح</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>التاريخ</th><th>البند</th><th>المبلغ</th><th></th></tr></thead>
+          <tbody id="expense-tbody"></tbody>
+        </table>
+      </div>
+      <div id="expense-total" style="text-align:left;padding-top:12px;font-weight:700;color:var(--danger);font-size:15px;"></div>
+    </div>
+  </div>
+
+  <!-- ===== PURCHASES ===== -->
+  <div id="page-purchases" class="page">
+    <div class="page-header">
+      <div class="page-title">🛒 المشتريات</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">➕ تسجيل فاتورة شراء</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>التاريخ</label>
+          <input type="date" id="pur-date">
+        </div>
+        <div class="form-group">
+          <label>المبلغ (ريال)</label>
+          <input type="number" id="pur-amount" placeholder="0.00" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>طريقة الدفع</label>
+          <div class="toggle-group" style="margin-top:4px;">
+            <button class="toggle-btn active" id="pay-cash-btn" onclick="setPayType('cash')">نقدي</button>
+            <button class="toggle-btn" id="pay-credit-btn" onclick="setPayType('credit')">آجل</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="credit-fields" class="form-row hidden">
+        <div class="form-group">
+          <label>اسم المورد</label>
+          <input type="text" id="pur-supplier" placeholder="اسم المورد">
+        </div>
+        <div class="form-group">
+          <label>تاريخ الاستحقاق</label>
+          <input type="date" id="pur-due">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>ملاحظات</label>
+          <input type="text" id="pur-note" placeholder="اختياري">
+        </div>
+      </div>
+      <button class="btn btn-accent" onclick="addPurchase()">✔ تسجيل الفاتورة</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📋 سجل المشتريات</div>
+      <div class="filter-row">
+        <div class="form-group"><label>من</label><input type="date" id="pur-filter-from"></div>
+        <div class="form-group"><label>إلى</label><input type="date" id="pur-filter-to"></div>
+        <button class="btn btn-primary btn-sm" onclick="renderPurchaseTable()">🔍 بحث</button>
+        <button class="btn btn-sm" style="background:var(--bg);color:var(--text-muted)" onclick="clearPurFilter()">مسح</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>التاريخ</th><th>المبلغ</th><th>نوع الدفع</th><th>المورد</th><th>الاستحقاق</th><th>الحالة</th><th></th></tr></thead>
+          <tbody id="purchase-tbody"></tbody>
+        </table>
+      </div>
+      <div id="purchase-total" style="text-align:left;padding-top:12px;font-weight:700;color:var(--accent);font-size:15px;"></div>
+    </div>
+  </div>
+
+  <!-- ===== EMPLOYEES ===== -->
+  <div id="page-employees" class="page">
+    <div class="page-header">
+      <div class="page-title">👥 الموظفون</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">➕ إضافة موظف</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>الاسم</label>
+          <input type="text" id="emp-name" placeholder="اسم الموظف">
+        </div>
+        <div class="form-group">
+          <label>التخصص / الوظيفة</label>
+          <input type="text" id="emp-role" placeholder="مثال: محاسب، كاشير...">
+        </div>
+        <div class="form-group">
+          <label>الراتب الأساسي (ريال)</label>
+          <input type="number" id="emp-salary" placeholder="0.00" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>تاريخ التعيين</label>
+          <input type="date" id="emp-join">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="addEmployee()">✔ إضافة الموظف</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📋 قائمة الموظفين</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>الاسم</th><th>التخصص</th><th>الراتب</th><th>تاريخ التعيين</th><th>إجراءات</th></tr></thead>
+          <tbody id="employees-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Edit salary modal -->
+    <div id="edit-salary-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200;display:flex;align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:12px;padding:24px;min-width:300px;">
+        <div style="font-weight:700;font-size:16px;margin-bottom:16px;color:var(--primary);">✏️ تعديل الراتب</div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label>الراتب الجديد</label>
+          <input type="number" id="edit-salary-val" step="0.01">
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-primary" onclick="saveEditSalary()">حفظ</button>
+          <button class="btn" style="background:var(--bg);" onclick="closeEditSalary()">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SALARIES ===== -->
+  <div id="page-salaries" class="page">
+    <div class="page-header">
+      <div class="page-title">💵 الرواتب والسلف</div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="showSalaryTab('pay')">صرف رواتب</button>
+      <button class="tab" onclick="showSalaryTab('advance')">سلفة</button>
+      <button class="tab" onclick="showSalaryTab('history')">السجل</button>
+    </div>
+
+    <!-- PAY SALARIES -->
+    <div id="sal-tab-pay">
+      <div class="card">
+        <div class="card-title">💵 صرف رواتب الموظفين</div>
+        <div class="form-row" style="margin-bottom:16px;">
+          <div class="form-group">
+            <label>تاريخ الصرف</label>
+            <input type="date" id="sal-pay-date">
+          </div>
+          <div class="form-group">
+            <label>دورة الراتب</label>
+            <select id="sal-period">
+              <option value="15">15 الشهر</option>
+              <option value="30">30 / نهاية الشهر</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>الموظف</th><th>التخصص</th><th>الراتب</th><th>صرف؟</th><th>المبلغ المصروف</th></tr></thead>
+            <tbody id="sal-pay-tbody"></tbody>
+          </table>
+        </div>
+        <div style="margin-top:16px;">
+          <button class="btn btn-success" onclick="confirmPaySalaries()">✔ تأكيد صرف الرواتب</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADVANCE -->
+    <div id="sal-tab-advance" class="hidden">
+      <div class="card">
+        <div class="card-title">💸 صرف سلفة</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>الموظف</label>
+            <select id="adv-emp"></select>
+          </div>
+          <div class="form-group">
+            <label>المبلغ (ريال)</label>
+            <input type="number" id="adv-amount" placeholder="0.00" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>التاريخ</label>
+            <input type="date" id="adv-date">
+          </div>
+          <div class="form-group">
+            <label>ملاحظات</label>
+            <input type="text" id="adv-note" placeholder="اختياري">
+          </div>
+        </div>
+        <button class="btn btn-accent" onclick="addAdvance()">✔ صرف السلفة</button>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div id="sal-tab-history" class="hidden">
+      <div class="card">
+        <div class="card-title">📋 سجل الرواتب والسلف</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>التاريخ</th><th>الموظف</th><th>النوع</th><th>المبلغ</th><th>ملاحظات</th><th></th></tr></thead>
+            <tbody id="sal-history-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SUPPLIERS / DEBTS ===== -->
+  <div id="page-suppliers" class="page">
+    <div class="page-header">
+      <div class="page-title">🏪 ديون الموردين</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📋 الديون المستحقة</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>المورد</th><th>تاريخ الشراء</th><th>المبلغ الأصلي</th><th>المدفوع</th><th>المتبقي</th><th>الاستحقاق</th><th>الحالة</th><th>دفع</th></tr></thead>
+          <tbody id="suppliers-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Pay debt modal -->
+    <div id="pay-debt-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200;display:flex;align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:12px;padding:24px;min-width:320px;">
+        <div style="font-weight:700;font-size:16px;margin-bottom:4px;color:var(--primary);">💳 تسجيل دفعة</div>
+        <div id="pay-debt-supplier" style="color:var(--text-muted);font-size:13px;margin-bottom:16px;"></div>
+        <div class="form-group" style="margin-bottom:8px;">
+          <label>المتبقي</label>
+          <input type="number" id="pay-debt-remaining" readonly style="background:#f8f8f8;">
+        </div>
+        <div class="form-group" style="margin-bottom:16px;">
+          <label>المبلغ المدفوع</label>
+          <input type="number" id="pay-debt-amount" step="0.01" placeholder="0.00">
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-success" onclick="confirmPayDebt()">تأكيد الدفع</button>
+          <button class="btn" style="background:var(--bg);" onclick="closePayDebt()">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== REPORTS ===== -->
+  <div id="page-reports" class="page">
+    <div class="page-header">
+      <div class="page-title">📈 التقارير</div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="showReportTab('pl')">أرباح وخسائر</button>
+      <button class="tab" onclick="showReportTab('income-rep')">الإيرادات</button>
+      <button class="tab" onclick="showReportTab('purchase-rep')">المشتريات</button>
+      <button class="tab" onclick="showReportTab('salary-rep')">الرواتب</button>
+    </div>
+
+    <!-- P&L -->
+    <div id="rep-tab-pl">
+      <div class="card">
+        <div class="card-title">📊 تقرير الأرباح والخسائر</div>
+        <div class="filter-row">
+          <div class="form-group"><label>من</label><input type="date" id="pl-from"></div>
+          <div class="form-group"><label>إلى</label><input type="date" id="pl-to"></div>
+          <button class="btn btn-primary btn-sm" onclick="generatePL()">📊 إنشاء التقرير</button>
+        </div>
+        <div id="pl-result" class="hidden">
+          <div class="report-grid">
+            <div>
+              <div style="font-weight:700;color:var(--success);margin-bottom:12px;font-size:14px;">الإيرادات</div>
+              <div class="report-row"><span class="lbl">إجمالي الإيرادات</span><span class="val green" id="pl-income">0.00</span></div>
+            </div>
+            <div>
+              <div style="font-weight:700;color:var(--danger);margin-bottom:12px;font-size:14px;">المصروفات والتكاليف</div>
+              <div class="report-row"><span class="lbl">مصروفات يومية</span><span class="val red" id="pl-expenses">0.00</span></div>
+              <div class="report-row"><span class="lbl">مشتريات</span><span class="val orange" id="pl-purchases">0.00</span></div>
+              <div class="report-row"><span class="lbl">رواتب موظفين</span><span class="val red" id="pl-salaries">0.00</span></div>
+              <div class="report-row"><span class="lbl">سلف موظفين</span><span class="val orange" id="pl-advances">0.00</span></div>
+              <div class="report-row total"><span class="lbl">إجمالي المصروفات</span><span class="val red" id="pl-total-exp">0.00</span></div>
+            </div>
+          </div>
+          <div style="margin-top:20px;padding:20px;border-radius:10px;text-align:center;" id="pl-net-box">
+            <div style="font-size:13px;font-weight:600;margin-bottom:6px;">صافي الربح / الخسارة</div>
+            <div style="font-size:32px;font-weight:800;" id="pl-net">0.00 ريال</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Income Report -->
+    <div id="rep-tab-income-rep" class="hidden">
+      <div class="card">
+        <div class="card-title">💰 تقرير الإيرادات</div>
+        <div class="filter-row">
+          <div class="form-group"><label>من</label><input type="date" id="irep-from"></div>
+          <div class="form-group"><label>إلى</label><input type="date" id="irep-to"></div>
+          <button class="btn btn-primary btn-sm" onclick="generateIncomeReport()">📊 إنشاء</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>التاريخ</th><th>المبلغ</th><th>ملاحظات</th></tr></thead>
+            <tbody id="irep-tbody"></tbody>
+          </table>
+        </div>
+        <div id="irep-total" style="padding-top:12px;font-weight:700;color:var(--success);"></div>
+      </div>
+    </div>
+
+    <!-- Purchase Report -->
+    <div id="rep-tab-purchase-rep" class="hidden">
+      <div class="card">
+        <div class="card-title">🛒 تقرير المشتريات</div>
+        <div class="filter-row">
+          <div class="form-group"><label>من</label><input type="date" id="prep-from"></div>
+          <div class="form-group"><label>إلى</label><input type="date" id="prep-to"></div>
+          <button class="btn btn-primary btn-sm" onclick="generatePurchaseReport()">📊 إنشاء</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>التاريخ</th><th>المبلغ</th><th>نوع الدفع</th><th>المورد</th><th>الاستحقاق</th></tr></thead>
+            <tbody id="prep-tbody"></tbody>
+          </table>
+        </div>
+        <div id="prep-total" style="padding-top:12px;font-weight:700;color:var(--accent);"></div>
+      </div>
+    </div>
+
+    <!-- Salary Report -->
+    <div id="rep-tab-salary-rep" class="hidden">
+      <div class="card">
+        <div class="card-title">💵 تقرير الرواتب والسلف</div>
+        <div class="filter-row">
+          <div class="form-group"><label>من</label><input type="date" id="srep-from"></div>
+          <div class="form-group"><label>إلى</label><input type="date" id="srep-to"></div>
+          <button class="btn btn-primary btn-sm" onclick="generateSalaryReport()">📊 إنشاء</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>التاريخ</th><th>الموظف</th><th>النوع</th><th>المبلغ</th></tr></thead>
+            <tbody id="srep-tbody"></tbody>
+          </table>
+        </div>
+        <div id="srep-total" style="padding-top:12px;font-weight:700;color:var(--primary);"></div>
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<script>
+// ============ DATA STORE ============
+let data = {
+  income: [],
+  expenses: [],
+  purchases: [],
+  employees: [],
+  salaryHistory: []
+};
+
+// Load from localStorage
+function loadData() {
+  const saved = localStorage.getItem('accounting_data');
+  if (saved) data = JSON.parse(saved);
+}
+
+function saveData() {
+  localStorage.setItem('accounting_data', JSON.stringify(data));
+}
+
+// ============ NAVIGATION ============
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+
+  if (name === 'dashboard') updateDashboard();
+  if (name === 'income') { setToday('income-date'); renderIncomeTable(); }
+  if (name === 'expenses') { setToday('exp-date'); renderExpenseTable(); }
+  if (name === 'purchases') { setToday('pur-date'); renderPurchaseTable(); }
+  if (name === 'employees') renderEmployeesTable();
+  if (name === 'salaries') { setToday('sal-pay-date'); setToday('adv-date'); renderSalPayTable(); renderAdvEmpSelect(); renderSalHistory(); }
+  if (name === 'suppliers') renderSuppliersTable();
+  if (name === 'reports') {}
+}
+
+function setToday(id) {
+  const el = document.getElementById(id);
+  if (el && !el.value) el.value = today();
+}
+
+function today() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function fmt(n) {
+  return parseFloat(n || 0).toLocaleString('ar-SA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function fmtDate(d) {
+  if (!d) return '';
+  const parts = d.split('-');
+  return parts[2] + '/' + parts[1] + '/' + parts[0];
+}
+
+// ============ DASHBOARD ============
+function updateDashboard() {
+  const t = today();
+
+  // Today income
+  const todayIncome = data.income.filter(i => i.date === t).reduce((s, i) => s + parseFloat(i.amount), 0);
+  document.getElementById('dash-today-income').textContent = fmt(todayIncome);
+
+  // Today expenses
+  const todayExp = data.expenses.filter(e => e.date === t).reduce((s, e) => s + parseFloat(e.amount), 0);
+  document.getElementById('dash-today-expense').textContent = fmt(todayExp);
+
+  // Week purchases
+  const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+  const weekStr = weekAgo.toISOString().split('T')[0];
+  const weekPur = data.purchases.filter(p => p.date >= weekStr).reduce((s, p) => s + parseFloat(p.amount), 0);
+  document.getElementById('dash-week-purchase').textContent = fmt(weekPur);
+
+  // Month net
+  const now = new Date();
+  const monthStart = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-01';
+  const mIncome = data.income.filter(i => i.date >= monthStart).reduce((s, i) => s + parseFloat(i.amount), 0);
+  const mExp = data.expenses.filter(e => e.date >= monthStart).reduce((s, e) => s + parseFloat(e.amount), 0);
+  const mPur = data.purchases.filter(p => p.date >= monthStart).reduce((s, p) => s + parseFloat(p.amount), 0);
+  const mSal = data.salaryHistory.filter(s => s.date >= monthStart).reduce((s, h) => s + parseFloat(h.amount), 0);
+  const net = mIncome - mExp - mPur - mSal;
+  const netEl = document.getElementById('dash-month-net');
+  netEl.textContent = fmt(Math.abs(net));
+  netEl.style.color = net >= 0 ? 'var(--success)' : 'var(--danger)';
+
+  // Debts
+  const debts = data.purchases.filter(p => p.payType === 'credit' && parseFloat(p.remaining) > 0);
+  const sevenDays = new Date(); sevenDays.setDate(sevenDays.getDate() + 7);
+  const sevenStr = sevenDays.toISOString().split('T')[0];
+  const upcoming = debts.filter(p => p.dueDate <= sevenStr);
+  const debtEl = document.getElementById('dash-debts-list');
+  if (upcoming.length === 0) {
+    debtEl.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">لا توجد ديون مستحقة خلال 7 أيام ✅</p>';
+  } else {
+    debtEl.innerHTML = upcoming.map(p => `
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--border);font-size:13px;">
+        <span style="color:var(--text-muted)">${p.supplier}</span>
+        <span style="font-weight:700;color:var(--danger)">${fmt(p.remaining)} ريال</span>
+        <span class="badge badge-warning">${fmtDate(p.dueDate)}</span>
+      </div>
+    `).join('');
+  }
+
+  // Salary alert
+  const day = now.getDate();
+  const salEl = document.getElementById('dash-salary-alert');
+  if (day >= 13 && day <= 15) {
+    salEl.innerHTML = '<div class="alert alert-info">⏰ موعد صرف رواتب يوم 15 قريب!</div>';
+  } else if (day >= 28) {
+    salEl.innerHTML = '<div class="alert alert-info">⏰ موعد صرف رواتب نهاية الشهر قريب!</div>';
+  } else {
+    salEl.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">لا توجد رواتب مستحقة قريباً</p>';
+  }
+}
+
+// ============ INCOME ============
+function addIncome() {
+  const date = document.getElementById('income-date').value;
+  const amount = parseFloat(document.getElementById('income-amount').value);
+  const note = document.getElementById('income-note').value;
+  if (!date || !amount || amount <= 0) return alert('يرجى إدخال التاريخ والمبلغ');
+  data.income.push({ id: Date.now(), date, amount, note });
+  saveData();
+  document.getElementById('income-amount').value = '';
+  document.getElementById('income-note').value = '';
+  renderIncomeTable();
+}
+
+function renderIncomeTable() {
+  const from = document.getElementById('income-filter-from').value;
+  const to = document.getElementById('income-filter-to').value;
+  let rows = [...data.income].sort((a, b) => b.date.localeCompare(a.date));
+  if (from) rows = rows.filter(r => r.date >= from);
+  if (to) rows = rows.filter(r => r.date <= to);
+  const total = rows.reduce((s, r) => s + parseFloat(r.amount), 0);
+  const tbody = document.getElementById('income-tbody');
+  tbody.innerHTML = rows.map((r, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${fmtDate(r.date)}</td>
+      <td style="font-weight:700;color:var(--success)">${fmt(r.amount)} ريال</td>
+      <td style="color:var(--text-muted)">${r.note || '-'}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteIncome(${r.id})">حذف</button></td>
+    </tr>
+  `).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد بيانات</td></tr>';
+  document.getElementById('income-total').textContent = rows.length ? `الإجمالي: ${fmt(total)} ريال` : '';
+}
+
+function deleteIncome(id) {
+  if (!confirm('هل تريد حذف هذا السجل؟')) return;
+  data.income = data.income.filter(r => r.id !== id);
+  saveData(); renderIncomeTable();
+}
+
+function clearIncomeFilter() {
+  document.getElementById('income-filter-from').value = '';
+  document.getElementById('income-filter-to').value = '';
+  renderIncomeTable();
+}
+
+// ============ EXPENSES ============
+function addExpense() {
+  const date = document.getElementById('exp-date').value;
+  const desc = document.getElementById('exp-desc').value;
+  const amount = parseFloat(document.getElementById('exp-amount').value);
+  if (!date || !desc || !amount || amount <= 0) return alert('يرجى إدخال جميع الحقول');
+  data.expenses.push({ id: Date.now(), date, desc, amount });
+  saveData();
+  document.getElementById('exp-desc').value = '';
+  document.getElementById('exp-amount').value = '';
+  renderExpenseTable();
+}
+
+function renderExpenseTable() {
+  const from = document.getElementById('exp-filter-from').value;
+  const to = document.getElementById('exp-filter-to').value;
+  let rows = [...data.expenses].sort((a, b) => b.date.localeCompare(a.date));
+  if (from) rows = rows.filter(r => r.date >= from);
+  if (to) rows = rows.filter(r => r.date <= to);
+  const total = rows.reduce((s, r) => s + parseFloat(r.amount), 0);
+  const tbody = document.getElementById('expense-tbody');
+  tbody.innerHTML = rows.map((r, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${fmtDate(r.date)}</td>
+      <td>${r.desc}</td>
+      <td style="font-weight:700;color:var(--danger)">${fmt(r.amount)} ريال</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteExpense(${r.id})">حذف</button></td>
+    </tr>
+  `).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد بيانات</td></tr>';
+  document.getElementById('expense-total').textContent = rows.length ? `الإجمالي: ${fmt(total)} ريال` : '';
+}
+
+function deleteExpense(id) {
+  if (!confirm('هل تريد حذف هذا السجل؟')) return;
+  data.expenses = data.expenses.filter(r => r.id !== id);
+  saveData(); renderExpenseTable();
+}
+
+function clearExpFilter() {
+  document.getElementById('exp-filter-from').value = '';
+  document.getElementById('exp-filter-to').value = '';
+  renderExpenseTable();
+}
+
+// ============ PURCHASES ============
+let currentPayType = 'cash';
+
+function setPayType(type) {
+  currentPayType = type;
+  document.getElementById('pay-cash-btn').classList.toggle('active', type === 'cash');
+  document.getElementById('pay-credit-btn').classList.toggle('active', type === 'credit');
+  document.getElementById('credit-fields').classList.toggle('hidden', type === 'cash');
+}
+
+function addPurchase() {
+  const date = document.getElementById('pur-date').value;
+  const amount = parseFloat(document.getElementById('pur-amount').value);
+  const note = document.getElementById('pur-note').value;
+  if (!date || !amount || amount <= 0) return alert('يرجى إدخال التاريخ والمبلغ');
+
+  let supplier = '', dueDate = '';
+  if (currentPayType === 'credit') {
+    supplier = document.getElementById('pur-supplier').value;
+    dueDate = document.getElementById('pur-due').value;
+    if (!supplier || !dueDate) return alert('يرجى إدخال اسم المورد وتاريخ الاستحقاق للشراء الآجل');
+  }
+
+  data.purchases.push({
+    id: Date.now(), date, amount, payType: currentPayType,
+    supplier, dueDate, note,
+    paid: currentPayType === 'cash' ? amount : 0,
+    remaining: currentPayType === 'cash' ? 0 : amount
+  });
+  saveData();
+  document.getElementById('pur-amount').value = '';
+  document.getElementById('pur-note').value = '';
+  document.getElementById('pur-supplier').value = '';
+  document.getElementById('pur-due').value = '';
+  setPayType('cash');
+  renderPurchaseTable();
+}
+
+function renderPurchaseTable() {
+  const from = document.getElementById('pur-filter-from').value;
+  const to = document.getElementById('pur-filter-to').value;
+  let rows = [...data.purchases].sort((a, b) => b.date.localeCompare(a.date));
+  if (from) rows = rows.filter(r => r.date >= from);
+  if (to) rows = rows.filter(r => r.date <= to);
+  const total = rows.reduce((s, r) => s + parseFloat(r.amount), 0);
+  const tbody = document.getElementById('purchase-tbody');
+  tbody.innerHTML = rows.map((r, i) => {
+    const isOverdue = r.payType === 'credit' && r.dueDate < today() && r.remaining > 0;
+    const isPaid = r.payType === 'cash' || r.remaining <= 0;
+    return `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${fmtDate(r.date)}</td>
+      <td style="font-weight:700;color:var(--accent)">${fmt(r.amount)} ريال</td>
+      <td>${r.payType === 'cash' ? '<span class="badge badge-success">نقدي</span>' : '<span class="badge badge-warning">آجل</span>'}</td>
+      <td>${r.supplier || '-'}</td>
+      <td>${r.dueDate ? fmtDate(r.dueDate) : '-'}</td>
+      <td>${isPaid ? '<span class="badge badge-success">مسدد</span>' : isOverdue ? '<span class="badge badge-danger">متأخر</span>' : '<span class="badge badge-info">معلق</span>'}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deletePurchase(${r.id})">حذف</button></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد بيانات</td></tr>';
+  document.getElementById('purchase-total').textContent = rows.length ? `الإجمالي: ${fmt(total)} ريال` : '';
+}
+
+function deletePurchase(id) {
+  if (!confirm('هل تريد حذف هذا السجل؟')) return;
+  data.purchases = data.purchases.filter(r => r.id !== id);
+  saveData(); renderPurchaseTable();
+}
+
+function clearPurFilter() {
+  document.getElementById('pur-filter-from').value = '';
+  document.getElementById('pur-filter-to').value = '';
+  renderPurchaseTable();
+}
+
+// ============ EMPLOYEES ============
+function addEmployee() {
+  const name = document.getElementById('emp-name').value.trim();
+  const role = document.getElementById('emp-role').value.trim();
+  const salary = parseFloat(document.getElementById('emp-salary').value);
+  const join = document.getElementById('emp-join').value;
+  if (!name || !role || !salary) return alert('يرجى إدخال جميع الحقول');
+  data.employees.push({ id: Date.now(), name, role, salary, join });
+  saveData();
+  document.getElementById('emp-name').value = '';
+  document.getElementById('emp-role').value = '';
+  document.getElementById('emp-salary').value = '';
+  document.getElementById('emp-join').value = '';
+  renderEmployeesTable();
+}
+
+function renderEmployeesTable() {
+  const tbody = document.getElementById('employees-tbody');
+  tbody.innerHTML = data.employees.map((e, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td style="font-weight:600">${e.name}</td>
+      <td><span class="badge badge-info">${e.role}</span></td>
+      <td style="font-weight:700;color:var(--primary)">${fmt(e.salary)} ريال</td>
+      <td style="color:var(--text-muted)">${e.join ? fmtDate(e.join) : '-'}</td>
+      <td>
+        <button class="btn btn-primary btn-sm" onclick="openEditSalary(${e.id})">تعديل الراتب</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteEmployee(${e.id})" style="margin-right:4px;">حذف</button>
+      </td>
+    </tr>
+  `).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;">لا يوجد موظفون</td></tr>';
+}
+
+let editingEmpId = null;
+function openEditSalary(id) {
+  editingEmpId = id;
+  const emp = data.employees.find(e => e.id === id);
+  document.getElementById('edit-salary-val').value = emp.salary;
+  document.getElementById('edit-salary-modal').classList.remove('hidden');
+  document.getElementById('edit-salary-modal').style.display = 'flex';
+}
+
+function saveEditSalary() {
+  const val = parseFloat(document.getElementById('edit-salary-val').value);
+  if (!val || val <= 0) return alert('يرجى إدخال راتب صحيح');
+  const emp = data.employees.find(e => e.id === editingEmpId);
+  emp.salary = val;
+  saveData(); renderEmployeesTable(); closeEditSalary();
+}
+
+function closeEditSalary() {
+  document.getElementById('edit-salary-modal').style.display = 'none';
+}
+
+function deleteEmployee(id) {
+  if (!confirm('هل تريد حذف هذا الموظف؟')) return;
+  data.employees = data.employees.filter(e => e.id !== id);
+  saveData(); renderEmployeesTable();
+}
+
+// ============ SALARIES ============
+function showSalaryTab(tab) {
+  ['pay', 'advance', 'history'].forEach(t => {
+    document.getElementById('sal-tab-' + t).classList.toggle('hidden', t !== tab);
+  });
+  document.querySelectorAll('#page-salaries .tab').forEach((el, i) => {
+    el.classList.toggle('active', ['pay', 'advance', 'history'][i] === tab);
+  });
+  if (tab === 'advance') renderAdvEmpSelect();
+  if (tab === 'history') renderSalHistory();
+}
+
+function renderSalPayTable() {
+  const tbody = document.getElementById('sal-pay-tbody');
+  tbody.innerHTML = data.employees.map(e => `
+    <tr>
+      <td style="font-weight:600">${e.name}</td>
+      <td style="color:var(--text-muted)">${e.role}</td>
+      <td style="font-weight:700;color:var(--primary)">${fmt(e.salary)} ريال</td>
+      <td><input type="checkbox" id="sal-chk-${e.id}" checked style="width:18px;height:18px;cursor:pointer;"></td>
+      <td>
+        <input type="number" id="sal-amt-${e.id}" value="${e.salary}" step="0.01" style="width:120px;">
+      </td>
+    </tr>
+  `).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">لا يوجد موظفون</td></tr>';
+}
+
+function confirmPaySalaries() {
+  const date = document.getElementById('sal-pay-date').value;
+  const period = document.getElementById('sal-period').value;
+  if (!date) return alert('يرجى تحديد تاريخ الصرف');
+  let count = 0;
+  data.employees.forEach(e => {
+    const chk = document.getElementById('sal-chk-' + e.id);
+    const amt = parseFloat(document.getElementById('sal-amt-' + e.id).value);
+    if (chk && chk.checked && amt > 0) {
+      data.salaryHistory.push({
+        id: Date.now() + Math.random(),
+        date, employeeId: e.id, employeeName: e.name,
+        type: 'راتب', amount: amt,
+        note: `راتب دورة ${period === '15' ? '15' : 'نهاية'} الشهر`
+      });
+      count++;
+    }
+  });
+  saveData();
+  alert(`✅ تم صرف رواتب ${count} موظف`);
+  renderSalHistory();
+  showSalaryTab('history');
+}
+
+function renderAdvEmpSelect() {
+  const sel = document.getElementById('adv-emp');
+  sel.innerHTML = data.employees.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+}
+
+function addAdvance() {
+  const empId = parseInt(document.getElementById('adv-emp').value);
+  const amount = parseFloat(document.getElementById('adv-amount').value);
+  const date = document.getElementById('adv-date').value;
+  const note = document.getElementById('adv-note').value;
+  if (!empId || !amount || !date) return alert('يرجى إدخال جميع الحقول');
+  const emp = data.employees.find(e => e.id === empId);
+  data.salaryHistory.push({
+    id: Date.now(), date, employeeId: empId,
+    employeeName: emp.name, type: 'سلفة', amount, note
+  });
+  saveData();
+  document.getElementById('adv-amount').value = '';
+  document.getElementById('adv-note').value = '';
+  alert('✅ تم تسجيل السلفة');
+  renderSalHistory();
+}
+
+function renderSalHistory() {
+  const rows = [...data.salaryHistory].sort((a, b) => b.date.localeCompare(a.date));
+  const tbody = document.getElementById('sal-history-tbody');
+  tbody.innerHTML = rows.map((r, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${fmtDate(r.date)}</td>
+      <td style="font-weight:600">${r.employeeName}</td>
+      <td>${r.type === 'راتب' ? '<span class="badge badge-success">راتب</span>' : '<span class="badge badge-warning">سلفة</span>'}</td>
+      <td style="font-weight:700;color:var(--primary)">${fmt(r.amount)} ريال</td>
+      <td style="color:var(--text-muted)">${r.note || '-'}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteSalHistory(${r.id})">حذف</button></td>
+    </tr>
+  `).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد بيانات</td></tr>';
+}
+
+function deleteSalHistory(id) {
+  if (!confirm('هل تريد حذف هذا السجل؟')) return;
+  data.salaryHistory = data.salaryHistory.filter(r => r.id !== id);
+  saveData(); renderSalHistory();
+}
+
+// ============ SUPPLIERS / DEBTS ============
+function renderSuppliersTable() {
+  const debts = data.purchases.filter(p => p.payType === 'credit');
+  const tbody = document.getElementById('suppliers-tbody');
+  tbody.innerHTML = debts.sort((a, b) => a.dueDate.localeCompare(b.dueDate)).map((p, i) => {
+    const isPaid = p.remaining <= 0;
+    const isOverdue = !isPaid && p.dueDate < today();
+    return `
+    <tr>
+      <td>${i + 1}</td>
+      <td style="font-weight:600">${p.supplier}</td>
+      <td>${fmtDate(p.date)}</td>
+      <td>${fmt(p.amount)} ريال</td>
+      <td style="color:var(--success)">${fmt(p.paid)} ريال</td>
+      <td style="font-weight:700;color:${isPaid ? 'var(--success)' : 'var(--danger)'}">${fmt(p.remaining)} ريال</td>
+      <td>${fmtDate(p.dueDate)}</td>
+      <td>${isPaid ? '<span class="badge badge-success">مسدد</span>' : isOverdue ? '<span class="badge badge-danger">متأخر</span>' : '<span class="badge badge-warning">معلق</span>'}</td>
+      <td>${isPaid ? '-' : `<button class="btn btn-success btn-sm" onclick="openPayDebt(${p.id})">دفع</button>`}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد ديون</td></tr>';
+}
+
+let payingDebtId = null;
+function openPayDebt(id) {
+  payingDebtId = id;
+  const p = data.purchases.find(x => x.id === id);
+  document.getElementById('pay-debt-supplier').textContent = 'المورد: ' + p.supplier;
+  document.getElementById('pay-debt-remaining').value = p.remaining;
+  document.getElementById('pay-debt-amount').value = p.remaining;
+  document.getElementById('pay-debt-modal').style.display = 'flex';
+  document.getElementById('pay-debt-modal').classList.remove('hidden');
+}
+
+function confirmPayDebt() {
+  const amount = parseFloat(document.getElementById('pay-debt-amount').value);
+  const p = data.purchases.find(x => x.id === payingDebtId);
+  if (!amount || amount <= 0 || amount > p.remaining) return alert('مبلغ غير صحيح');
+  p.paid = parseFloat(p.paid) + amount;
+  p.remaining = parseFloat(p.remaining) - amount;
+  saveData(); closePayDebt(); renderSuppliersTable();
+}
+
+function closePayDebt() {
+  document.getElementById('pay-debt-modal').style.display = 'none';
+}
+
+// ============ REPORTS ============
+function showReportTab(tab) {
+  ['pl', 'income-rep', 'purchase-rep', 'salary-rep'].forEach(t => {
+    document.getElementById('rep-tab-' + t).classList.toggle('hidden', t !== tab);
+  });
+  document.querySelectorAll('#page-reports .tab').forEach((el, i) => {
+    el.classList.toggle('active', ['pl', 'income-rep', 'purchase-rep', 'salary-rep'][i] === tab);
+  });
+}
+
+function generatePL() {
+  const from = document.getElementById('pl-from').value;
+  const to = document.getElementById('pl-to').value;
+  if (!from || !to) return alert('يرجى تحديد الفترة');
+
+  const income = data.income.filter(r => r.date >= from && r.date <= to).reduce((s, r) => s + parseFloat(r.amount), 0);
+  const expenses = data.expenses.filter(r => r.date >= from && r.date <= to).reduce((s, r) => s + parseFloat(r.amount), 0);
+  const purchases = data.purchases.filter(r => r.date >= from && r.date <= to).reduce((s, r) => s + parseFloat(r.amount), 0);
+  const salaries = data.salaryHistory.filter(r => r.date >= from && r.date <= to && r.type === 'راتب').reduce((s, r) => s + parseFloat(r.amount), 0);
+  const advances = data.salaryHistory.filter(r => r.date >= from && r.date <= to && r.type === 'سلفة').reduce((s, r) => s + parseFloat(r.amount), 0);
+  const totalExp = expenses + purchases + salaries + advances;
+  const net = income - totalExp;
+
+  document.getElementById('pl-income').textContent = fmt(income) + ' ريال';
+  document.getElementById('pl-expenses').textContent = fmt(expenses) + ' ريال';
+  document.getElementById('pl-purchases').textContent = fmt(purchases) + ' ريال';
+  document.getElementById('pl-salaries').textContent = fmt(salaries) + ' ريال';
+  document.getElementById('pl-advances').textContent = fmt(advances) + ' ريال';
+  document.getElementById('pl-total-exp').textContent = fmt(totalExp) + ' ريال';
+  document.getElementById('pl-net').textContent = fmt(Math.abs(net)) + ' ريال';
+
+  const box = document.getElementById('pl-net-box');
+  if (net >= 0) {
+    box.style.background = '#D4EDDA'; box.style.color = 'var(--success)';
+    document.getElementById('pl-net').textContent = '+ ' + fmt(net) + ' ريال ربح';
+  } else {
+    box.style.background = '#F8D7DA'; box.style.color = 'var(--danger)';
+    document.getElementById('pl-net').textContent = '- ' + fmt(Math.abs(net)) + ' ريال خسارة';
+  }
+
+  document.getElementById('pl-result').classList.remove('hidden');
+}
+
+function generateIncomeReport() {
+  const from = document.getElementById('irep-from').value;
+  const to = document.getElementById('irep-to').value;
+  let rows = [...data.income].sort((a, b) => b.date.localeCompare(a.date));
+  if (from) rows = rows.filter(r => r.date >= from);
+  if (to) rows = rows.filter(r => r.date <= to);
+  const total = rows.reduce((s, r) => s + parseFloat(r.amount), 0);
+  document.getElementById('irep-tbody').innerHTML = rows.map(r => `
+    <tr><td>${fmtDate(r.date)}</td><td style="font-weight:700;color:var(--success)">${fmt(r.amount)} ريال</td><td>${r.note || '-'}</td></tr>
+  `).join('') || '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);">لا توجد بيانات</td></tr>';
+  document.getElementById('irep-total').textContent = rows.length ? `الإجمالي: ${fmt(total)} ريال` : '';
+}
+
+function generatePurchaseReport() {
+  const from = document.getElementById('prep-from').value;
+  const to = document.getElementById('prep-to').value;
+  let rows = [...data.purchases].sort((a, b) => b.date.localeCompare(a.date));
+  if (from) rows = rows.filter(r => r.date >= from);
+  if (to) rows = rows.filter(r => r.date <= to);
+  const total = rows.reduce((s, r) => s + parseFloat(r.amount), 0);
+  document.getElementById('prep-tbody').innerHTML = rows.map(r => `
+    <tr>
+      <td>${fmtDate(r.date)}</td>
+      <td style="font-weight:700;color:var(--accent)">${fmt(r.amount)} ريال</td>
+      <td>${r.payType === 'cash' ? '<span class="badge badge-success">نقدي</span>' : '<span class="badge badge-warning">آجل</span>'}</td>
+      <td>${r.supplier || '-'}</td>
+      <td>${r.dueDate ? fmtDate(r.dueDate) : '-'}</td>
+    </tr>
+  `).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">لا توجد بيانات</td></tr>';
+  document.getElementById('prep-total').textContent = rows.length ? `الإجمالي: ${fmt(total)} ريال` : '';
+}
+
+function generateSalaryReport() {
+  const from = document.getElementById('srep-from').value;
+  const to = document.getElementById('srep-to').value;
+  let rows = [...data.salaryHistory].sort((a, b) => b.date.localeCompare(a.date));
+  if (from) rows = rows.filter(r => r.date >= from);
+  if (to) rows = rows.filter(r => r.date <= to);
+  const total = rows.reduce((s, r) => s + parseFloat(r.amount), 0);
+  document.getElementById('srep-tbody').innerHTML = rows.map(r => `
+    <tr>
+      <td>${fmtDate(r.date)}</td>
+      <td style="font-weight:600">${r.employeeName}</td>
+      <td>${r.type === 'راتب' ? '<span class="badge badge-success">راتب</span>' : '<span class="badge badge-warning">سلفة</span>'}</td>
+      <td style="font-weight:700;color:var(--primary)">${fmt(r.amount)} ريال</td>
+    </tr>
+  `).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);">لا توجد بيانات</td></tr>';
+  document.getElementById('srep-total').textContent = rows.length ? `الإجمالي: ${fmt(total)} ريال` : '';
+}
+
+// ============ INIT ============
+document.getElementById('today-date').textContent = new Date().toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+loadData();
+setToday('income-date');
+setToday('exp-date');
+setToday('pur-date');
+updateDashboard();
+</script>
+</body>
+</html>
