@@ -4,6 +4,56 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>برنامج المحاسبة اليومي</title>
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBVV53mUyYJlVnlJOTMu8hJ62TIyCWFWyM",
+      authDomain: "my-accounting-1cad7.firebaseapp.com",
+      projectId: "my-accounting-1cad7",
+      storageBucket: "my-accounting-1cad7.firebasestorage.app",
+      messagingSenderId: "624716274340",
+      appId: "1:624716274340:web:8d47118bb3c3b7707a6431",
+      measurementId: "G-3S87N6K1Q2"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const DATA_DOC = doc(db, "accounting", "main");
+
+    // Expose to global scope for use in main script
+    window._fbSaveData = async (data) => {
+      try {
+        await setDoc(DATA_DOC, { payload: JSON.stringify(data) });
+      } catch(e) {
+        console.error("Firebase save error:", e);
+      }
+    };
+
+    window._fbListenData = (onUpdate) => {
+      onSnapshot(DATA_DOC, (snap) => {
+        if (snap.exists()) {
+          try {
+            const parsed = JSON.parse(snap.data().payload);
+            onUpdate(parsed);
+          } catch(e) { console.error("Parse error:", e); }
+        }
+      });
+    };
+
+    window._fbLoadData = async () => {
+      try {
+        const snap = await getDoc(DATA_DOC);
+        if (snap.exists()) return JSON.parse(snap.data().payload);
+      } catch(e) { console.error("Firebase load error:", e); }
+      return null;
+    };
+
+    window._firebaseReady = true;
+    document.dispatchEvent(new Event('firebaseReady'));
+  </script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap');
 
@@ -36,14 +86,18 @@
   #sidebar {
     width: var(--sidebar-w);
     background: var(--primary);
-    min-height: 100vh;
+    height: 100vh;
     position: fixed;
     right: 0;
     top: 0;
     display: flex;
     flex-direction: column;
+    overflow-y: auto;
     z-index: 100;
   }
+
+  #sidebar::-webkit-scrollbar { width: 4px; }
+  #sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
 
   .sidebar-logo {
     padding: 24px 16px;
@@ -348,11 +402,57 @@
 
   .filter-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 16px; }
 
+  /* MOBILE TOPBAR */
+  #mobile-topbar {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    background: var(--primary);
+    color: #fff;
+    padding: 14px 16px;
+    position: fixed;
+    top: 0; right: 0; left: 0;
+    z-index: 150;
+    font-weight: 700;
+    font-size: 15px;
+  }
+
+  #mobile-menu-btn {
+    background: rgba(255,255,255,0.15);
+    border: none;
+    color: #fff;
+    font-size: 20px;
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  #mobile-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 99;
+  }
+
+  #mobile-overlay.show { display: block; }
+
   /* RESPONSIVE */
   @media(max-width: 768px) {
-    :root { --sidebar-w: 0px; }
-    #sidebar { display: none; }
-    #main { margin-right: 0; padding: 16px; }
+    #mobile-topbar { display: flex; }
+
+    :root { --sidebar-w: 240px; }
+    #sidebar {
+      display: flex;
+      transform: translateX(100%);
+      transition: transform 0.25s ease;
+      box-shadow: -4px 0 20px rgba(0,0,0,0.2);
+    }
+    #sidebar.open { transform: translateX(0); }
+
+    #main { margin-right: 0; padding: 16px; padding-top: 70px; }
     .stats-grid { grid-template-columns: 1fr 1fr; }
     .report-grid { grid-template-columns: 1fr; }
   }
@@ -360,50 +460,66 @@
 </head>
 <body>
 
+<!-- MOBILE TOP BAR -->
+<div id="mobile-topbar">
+  <button id="mobile-menu-btn" aria-label="فتح القائمة">☰</button>
+  <span id="mobile-topbar-title">📊 برنامج المحاسبة</span>
+  <span id="sync-status-mobile" style="font-size:11px;margin-right:auto;color:rgba(255,255,255,0.8);"></span>
+</div>
+<div id="mobile-overlay"></div>
+
 <!-- SIDEBAR -->
 <nav id="sidebar">
   <div class="sidebar-logo">
     <h2>📊 برنامج المحاسبة</h2>
     <span>الإدارة اليومية</span>
+    <div id="sync-status" style="font-size:11px;margin-top:6px;color:rgba(255,255,255,0.6);">⏳ جاري الاتصال...</div>
   </div>
 
   <div class="nav-section">
     <div class="nav-label">الرئيسية</div>
-    <div class="nav-item active" onclick="showPage('dashboard')">
+    <div class="nav-item active" data-page="dashboard">
       <span class="icon">🏠</span> لوحة التحكم
     </div>
   </div>
 
   <div class="nav-section">
     <div class="nav-label">العمليات اليومية</div>
-    <div class="nav-item" onclick="showPage('income')">
+    <div class="nav-item" data-page="income">
       <span class="icon">💰</span> الإيرادات
     </div>
-    <div class="nav-item" onclick="showPage('expenses')">
+    <div class="nav-item" data-page="expenses">
       <span class="icon">📤</span> المصروفات
     </div>
-    <div class="nav-item" onclick="showPage('purchases')">
+    <div class="nav-item" data-page="purchases">
       <span class="icon">🛒</span> المشتريات
     </div>
   </div>
 
   <div class="nav-section">
     <div class="nav-label">الموظفون</div>
-    <div class="nav-item" onclick="showPage('employees')">
+    <div class="nav-item" data-page="employees">
       <span class="icon">👥</span> الموظفون
     </div>
-    <div class="nav-item" onclick="showPage('salaries')">
+    <div class="nav-item" data-page="salaries">
       <span class="icon">💵</span> الرواتب والسلف
     </div>
   </div>
 
   <div class="nav-section">
     <div class="nav-label">التقارير</div>
-    <div class="nav-item" onclick="showPage('suppliers')">
+    <div class="nav-item" data-page="suppliers">
       <span class="icon">🏪</span> ديون الموردين
     </div>
-    <div class="nav-item" onclick="showPage('reports')">
+    <div class="nav-item" data-page="reports">
       <span class="icon">📈</span> التقارير
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">النظام</div>
+    <div class="nav-item" data-page="settings">
+      <span class="icon">⚙️</span> الإعدادات
     </div>
   </div>
 </nav>
@@ -424,22 +540,22 @@
       <div class="stat-card income">
         <div class="stat-label">إيراد اليوم</div>
         <div class="stat-value" id="dash-today-income">0.00</div>
-        <div class="stat-sub">ريال</div>
+        <div class="stat-sub">دينار</div>
       </div>
       <div class="stat-card expense">
         <div class="stat-label">مصروفات اليوم</div>
         <div class="stat-value" id="dash-today-expense">0.00</div>
-        <div class="stat-sub">ريال</div>
+        <div class="stat-sub">دينار</div>
       </div>
       <div class="stat-card purchase">
         <div class="stat-label">مشتريات الأسبوع</div>
         <div class="stat-value" id="dash-week-purchase">0.00</div>
-        <div class="stat-sub">ريال</div>
+        <div class="stat-sub">دينار</div>
       </div>
       <div class="stat-card profit">
         <div class="stat-label">صافي هذا الشهر</div>
         <div class="stat-value" id="dash-month-net">0.00</div>
-        <div class="stat-sub">ريال</div>
+        <div class="stat-sub">دينار</div>
       </div>
     </div>
 
@@ -469,7 +585,11 @@
           <input type="date" id="income-date">
         </div>
         <div class="form-group">
-          <label>المبلغ (ريال)</label>
+          <label>طريقة الدفع</label>
+          <select id="income-method"></select>
+        </div>
+        <div class="form-group">
+          <label>المبلغ (دينار)</label>
           <input type="number" id="income-amount" placeholder="0.00" step="0.01">
         </div>
         <div class="form-group">
@@ -478,6 +598,15 @@
         </div>
       </div>
       <button class="btn btn-success" onclick="addIncome()">✔ تسجيل الإيراد</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📊 ملخص اليوم حسب طريقة الدفع</div>
+      <div id="income-today-summary" class="report-grid" style="grid-template-columns:repeat(4,1fr);gap:12px;"></div>
+      <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn" style="background:#25D366;color:#fff;" onclick="sendIncomeSummaryWhatsApp()">📲 إرسال لصاحب العمل (واتساب)</button>
+        <button class="btn" style="background:#566573;color:#fff;" onclick="sendIncomeSummarySMS()">✉️ إرسال لصاحب العمل (SMS)</button>
+      </div>
     </div>
 
     <div class="card">
@@ -496,7 +625,7 @@
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>#</th><th>التاريخ</th><th>المبلغ</th><th>ملاحظات</th><th></th></tr></thead>
+          <thead><tr><th>#</th><th>التاريخ</th><th>طريقة الدفع</th><th>المبلغ</th><th>ملاحظات</th><th></th></tr></thead>
           <tbody id="income-tbody"></tbody>
         </table>
       </div>
@@ -522,7 +651,7 @@
           <input type="text" id="exp-desc" placeholder="وصف المصروف">
         </div>
         <div class="form-group">
-          <label>المبلغ (ريال)</label>
+          <label>المبلغ (دينار)</label>
           <input type="number" id="exp-amount" placeholder="0.00" step="0.01">
         </div>
       </div>
@@ -561,7 +690,11 @@
           <input type="date" id="pur-date">
         </div>
         <div class="form-group">
-          <label>المبلغ (ريال)</label>
+          <label>رقم الفاتورة</label>
+          <input type="text" id="pur-invoice" placeholder="رقم الفاتورة">
+        </div>
+        <div class="form-group">
+          <label>المبلغ (دينار)</label>
           <input type="number" id="pur-amount" placeholder="0.00" step="0.01">
         </div>
         <div class="form-group">
@@ -603,7 +736,7 @@
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>#</th><th>التاريخ</th><th>المبلغ</th><th>نوع الدفع</th><th>المورد</th><th>الاستحقاق</th><th>الحالة</th><th></th></tr></thead>
+          <thead><tr><th>#</th><th>التاريخ</th><th>رقم الفاتورة</th><th>المبلغ</th><th>نوع الدفع</th><th>المورد</th><th>الاستحقاق</th><th>الحالة</th><th></th></tr></thead>
           <tbody id="purchase-tbody"></tbody>
         </table>
       </div>
@@ -629,12 +762,16 @@
           <input type="text" id="emp-role" placeholder="مثال: محاسب، كاشير...">
         </div>
         <div class="form-group">
-          <label>الراتب الأساسي (ريال)</label>
+          <label>الراتب الأساسي (دينار)</label>
           <input type="number" id="emp-salary" placeholder="0.00" step="0.01">
         </div>
         <div class="form-group">
           <label>تاريخ التعيين</label>
           <input type="date" id="emp-join">
+        </div>
+        <div class="form-group">
+          <label>رقم الهاتف (مع رمز الدولة)</label>
+          <input type="tel" id="emp-phone" placeholder="9665XXXXXXXX">
         </div>
       </div>
       <button class="btn btn-primary" onclick="addEmployee()">✔ إضافة الموظف</button>
@@ -644,7 +781,7 @@
       <div class="card-title">📋 قائمة الموظفين</div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>#</th><th>الاسم</th><th>التخصص</th><th>الراتب</th><th>تاريخ التعيين</th><th>إجراءات</th></tr></thead>
+          <thead><tr><th>#</th><th>الاسم</th><th>التخصص</th><th>الراتب</th><th>الهاتف</th><th>تاريخ التعيين</th><th>إجراءات</th></tr></thead>
           <tbody id="employees-tbody"></tbody>
         </table>
       </div>
@@ -675,6 +812,7 @@
     <div class="tabs">
       <button class="tab active" onclick="showSalaryTab('pay')">صرف رواتب</button>
       <button class="tab" onclick="showSalaryTab('advance')">سلفة</button>
+      <button class="tab" onclick="showSalaryTab('deduction')">خصم</button>
       <button class="tab" onclick="showSalaryTab('history')">السجل</button>
     </div>
 
@@ -697,7 +835,7 @@
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>الموظف</th><th>التخصص</th><th>الراتب</th><th>صرف؟</th><th>المبلغ المصروف</th></tr></thead>
+            <thead><tr><th>الموظف</th><th>التخصص</th><th>الراتب</th><th>صرف؟</th><th>المبلغ المصروف</th><th>إشعار</th></tr></thead>
             <tbody id="sal-pay-tbody"></tbody>
           </table>
         </div>
@@ -717,7 +855,7 @@
             <select id="adv-emp"></select>
           </div>
           <div class="form-group">
-            <label>المبلغ (ريال)</label>
+            <label>المبلغ (دينار)</label>
             <input type="number" id="adv-amount" placeholder="0.00" step="0.01">
           </div>
           <div class="form-group">
@@ -730,6 +868,40 @@
           </div>
         </div>
         <button class="btn btn-accent" onclick="addAdvance()">✔ صرف السلفة</button>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn" style="background:#25D366;color:#fff;font-size:12px;padding:7px 14px;" onclick="notifyLastAdvance('whatsapp')">📲 إشعار الموظف (واتساب)</button>
+          <button class="btn" style="background:#566573;color:#fff;font-size:12px;padding:7px 14px;" onclick="notifyLastAdvance('sms')">✉️ إشعار الموظف (SMS)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEDUCTION -->
+    <div id="sal-tab-deduction" class="hidden">
+      <div class="card">
+        <div class="card-title">➖ تسجيل خصم</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>الموظف</label>
+            <select id="ded-emp"></select>
+          </div>
+          <div class="form-group">
+            <label>المبلغ (دينار)</label>
+            <input type="number" id="ded-amount" placeholder="0.00" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>التاريخ</label>
+            <input type="date" id="ded-date">
+          </div>
+          <div class="form-group">
+            <label>سبب الخصم</label>
+            <input type="text" id="ded-note" placeholder="مثال: تأخير، غياب...">
+          </div>
+        </div>
+        <button class="btn btn-danger" style="font-size:14px;padding:9px 20px;" onclick="addDeduction()">✔ تسجيل الخصم</button>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn" style="background:#25D366;color:#fff;font-size:12px;padding:7px 14px;" onclick="notifyLastDeduction('whatsapp')">📲 إشعار الموظف (واتساب)</button>
+          <button class="btn" style="background:#566573;color:#fff;font-size:12px;padding:7px 14px;" onclick="notifyLastDeduction('sms')">✉️ إشعار الموظف (SMS)</button>
+        </div>
       </div>
     </div>
 
@@ -823,7 +995,7 @@
           </div>
           <div style="margin-top:20px;padding:20px;border-radius:10px;text-align:center;" id="pl-net-box">
             <div style="font-size:13px;font-weight:600;margin-bottom:6px;">صافي الربح / الخسارة</div>
-            <div style="font-size:32px;font-weight:800;" id="pl-net">0.00 ريال</div>
+            <div style="font-size:32px;font-weight:800;" id="pl-net">0.00 دينار</div>
           </div>
         </div>
       </div>
@@ -838,9 +1010,10 @@
           <div class="form-group"><label>إلى</label><input type="date" id="irep-to"></div>
           <button class="btn btn-primary btn-sm" onclick="generateIncomeReport()">📊 إنشاء</button>
         </div>
+        <div id="irep-breakdown" class="report-grid" style="grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;"></div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>التاريخ</th><th>المبلغ</th><th>ملاحظات</th></tr></thead>
+            <thead><tr><th>التاريخ</th><th>طريقة الدفع</th><th>المبلغ</th><th>ملاحظات</th></tr></thead>
             <tbody id="irep-tbody"></tbody>
           </table>
         </div>
@@ -859,7 +1032,7 @@
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>التاريخ</th><th>المبلغ</th><th>نوع الدفع</th><th>المورد</th><th>الاستحقاق</th></tr></thead>
+            <thead><tr><th>التاريخ</th><th>رقم الفاتورة</th><th>المبلغ</th><th>نوع الدفع</th><th>المورد</th><th>الاستحقاق</th></tr></thead>
             <tbody id="prep-tbody"></tbody>
           </table>
         </div>
@@ -888,7 +1061,58 @@
 
   </div>
 
+  <!-- ===== SETTINGS ===== -->
+  <div id="page-settings" class="page">
+    <div class="page-header">
+      <div class="page-title">⚙️ الإعدادات</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📱 رقم صاحب العمل (لإرسال ملخص الإيراد اليومي)</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>رقم الهاتف (مع رمز الدولة، مثال: 9665xxxxxxxx)</label>
+          <input type="tel" id="owner-phone" placeholder="9665XXXXXXXX">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="saveOwnerPhone()">✔ حفظ الرقم</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">💳 طرق الدفع (الإيرادات)</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>اسم طريقة الدفع الجديدة</label>
+          <input type="text" id="new-method-name" placeholder="مثال: آبل باي">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="addPaymentMethod()">➕ إضافة طريقة دفع</button>
+
+      <div class="table-wrap" style="margin-top:20px;">
+        <table>
+          <thead><tr><th>#</th><th>اسم طريقة الدفع</th><th></th></tr></thead>
+          <tbody id="methods-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
 </main>
+
+<!-- Edit method modal -->
+<div id="edit-method-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200;display:flex;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:24px;min-width:300px;">
+    <div style="font-weight:700;font-size:16px;margin-bottom:16px;color:var(--primary);">✏️ تعديل اسم طريقة الدفع</div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>الاسم الجديد</label>
+      <input type="text" id="edit-method-val">
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-primary" onclick="saveEditMethod()">حفظ</button>
+      <button class="btn" style="background:var(--bg);" onclick="closeEditMethod()">إلغاء</button>
+    </div>
+  </div>
+</div>
 
 <script>
 // ============ DATA STORE ============
@@ -897,33 +1121,78 @@ let data = {
   expenses: [],
   purchases: [],
   employees: [],
-  salaryHistory: []
+  salaryHistory: [],
+  paymentMethods: ['كاش', 'فيزا', 'ماستركارد', 'حوالة مصرفية'],
+  ownerPhone: ''
 };
 
-// Load from localStorage
-function loadData() {
-  const saved = localStorage.getItem('accounting_data');
-  if (saved) data = JSON.parse(saved);
+let _isSaving = false;
+
+function setSyncStatus(status) {
+  const el = document.getElementById('sync-status');
+  const el2 = document.getElementById('sync-status-mobile');
+  let text = '', color = '';
+  if (status === 'saving')      { text = '🔄 جاري الحفظ...'; color = 'rgba(255,255,255,0.7)'; }
+  else if (status === 'saved')  { text = '✅ محفوظ';           color = '#2ECC71'; }
+  else if (status === 'error')  { text = '❌ خطأ في الحفظ';   color = '#E74C3C'; }
+  else if (status === 'synced') { text = '🔁 متزامن';          color = '#2ECC71'; }
+  if (el)  { el.textContent = text;  el.style.color = color; }
+  if (el2) { el2.textContent = text; el2.style.color = color; }
 }
 
-function saveData() {
-  localStorage.setItem('accounting_data', JSON.stringify(data));
+async function saveData() {
+  setSyncStatus('saving');
+  try {
+    if (window._fbSaveData) {
+      await window._fbSaveData(data);
+      setSyncStatus('saved');
+    } else {
+      // fallback localStorage
+      localStorage.setItem('accounting_data', JSON.stringify(data));
+      setSyncStatus('saved');
+    }
+  } catch(e) {
+    setSyncStatus('error');
+    console.error(e);
+  }
+}
+
+async function loadData() {
+  try {
+    if (window._fbLoadData) {
+      const remote = await window._fbLoadData();
+      if (remote) {
+        data = remote;
+      }
+    } else {
+      const saved = localStorage.getItem('accounting_data');
+      if (saved) data = JSON.parse(saved);
+    }
+  } catch(e) {
+    console.error('Load error:', e);
+  }
+  // Ensure required fields
+  if (!data.paymentMethods || !data.paymentMethods.length)
+    data.paymentMethods = ['كاش', 'فيزا', 'ماستركارد', 'حوالة مصرفية'];
+  if (data.ownerPhone === undefined) data.ownerPhone = '';
 }
 
 // ============ NAVIGATION ============
-function showPage(name) {
+function showPage(name, el) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
-  event.currentTarget.classList.add('active');
+  const target = el || document.querySelector('.nav-item[data-page="' + name + '"]');
+  if (target) target.classList.add('active');
 
   if (name === 'dashboard') updateDashboard();
-  if (name === 'income') { setToday('income-date'); renderIncomeTable(); }
+  if (name === 'income') { setToday('income-date'); renderIncomeTable(); renderIncomeTodaySummary(); }
   if (name === 'expenses') { setToday('exp-date'); renderExpenseTable(); }
   if (name === 'purchases') { setToday('pur-date'); renderPurchaseTable(); }
   if (name === 'employees') renderEmployeesTable();
-  if (name === 'salaries') { setToday('sal-pay-date'); setToday('adv-date'); renderSalPayTable(); renderAdvEmpSelect(); renderSalHistory(); }
+  if (name === 'salaries') { setToday('sal-pay-date'); setToday('adv-date'); setToday('ded-date'); renderSalPayTable(); renderAdvEmpSelect(); renderSalHistory(); }
   if (name === 'suppliers') renderSuppliersTable();
+  if (name === 'settings') { renderMethodsTable(); loadOwnerPhoneField(); }
   if (name === 'reports') {}
 }
 
@@ -937,7 +1206,7 @@ function today() {
 }
 
 function fmt(n) {
-  return parseFloat(n || 0).toLocaleString('ar-SA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return parseFloat(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function fmtDate(d) {
@@ -988,7 +1257,7 @@ function updateDashboard() {
     debtEl.innerHTML = upcoming.map(p => `
       <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--border);font-size:13px;">
         <span style="color:var(--text-muted)">${p.supplier}</span>
-        <span style="font-weight:700;color:var(--danger)">${fmt(p.remaining)} ريال</span>
+        <span style="font-weight:700;color:var(--danger)">${fmt(p.remaining)} دينار</span>
         <span class="badge badge-warning">${fmtDate(p.dueDate)}</span>
       </div>
     `).join('');
@@ -1009,14 +1278,47 @@ function updateDashboard() {
 // ============ INCOME ============
 function addIncome() {
   const date = document.getElementById('income-date').value;
+  const method = document.getElementById('income-method').value;
   const amount = parseFloat(document.getElementById('income-amount').value);
   const note = document.getElementById('income-note').value;
   if (!date || !amount || amount <= 0) return alert('يرجى إدخال التاريخ والمبلغ');
-  data.income.push({ id: Date.now(), date, amount, note });
+  data.income.push({ id: Date.now(), date, method, amount, note });
   saveData();
   document.getElementById('income-amount').value = '';
   document.getElementById('income-note').value = '';
   renderIncomeTable();
+  renderIncomeTodaySummary();
+}
+
+const methodColorPalette = ['var(--success)', 'var(--primary-light)', 'var(--accent)', '#8E44AD', '#16A085', '#D35400', '#2C3E50', '#C0392B'];
+function methodColor(method) {
+  const idx = data.paymentMethods.indexOf(method);
+  return methodColorPalette[idx >= 0 ? idx % methodColorPalette.length : 0];
+}
+
+function populateIncomeMethodSelect() {
+  const sel = document.getElementById('income-method');
+  const current = sel.value;
+  sel.innerHTML = data.paymentMethods.map(m => `<option value="${m}">${m}</option>`).join('');
+  if (data.paymentMethods.includes(current)) sel.value = current;
+}
+
+function renderIncomeTodaySummary() {
+  const t = today();
+  const todayRows = data.income.filter(r => r.date === t);
+  const box = document.getElementById('income-today-summary');
+  let total = 0;
+  box.innerHTML = data.paymentMethods.map(m => {
+    const sum = todayRows.filter(r => r.method === m).reduce((s, r) => s + parseFloat(r.amount), 0);
+    total += sum;
+    return `<div style="text-align:center;padding:12px;background:var(--bg);border-radius:10px;">
+      <div style="font-size:11px;color:var(--text-muted);font-weight:600;margin-bottom:6px;">${m}</div>
+      <div style="font-size:17px;font-weight:800;color:${methodColor(m)}">${fmt(sum)}</div>
+    </div>`;
+  }).join('') + `<div style="text-align:center;padding:12px;background:var(--primary);border-radius:10px;grid-column:1/-1;margin-top:4px;">
+      <div style="font-size:11px;color:rgba(255,255,255,0.8);font-weight:600;margin-bottom:4px;">إجمالي إيراد اليوم</div>
+      <div style="font-size:20px;font-weight:800;color:#fff;">${fmt(total)} دينار</div>
+    </div>`;
 }
 
 function renderIncomeTable() {
@@ -1031,18 +1333,19 @@ function renderIncomeTable() {
     <tr>
       <td>${i + 1}</td>
       <td>${fmtDate(r.date)}</td>
-      <td style="font-weight:700;color:var(--success)">${fmt(r.amount)} ريال</td>
+      <td><span class="badge badge-info">${r.method || 'كاش'}</span></td>
+      <td style="font-weight:700;color:var(--success)">${fmt(r.amount)} دينار</td>
       <td style="color:var(--text-muted)">${r.note || '-'}</td>
       <td><button class="btn btn-danger btn-sm" onclick="deleteIncome(${r.id})">حذف</button></td>
     </tr>
-  `).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد بيانات</td></tr>';
-  document.getElementById('income-total').textContent = rows.length ? `الإجمالي: ${fmt(total)} ريال` : '';
+  `).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد بيانات</td></tr>';
+  document.getElementById('income-total').textContent = rows.length ? `الإجمالي: ${fmt(total)} دينار` : '';
 }
 
 function deleteIncome(id) {
   if (!confirm('هل تريد حذف هذا السجل؟')) return;
   data.income = data.income.filter(r => r.id !== id);
-  saveData(); renderIncomeTable();
+  saveData(); renderIncomeTable(); renderIncomeTodaySummary();
 }
 
 function clearIncomeFilter() {
@@ -1077,11 +1380,11 @@ function renderExpenseTable() {
       <td>${i + 1}</td>
       <td>${fmtDate(r.date)}</td>
       <td>${r.desc}</td>
-      <td style="font-weight:700;color:var(--danger)">${fmt(r.amount)} ريال</td>
+      <td style="font-weight:700;color:var(--danger)">${fmt(r.amount)} دينار</td>
       <td><button class="btn btn-danger btn-sm" onclick="deleteExpense(${r.id})">حذف</button></td>
     </tr>
   `).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد بيانات</td></tr>';
-  document.getElementById('expense-total').textContent = rows.length ? `الإجمالي: ${fmt(total)} ريال` : '';
+  document.getElementById('expense-total').textContent = rows.length ? `الإجمالي: ${fmt(total)} دينار` : '';
 }
 
 function deleteExpense(id) {
@@ -1108,6 +1411,7 @@ function setPayType(type) {
 
 function addPurchase() {
   const date = document.getElementById('pur-date').value;
+  const invoice = document.getElementById('pur-invoice').value.trim();
   const amount = parseFloat(document.getElementById('pur-amount').value);
   const note = document.getElementById('pur-note').value;
   if (!date || !amount || amount <= 0) return alert('يرجى إدخال التاريخ والمبلغ');
@@ -1120,12 +1424,13 @@ function addPurchase() {
   }
 
   data.purchases.push({
-    id: Date.now(), date, amount, payType: currentPayType,
+    id: Date.now(), date, invoice, amount, payType: currentPayType,
     supplier, dueDate, note,
     paid: currentPayType === 'cash' ? amount : 0,
     remaining: currentPayType === 'cash' ? 0 : amount
   });
   saveData();
+  document.getElementById('pur-invoice').value = '';
   document.getElementById('pur-amount').value = '';
   document.getElementById('pur-note').value = '';
   document.getElementById('pur-supplier').value = '';
@@ -1149,7 +1454,8 @@ function renderPurchaseTable() {
     <tr>
       <td>${i + 1}</td>
       <td>${fmtDate(r.date)}</td>
-      <td style="font-weight:700;color:var(--accent)">${fmt(r.amount)} ريال</td>
+      <td style="font-weight:600;color:var(--primary)">${r.invoice || '-'}</td>
+      <td style="font-weight:700;color:var(--accent)">${fmt(r.amount)} دينار</td>
       <td>${r.payType === 'cash' ? '<span class="badge badge-success">نقدي</span>' : '<span class="badge badge-warning">آجل</span>'}</td>
       <td>${r.supplier || '-'}</td>
       <td>${r.dueDate ? fmtDate(r.dueDate) : '-'}</td>
@@ -1157,7 +1463,7 @@ function renderPurchaseTable() {
       <td><button class="btn btn-danger btn-sm" onclick="deletePurchase(${r.id})">حذف</button></td>
     </tr>`;
   }).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد بيانات</td></tr>';
-  document.getElementById('purchase-total').textContent = rows.length ? `الإجمالي: ${fmt(total)} ريال` : '';
+  document.getElementById('purchase-total').textContent = rows.length ? `الإجمالي: ${fmt(total)} دينار` : '';
 }
 
 function deletePurchase(id) {
@@ -1178,13 +1484,15 @@ function addEmployee() {
   const role = document.getElementById('emp-role').value.trim();
   const salary = parseFloat(document.getElementById('emp-salary').value);
   const join = document.getElementById('emp-join').value;
+  const phone = document.getElementById('emp-phone').value.trim();
   if (!name || !role || !salary) return alert('يرجى إدخال جميع الحقول');
-  data.employees.push({ id: Date.now(), name, role, salary, join });
+  data.employees.push({ id: Date.now(), name, role, salary, join, phone });
   saveData();
   document.getElementById('emp-name').value = '';
   document.getElementById('emp-role').value = '';
   document.getElementById('emp-salary').value = '';
   document.getElementById('emp-join').value = '';
+  document.getElementById('emp-phone').value = '';
   renderEmployeesTable();
 }
 
@@ -1195,14 +1503,15 @@ function renderEmployeesTable() {
       <td>${i + 1}</td>
       <td style="font-weight:600">${e.name}</td>
       <td><span class="badge badge-info">${e.role}</span></td>
-      <td style="font-weight:700;color:var(--primary)">${fmt(e.salary)} ريال</td>
+      <td style="font-weight:700;color:var(--primary)">${fmt(e.salary)} دينار</td>
+      <td style="color:var(--text-muted);font-size:12px;">${e.phone || '<span style="color:var(--danger)">غير مسجل</span>'}</td>
       <td style="color:var(--text-muted)">${e.join ? fmtDate(e.join) : '-'}</td>
       <td>
         <button class="btn btn-primary btn-sm" onclick="openEditSalary(${e.id})">تعديل الراتب</button>
         <button class="btn btn-danger btn-sm" onclick="deleteEmployee(${e.id})" style="margin-right:4px;">حذف</button>
       </td>
     </tr>
-  `).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;">لا يوجد موظفون</td></tr>';
+  `).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px;">لا يوجد موظفون</td></tr>';
 }
 
 let editingEmpId = null;
@@ -1234,13 +1543,14 @@ function deleteEmployee(id) {
 
 // ============ SALARIES ============
 function showSalaryTab(tab) {
-  ['pay', 'advance', 'history'].forEach(t => {
+  ['pay', 'advance', 'deduction', 'history'].forEach(t => {
     document.getElementById('sal-tab-' + t).classList.toggle('hidden', t !== tab);
   });
   document.querySelectorAll('#page-salaries .tab').forEach((el, i) => {
-    el.classList.toggle('active', ['pay', 'advance', 'history'][i] === tab);
+    el.classList.toggle('active', ['pay', 'advance', 'deduction', 'history'][i] === tab);
   });
   if (tab === 'advance') renderAdvEmpSelect();
+  if (tab === 'deduction') renderDedEmpSelect();
   if (tab === 'history') renderSalHistory();
 }
 
@@ -1250,13 +1560,17 @@ function renderSalPayTable() {
     <tr>
       <td style="font-weight:600">${e.name}</td>
       <td style="color:var(--text-muted)">${e.role}</td>
-      <td style="font-weight:700;color:var(--primary)">${fmt(e.salary)} ريال</td>
+      <td style="font-weight:700;color:var(--primary)">${fmt(e.salary)} دينار</td>
       <td><input type="checkbox" id="sal-chk-${e.id}" checked style="width:18px;height:18px;cursor:pointer;"></td>
       <td>
         <input type="number" id="sal-amt-${e.id}" value="${e.salary}" step="0.01" style="width:120px;">
       </td>
+      <td>
+        <button class="btn btn-sm" style="background:#25D366;color:#fff;" onclick="notifySalaryPaid(${e.id},'whatsapp')">📲</button>
+        <button class="btn btn-sm" style="background:#566573;color:#fff;" onclick="notifySalaryPaid(${e.id},'sms')">✉️</button>
+      </td>
     </tr>
-  `).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">لا يوجد موظفون</td></tr>';
+  `).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);">لا يوجد موظفون</td></tr>';
 }
 
 function confirmPaySalaries() {
@@ -1283,6 +1597,59 @@ function confirmPaySalaries() {
   showSalaryTab('history');
 }
 
+function renderDedEmpSelect() {
+  const sel = document.getElementById('ded-emp');
+  sel.innerHTML = data.employees.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+}
+
+let lastAdvanceRecord = null;
+let lastDeductionRecord = null;
+
+function addDeduction() {
+  const empId = parseInt(document.getElementById('ded-emp').value);
+  const amount = parseFloat(document.getElementById('ded-amount').value);
+  const date = document.getElementById('ded-date').value;
+  const note = document.getElementById('ded-note').value;
+  if (!empId || !amount || !date) return alert('يرجى إدخال جميع الحقول');
+  const emp = data.employees.find(e => e.id === empId);
+  const record = {
+    id: Date.now(), date, employeeId: empId,
+    employeeName: emp.name, type: 'خصم', amount, note
+  };
+  data.salaryHistory.push(record);
+  lastDeductionRecord = record;
+  saveData();
+  document.getElementById('ded-amount').value = '';
+  document.getElementById('ded-note').value = '';
+  alert('✅ تم تسجيل الخصم');
+  renderSalHistory();
+}
+
+function notifyLastAdvance(channel) {
+  if (!lastAdvanceRecord) return alert('يرجى تسجيل سلفة أولاً');
+  const emp = data.employees.find(e => e.id === lastAdvanceRecord.employeeId);
+  const msg = `💸 إشعار سلفة\n\nالموظف: ${emp.name}\nالمبلغ: ${fmt(lastAdvanceRecord.amount)} دينار\nالتاريخ: ${fmtDate(lastAdvanceRecord.date)}${lastAdvanceRecord.note ? '\nملاحظة: ' + lastAdvanceRecord.note : ''}`;
+  if (channel === 'whatsapp') sendWhatsApp(emp.phone, msg);
+  else sendSMS(emp.phone, msg);
+}
+
+function notifyLastDeduction(channel) {
+  if (!lastDeductionRecord) return alert('يرجى تسجيل خصم أولاً');
+  const emp = data.employees.find(e => e.id === lastDeductionRecord.employeeId);
+  const msg = `➖ إشعار خصم\n\nالموظف: ${emp.name}\nالمبلغ: ${fmt(lastDeductionRecord.amount)} دينار\nالتاريخ: ${fmtDate(lastDeductionRecord.date)}${lastDeductionRecord.note ? '\nالسبب: ' + lastDeductionRecord.note : ''}`;
+  if (channel === 'whatsapp') sendWhatsApp(emp.phone, msg);
+  else sendSMS(emp.phone, msg);
+}
+
+function notifySalaryPaid(empId, channel) {
+  const emp = data.employees.find(e => e.id === empId);
+  const amt = document.getElementById('sal-amt-' + empId).value;
+  const date = document.getElementById('sal-pay-date').value || today();
+  const msg = `💵 إشعار صرف راتب\n\nالموظف: ${emp.name}\nالمبلغ: ${fmt(amt)} دينار\nتاريخ الصرف: ${fmtDate(date)}`;
+  if (channel === 'whatsapp') sendWhatsApp(emp.phone, msg);
+  else sendSMS(emp.phone, msg);
+}
+
 function renderAdvEmpSelect() {
   const sel = document.getElementById('adv-emp');
   sel.innerHTML = data.employees.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
@@ -1295,10 +1662,12 @@ function addAdvance() {
   const note = document.getElementById('adv-note').value;
   if (!empId || !amount || !date) return alert('يرجى إدخال جميع الحقول');
   const emp = data.employees.find(e => e.id === empId);
-  data.salaryHistory.push({
+  const record = {
     id: Date.now(), date, employeeId: empId,
     employeeName: emp.name, type: 'سلفة', amount, note
-  });
+  };
+  data.salaryHistory.push(record);
+  lastAdvanceRecord = record;
   saveData();
   document.getElementById('adv-amount').value = '';
   document.getElementById('adv-note').value = '';
@@ -1314,8 +1683,8 @@ function renderSalHistory() {
       <td>${i + 1}</td>
       <td>${fmtDate(r.date)}</td>
       <td style="font-weight:600">${r.employeeName}</td>
-      <td>${r.type === 'راتب' ? '<span class="badge badge-success">راتب</span>' : '<span class="badge badge-warning">سلفة</span>'}</td>
-      <td style="font-weight:700;color:var(--primary)">${fmt(r.amount)} ريال</td>
+      <td>${r.type === 'راتب' ? '<span class="badge badge-success">راتب</span>' : r.type === 'سلفة' ? '<span class="badge badge-warning">سلفة</span>' : '<span class="badge badge-danger">خصم</span>'}</td>
+      <td style="font-weight:700;color:var(--primary)">${fmt(r.amount)} دينار</td>
       <td style="color:var(--text-muted)">${r.note || '-'}</td>
       <td><button class="btn btn-danger btn-sm" onclick="deleteSalHistory(${r.id})">حذف</button></td>
     </tr>
@@ -1340,9 +1709,9 @@ function renderSuppliersTable() {
       <td>${i + 1}</td>
       <td style="font-weight:600">${p.supplier}</td>
       <td>${fmtDate(p.date)}</td>
-      <td>${fmt(p.amount)} ريال</td>
-      <td style="color:var(--success)">${fmt(p.paid)} ريال</td>
-      <td style="font-weight:700;color:${isPaid ? 'var(--success)' : 'var(--danger)'}">${fmt(p.remaining)} ريال</td>
+      <td>${fmt(p.amount)} دينار</td>
+      <td style="color:var(--success)">${fmt(p.paid)} دينار</td>
+      <td style="font-weight:700;color:${isPaid ? 'var(--success)' : 'var(--danger)'}">${fmt(p.remaining)} دينار</td>
       <td>${fmtDate(p.dueDate)}</td>
       <td>${isPaid ? '<span class="badge badge-success">مسدد</span>' : isOverdue ? '<span class="badge badge-danger">متأخر</span>' : '<span class="badge badge-warning">معلق</span>'}</td>
       <td>${isPaid ? '-' : `<button class="btn btn-success btn-sm" onclick="openPayDebt(${p.id})">دفع</button>`}</td>
@@ -1394,24 +1763,25 @@ function generatePL() {
   const purchases = data.purchases.filter(r => r.date >= from && r.date <= to).reduce((s, r) => s + parseFloat(r.amount), 0);
   const salaries = data.salaryHistory.filter(r => r.date >= from && r.date <= to && r.type === 'راتب').reduce((s, r) => s + parseFloat(r.amount), 0);
   const advances = data.salaryHistory.filter(r => r.date >= from && r.date <= to && r.type === 'سلفة').reduce((s, r) => s + parseFloat(r.amount), 0);
-  const totalExp = expenses + purchases + salaries + advances;
+  const deductions = data.salaryHistory.filter(r => r.date >= from && r.date <= to && r.type === 'خصم').reduce((s, r) => s + parseFloat(r.amount), 0);
+  const totalExp = expenses + purchases + salaries + advances - deductions;
   const net = income - totalExp;
 
-  document.getElementById('pl-income').textContent = fmt(income) + ' ريال';
-  document.getElementById('pl-expenses').textContent = fmt(expenses) + ' ريال';
-  document.getElementById('pl-purchases').textContent = fmt(purchases) + ' ريال';
-  document.getElementById('pl-salaries').textContent = fmt(salaries) + ' ريال';
-  document.getElementById('pl-advances').textContent = fmt(advances) + ' ريال';
-  document.getElementById('pl-total-exp').textContent = fmt(totalExp) + ' ريال';
-  document.getElementById('pl-net').textContent = fmt(Math.abs(net)) + ' ريال';
+  document.getElementById('pl-income').textContent = fmt(income) + ' دينار';
+  document.getElementById('pl-expenses').textContent = fmt(expenses) + ' دينار';
+  document.getElementById('pl-purchases').textContent = fmt(purchases) + ' دينار';
+  document.getElementById('pl-salaries').textContent = fmt(salaries) + ' دينار';
+  document.getElementById('pl-advances').textContent = fmt(advances) + ' دينار';
+  document.getElementById('pl-total-exp').textContent = fmt(totalExp) + ' دينار';
+  document.getElementById('pl-net').textContent = fmt(Math.abs(net)) + ' دينار';
 
   const box = document.getElementById('pl-net-box');
   if (net >= 0) {
     box.style.background = '#D4EDDA'; box.style.color = 'var(--success)';
-    document.getElementById('pl-net').textContent = '+ ' + fmt(net) + ' ريال ربح';
+    document.getElementById('pl-net').textContent = '+ ' + fmt(net) + ' دينار ربح';
   } else {
     box.style.background = '#F8D7DA'; box.style.color = 'var(--danger)';
-    document.getElementById('pl-net').textContent = '- ' + fmt(Math.abs(net)) + ' ريال خسارة';
+    document.getElementById('pl-net').textContent = '- ' + fmt(Math.abs(net)) + ' دينار خسارة';
   }
 
   document.getElementById('pl-result').classList.remove('hidden');
@@ -1424,10 +1794,20 @@ function generateIncomeReport() {
   if (from) rows = rows.filter(r => r.date >= from);
   if (to) rows = rows.filter(r => r.date <= to);
   const total = rows.reduce((s, r) => s + parseFloat(r.amount), 0);
+
+  const methods = data.paymentMethods;
+  document.getElementById('irep-breakdown').innerHTML = methods.map(m => {
+    const sum = rows.filter(r => (r.method || 'كاش') === m).reduce((s, r) => s + parseFloat(r.amount), 0);
+    return `<div style="text-align:center;padding:12px;background:var(--bg);border-radius:10px;">
+      <div style="font-size:11px;color:var(--text-muted);font-weight:600;margin-bottom:6px;">${m}</div>
+      <div style="font-size:16px;font-weight:800;color:${methodColor(m)}">${fmt(sum)}</div>
+    </div>`;
+  }).join('');
+
   document.getElementById('irep-tbody').innerHTML = rows.map(r => `
-    <tr><td>${fmtDate(r.date)}</td><td style="font-weight:700;color:var(--success)">${fmt(r.amount)} ريال</td><td>${r.note || '-'}</td></tr>
-  `).join('') || '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);">لا توجد بيانات</td></tr>';
-  document.getElementById('irep-total').textContent = rows.length ? `الإجمالي: ${fmt(total)} ريال` : '';
+    <tr><td>${fmtDate(r.date)}</td><td><span class="badge badge-info">${r.method || 'كاش'}</span></td><td style="font-weight:700;color:var(--success)">${fmt(r.amount)} دينار</td><td>${r.note || '-'}</td></tr>
+  `).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);">لا توجد بيانات</td></tr>';
+  document.getElementById('irep-total').textContent = rows.length ? `الإجمالي: ${fmt(total)} دينار` : '';
 }
 
 function generatePurchaseReport() {
@@ -1440,13 +1820,14 @@ function generatePurchaseReport() {
   document.getElementById('prep-tbody').innerHTML = rows.map(r => `
     <tr>
       <td>${fmtDate(r.date)}</td>
-      <td style="font-weight:700;color:var(--accent)">${fmt(r.amount)} ريال</td>
+      <td style="font-weight:600;color:var(--primary)">${r.invoice || '-'}</td>
+      <td style="font-weight:700;color:var(--accent)">${fmt(r.amount)} دينار</td>
       <td>${r.payType === 'cash' ? '<span class="badge badge-success">نقدي</span>' : '<span class="badge badge-warning">آجل</span>'}</td>
       <td>${r.supplier || '-'}</td>
       <td>${r.dueDate ? fmtDate(r.dueDate) : '-'}</td>
     </tr>
   `).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">لا توجد بيانات</td></tr>';
-  document.getElementById('prep-total').textContent = rows.length ? `الإجمالي: ${fmt(total)} ريال` : '';
+  document.getElementById('prep-total').textContent = rows.length ? `الإجمالي: ${fmt(total)} دينار` : '';
 }
 
 function generateSalaryReport() {
@@ -1460,21 +1841,213 @@ function generateSalaryReport() {
     <tr>
       <td>${fmtDate(r.date)}</td>
       <td style="font-weight:600">${r.employeeName}</td>
-      <td>${r.type === 'راتب' ? '<span class="badge badge-success">راتب</span>' : '<span class="badge badge-warning">سلفة</span>'}</td>
-      <td style="font-weight:700;color:var(--primary)">${fmt(r.amount)} ريال</td>
+      <td>${r.type === 'راتب' ? '<span class="badge badge-success">راتب</span>' : r.type === 'سلفة' ? '<span class="badge badge-warning">سلفة</span>' : '<span class="badge badge-danger">خصم</span>'}</td>
+      <td style="font-weight:700;color:var(--primary)">${fmt(r.amount)} دينار</td>
     </tr>
   `).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);">لا توجد بيانات</td></tr>';
-  document.getElementById('srep-total').textContent = rows.length ? `الإجمالي: ${fmt(total)} ريال` : '';
+  document.getElementById('srep-total').textContent = rows.length ? `الإجمالي: ${fmt(total)} دينار` : '';
+}
+
+function buildIncomeSummaryMessage() {
+  const t = today();
+  const todayRows = data.income.filter(r => r.date === t);
+  let total = 0;
+  let lines = data.paymentMethods.map(m => {
+    const sum = todayRows.filter(r => r.method === m).reduce((s, r) => s + parseFloat(r.amount), 0);
+    total += sum;
+    return `${m}: ${fmt(sum)} دينار`;
+  });
+  return `📊 ملخص إيراد اليوم (${fmtDate(t)})\n\n${lines.join('\n')}\n\n💰 الإجمالي: ${fmt(total)} دينار`;
+}
+
+function sendIncomeSummaryWhatsApp() {
+  if (!data.ownerPhone) return alert('يرجى إضافة رقم هاتف صاحب العمل أولاً من صفحة الإعدادات');
+  sendWhatsApp(data.ownerPhone, buildIncomeSummaryMessage());
+}
+
+function sendIncomeSummarySMS() {
+  if (!data.ownerPhone) return alert('يرجى إضافة رقم هاتف صاحب العمل أولاً من صفحة الإعدادات');
+  sendSMS(data.ownerPhone, buildIncomeSummaryMessage());
+}
+
+// ============ SETTINGS: OWNER PHONE ============
+function saveOwnerPhone() {
+  const val = document.getElementById('owner-phone').value.trim();
+  data.ownerPhone = val.replace(/[^0-9]/g, '');
+  saveData();
+  alert('✅ تم حفظ رقم صاحب العمل');
+}
+
+function loadOwnerPhoneField() {
+  document.getElementById('owner-phone').value = data.ownerPhone || '';
+}
+
+// ============ SEND HELPERS (WhatsApp / SMS) ============
+function cleanPhone(p) {
+  return (p || '').replace(/[^0-9]/g, '');
+}
+
+function sendWhatsApp(phone, message) {
+  const clean = cleanPhone(phone);
+  if (!clean) return alert('لا يوجد رقم هاتف مسجل لهذا الشخص. أضفه من الإعدادات أو من بيانات الموظف.');
+  const url = `https://wa.me/${clean}?text=${encodeURIComponent(message)}`;
+  window.open(url, '_blank');
+}
+
+function sendSMS(phone, message) {
+  const clean = cleanPhone(phone);
+  if (!clean) return alert('لا يوجد رقم هاتف مسجل لهذا الشخص. أضفه من الإعدادات أو من بيانات الموظف.');
+  // sms: URI scheme - body param works on most mobile browsers (iOS uses &body=, Android often uses ?body=)
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const url = isIOS
+    ? `sms:${clean}&body=${encodeURIComponent(message)}`
+    : `sms:${clean}?body=${encodeURIComponent(message)}`;
+  window.location.href = url;
+}
+
+// ============ SETTINGS: PAYMENT METHODS ============
+function renderMethodsTable() {
+  const tbody = document.getElementById('methods-tbody');
+  tbody.innerHTML = data.paymentMethods.map((m, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td style="font-weight:600">${m}</td>
+      <td>
+        <button class="btn btn-primary btn-sm" onclick="openEditMethod(${i})">تعديل</button>
+        <button class="btn btn-danger btn-sm" onclick="deletePaymentMethod(${i})" style="margin-right:4px;">حذف</button>
+      </td>
+    </tr>
+  `).join('') || '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد طرق دفع</td></tr>';
+}
+
+function addPaymentMethod() {
+  const input = document.getElementById('new-method-name');
+  const name = input.value.trim();
+  if (!name) return alert('يرجى إدخال اسم طريقة الدفع');
+  if (data.paymentMethods.includes(name)) return alert('هذه الطريقة موجودة بالفعل');
+  data.paymentMethods.push(name);
+  saveData();
+  input.value = '';
+  renderMethodsTable();
+  populateIncomeMethodSelect();
+}
+
+let editingMethodIndex = null;
+function openEditMethod(index) {
+  editingMethodIndex = index;
+  document.getElementById('edit-method-val').value = data.paymentMethods[index];
+  document.getElementById('edit-method-modal').style.display = 'flex';
+  document.getElementById('edit-method-modal').classList.remove('hidden');
+}
+
+function saveEditMethod() {
+  const newName = document.getElementById('edit-method-val').value.trim();
+  if (!newName) return alert('يرجى إدخال اسم صحيح');
+  const oldName = data.paymentMethods[editingMethodIndex];
+  if (newName !== oldName && data.paymentMethods.includes(newName)) return alert('هذا الاسم موجود بالفعل');
+
+  // Update name in methods list
+  data.paymentMethods[editingMethodIndex] = newName;
+  // Update existing income records using the old name
+  data.income.forEach(r => { if (r.method === oldName) r.method = newName; });
+
+  saveData();
+  renderMethodsTable();
+  populateIncomeMethodSelect();
+  renderIncomeTable();
+  renderIncomeTodaySummary();
+  closeEditMethod();
+}
+
+function closeEditMethod() {
+  document.getElementById('edit-method-modal').style.display = 'none';
+}
+
+function deletePaymentMethod(index) {
+  const name = data.paymentMethods[index];
+  const inUse = data.income.some(r => r.method === name);
+  if (inUse) {
+    if (!confirm(`طريقة "${name}" مستخدمة في سجلات إيراد سابقة. حذفها لن يحذف السجلات لكنها ستبقى بهذا الاسم القديم. هل تريد الاستمرار؟`)) return;
+  } else {
+    if (!confirm(`هل تريد حذف طريقة الدفع "${name}"؟`)) return;
+  }
+  data.paymentMethods.splice(index, 1);
+  saveData();
+  renderMethodsTable();
+  populateIncomeMethodSelect();
 }
 
 // ============ INIT ============
 document.getElementById('today-date').textContent = new Date().toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-loadData();
-setToday('income-date');
-setToday('exp-date');
-setToday('pur-date');
-updateDashboard();
+async function initApp() {
+  setSyncStatus('saving');
+  await loadData();
+
+  populateIncomeMethodSelect();
+  setToday('income-date');
+  setToday('exp-date');
+  setToday('pur-date');
+  updateDashboard();
+  renderIncomeTodaySummary();
+
+  // Real-time sync listener — updates UI when data changes from another device
+  if (window._fbListenData) {
+    window._fbListenData((remoteData) => {
+      data = remoteData;
+      if (!data.paymentMethods || !data.paymentMethods.length)
+        data.paymentMethods = ['كاش', 'فيزا', 'ماستركارد', 'حوالة مصرفية'];
+      if (data.ownerPhone === undefined) data.ownerPhone = '';
+      setSyncStatus('synced');
+      // Refresh whatever page is currently active
+      const activePage = document.querySelector('.page.active');
+      if (activePage) {
+        const id = activePage.id.replace('page-', '');
+        const fns = {
+          dashboard: updateDashboard,
+          income: () => { renderIncomeTable(); renderIncomeTodaySummary(); },
+          expenses: renderExpenseTable,
+          purchases: renderPurchaseTable,
+          employees: renderEmployeesTable,
+          salaries: () => { renderSalPayTable(); renderSalHistory(); },
+          suppliers: renderSuppliersTable,
+          settings: () => { renderMethodsTable(); loadOwnerPhoneField(); }
+        };
+        if (fns[id]) fns[id]();
+        populateIncomeMethodSelect();
+      }
+    });
+  }
+}
+
+// Bind nav clicks via addEventListener
+document.querySelectorAll('.nav-item[data-page]').forEach(item => {
+  item.addEventListener('click', function() {
+    showPage(this.getAttribute('data-page'), this);
+    closeMobileMenu();
+  });
+});
+
+// Mobile hamburger menu
+function openMobileMenu() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('mobile-overlay').classList.add('show');
+}
+function closeMobileMenu() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('mobile-overlay').classList.remove('show');
+}
+document.getElementById('mobile-menu-btn').addEventListener('click', openMobileMenu);
+document.getElementById('mobile-overlay').addEventListener('click', closeMobileMenu);
+
+// Start app when Firebase is ready (or immediately if already loaded)
+if (window._firebaseReady) {
+  initApp();
+} else {
+  document.addEventListener('firebaseReady', initApp);
+  // Fallback: start after 3 seconds even if Firebase didn't respond
+  setTimeout(() => { if (!window._firebaseReady) initApp(); }, 3000);
+}
 </script>
 </body>
 </html>
