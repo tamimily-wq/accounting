@@ -439,6 +439,95 @@
 
   #mobile-overlay.show { display: block; }
 
+  /* TOAST NOTIFICATIONS */
+  #toast-container {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 600;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+    pointer-events: none;
+  }
+
+  .toast {
+    background: #fff;
+    border-radius: 10px;
+    padding: 13px 20px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.18);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    min-width: 220px;
+    max-width: 90vw;
+    border-right: 4px solid var(--success);
+    animation: toastIn 0.25s ease;
+    pointer-events: auto;
+  }
+
+  .toast.success { border-right-color: var(--success); }
+  .toast.success .toast-icon { color: var(--success); }
+  .toast.error { border-right-color: var(--danger); }
+  .toast.error .toast-icon { color: var(--danger); }
+  .toast.info { border-right-color: var(--primary-light); }
+  .toast.info .toast-icon { color: var(--primary-light); }
+
+  .toast-icon { font-size: 18px; flex-shrink: 0; }
+  .toast-msg { flex: 1; color: var(--text); }
+
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateY(-16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes toastOut {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-16px); }
+  }
+
+  .toast.closing { animation: toastOut 0.2s ease forwards; }
+
+  /* CONFIRM MODAL */
+  #confirm-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 590;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  #confirm-modal.show { display: flex; }
+
+  .confirm-box {
+    background: #fff;
+    border-radius: 14px;
+    padding: 26px;
+    max-width: 380px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+    animation: confirmPop 0.2s ease;
+  }
+
+  @keyframes confirmPop {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .confirm-icon { font-size: 40px; margin-bottom: 10px; }
+  .confirm-title { font-size: 16px; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+  .confirm-message { font-size: 13.5px; color: var(--text-muted); margin-bottom: 22px; line-height: 1.6; }
+  .confirm-actions { display: flex; gap: 10px; }
+  .confirm-actions .btn { flex: 1; justify-content: center; padding: 11px; }
+
   /* RESPONSIVE */
   @media(max-width: 768px) {
     #mobile-topbar { display: flex; }
@@ -460,6 +549,49 @@
 </head>
 <body>
 
+<!-- ===== LOGIN SCREEN ===== -->
+<div id="login-screen" style="position:fixed;inset:0;background:linear-gradient(135deg,var(--primary),var(--primary-light));z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border-radius:16px;padding:36px 30px;width:100%;max-width:380px;box-shadow:0 10px 40px rgba(0,0,0,0.25);">
+    <div style="text-align:center;margin-bottom:28px;">
+      <div style="font-size:38px;margin-bottom:8px;">📊</div>
+      <div style="font-size:19px;font-weight:800;color:var(--primary);">برنامج المحاسبة</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-top:4px;">سجّل الدخول للمتابعة</div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:14px;">
+      <label>اسم المستخدم</label>
+      <input type="text" id="login-username" placeholder="اسم المستخدم" autocomplete="username">
+    </div>
+    <div class="form-group" style="margin-bottom:18px;">
+      <label>كلمة المرور</label>
+      <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+
+    <div id="login-error" class="hidden" style="background:#F8D7DA;color:var(--danger);padding:10px 14px;border-radius:8px;font-size:13px;font-weight:600;margin-bottom:14px;text-align:center;"></div>
+
+    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;font-size:15px;" onclick="handleLogin()">دخول</button>
+
+    <div id="login-loading" class="hidden" style="text-align:center;margin-top:14px;font-size:13px;color:var(--text-muted);">🔄 جاري التحقق...</div>
+  </div>
+</div>
+
+<div id="app-shell" class="hidden">
+<!-- TOAST CONTAINER -->
+<div id="toast-container"></div>
+
+<!-- CONFIRM MODAL -->
+<div id="confirm-modal">
+  <div class="confirm-box">
+    <div class="confirm-icon" id="confirm-icon">⚠️</div>
+    <div class="confirm-title" id="confirm-title">هل أنت متأكد؟</div>
+    <div class="confirm-message" id="confirm-message"></div>
+    <div class="confirm-actions">
+      <button class="btn btn-danger" style="font-size:14px;padding:11px;" id="confirm-yes-btn">تأكيد</button>
+      <button class="btn" style="background:var(--bg);color:var(--text-muted);" id="confirm-no-btn">إلغاء</button>
+    </div>
+  </div>
+</div>
+
 <!-- MOBILE TOP BAR -->
 <div id="mobile-topbar">
   <button id="mobile-menu-btn" aria-label="فتح القائمة">☰</button>
@@ -476,14 +608,22 @@
     <div id="sync-status" style="font-size:11px;margin-top:6px;color:rgba(255,255,255,0.6);">⏳ جاري الاتصال...</div>
   </div>
 
-  <div class="nav-section">
+  <div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:space-between;">
+    <div>
+      <div id="current-user-name" style="color:#fff;font-size:13px;font-weight:700;"></div>
+      <div id="current-user-role" style="color:rgba(255,255,255,0.6);font-size:11px;"></div>
+    </div>
+    <button onclick="handleLogout()" style="background:rgba(255,255,255,0.12);border:none;color:#fff;font-size:11px;padding:5px 10px;border-radius:6px;cursor:pointer;">خروج</button>
+  </div>
+
+  <div class="nav-section" id="nav-section-dashboard">
     <div class="nav-label">الرئيسية</div>
     <div class="nav-item active" data-page="dashboard">
       <span class="icon">🏠</span> لوحة التحكم
     </div>
   </div>
 
-  <div class="nav-section">
+  <div class="nav-section" id="nav-section-daily">
     <div class="nav-label">العمليات اليومية</div>
     <div class="nav-item" data-page="income">
       <span class="icon">💰</span> الإيرادات
@@ -491,12 +631,12 @@
     <div class="nav-item" data-page="expenses">
       <span class="icon">📤</span> المصروفات
     </div>
-    <div class="nav-item" data-page="purchases">
+    <div class="nav-item" data-page="purchases" id="nav-purchases">
       <span class="icon">🛒</span> المشتريات
     </div>
   </div>
 
-  <div class="nav-section">
+  <div class="nav-section" id="nav-section-employees">
     <div class="nav-label">الموظفون</div>
     <div class="nav-item" data-page="employees">
       <span class="icon">👥</span> الموظفون
@@ -506,7 +646,7 @@
     </div>
   </div>
 
-  <div class="nav-section">
+  <div class="nav-section" id="nav-section-reports">
     <div class="nav-label">التقارير</div>
     <div class="nav-item" data-page="suppliers">
       <span class="icon">🏪</span> ديون الموردين
@@ -516,7 +656,14 @@
     </div>
   </div>
 
-  <div class="nav-section">
+  <div class="nav-section" id="nav-section-myinfo">
+    <div class="nav-label">حسابي</div>
+    <div class="nav-item" data-page="mysalary">
+      <span class="icon">👤</span> راتبي وسلفي
+    </div>
+  </div>
+
+  <div class="nav-section" id="nav-section-settings">
     <div class="nav-label">النظام</div>
     <div class="nav-item" data-page="settings">
       <span class="icon">⚙️</span> الإعدادات
@@ -621,7 +768,7 @@
           <input type="date" id="income-filter-to">
         </div>
         <button class="btn btn-primary btn-sm" onclick="renderIncomeTable()">🔍 بحث</button>
-        <button class="btn btn-sm" style="background:var(--bg);color:var(--text-muted)" onclick="clearIncomeFilter()">مسح</button>
+        <button class="btn btn-sm" style="background:var(--bg);color:var(--text-muted)" onclick="clearIncomeFilter()">اليوم</button>
       </div>
       <div class="table-wrap">
         <table>
@@ -648,7 +795,7 @@
         </div>
         <div class="form-group">
           <label>البند</label>
-          <input type="text" id="exp-desc" placeholder="وصف المصروف">
+          <select id="exp-desc"></select>
         </div>
         <div class="form-group">
           <label>المبلغ (دينار)</label>
@@ -1062,9 +1209,97 @@
   </div>
 
   <!-- ===== SETTINGS ===== -->
+  <div id="page-mysalary" class="page">
+    <div class="page-header">
+      <div class="page-title">👤 راتبي وسلفي</div>
+    </div>
+
+    <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);">
+      <div class="stat-card profit">
+        <div class="stat-label">الراتب الأساسي</div>
+        <div class="stat-value" id="my-base-salary">0.00</div>
+        <div class="stat-sub">دينار</div>
+      </div>
+      <div class="stat-card purchase">
+        <div class="stat-label">إجمالي السلف</div>
+        <div class="stat-value" id="my-total-advances">0.00</div>
+        <div class="stat-sub">دينار</div>
+      </div>
+      <div class="stat-card expense">
+        <div class="stat-label">إجمالي الخصومات</div>
+        <div class="stat-value" id="my-total-deductions">0.00</div>
+        <div class="stat-sub">دينار</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📋 سجلي (رواتب، سلف، خصومات)</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>التاريخ</th><th>النوع</th><th>المبلغ</th><th>ملاحظات</th></tr></thead>
+          <tbody id="my-history-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <div id="page-settings" class="page">
     <div class="page-header">
       <div class="page-title">⚙️ الإعدادات</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔒 تغيير كلمة المرور الخاصة بي</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>كلمة المرور الحالية</label>
+          <input type="password" id="change-pw-current" placeholder="••••••••">
+        </div>
+        <div class="form-group">
+          <label>كلمة المرور الجديدة</label>
+          <input type="password" id="change-pw-new" placeholder="••••••••">
+        </div>
+        <div class="form-group">
+          <label>تأكيد كلمة المرور الجديدة</label>
+          <input type="password" id="change-pw-confirm" placeholder="••••••••">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="changeMyPassword()">✔ تغيير كلمة المرور</button>
+    </div>
+
+    <div class="card" id="users-management-card">
+      <div class="card-title">👥 إدارة المستخدمين والصلاحيات</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>اسم المستخدم</label>
+          <input type="text" id="new-user-username" placeholder="مثال: ahmed">
+        </div>
+        <div class="form-group">
+          <label>كلمة المرور</label>
+          <input type="text" id="new-user-password" placeholder="كلمة المرور">
+        </div>
+        <div class="form-group">
+          <label>الدور / الصلاحية</label>
+          <select id="new-user-role">
+            <option value="admin">👑 مدير النظام</option>
+            <option value="owner">💼 صاحب العمل</option>
+            <option value="cashier">🖥️ كاشير</option>
+            <option value="employee">👤 موظف</option>
+          </select>
+        </div>
+        <div class="form-group" id="new-user-employee-link-wrap">
+          <label>ربط بموظف (للدور "موظف" فقط)</label>
+          <select id="new-user-employee-link"></select>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="addUser()">➕ إضافة مستخدم</button>
+
+      <div class="table-wrap" style="margin-top:20px;">
+        <table>
+          <thead><tr><th>#</th><th>اسم المستخدم</th><th>الدور</th><th>مرتبط بموظف</th><th></th></tr></thead>
+          <tbody id="users-tbody"></tbody>
+        </table>
+      </div>
     </div>
 
     <div class="card">
@@ -1095,6 +1330,24 @@
         </table>
       </div>
     </div>
+
+    <div class="card">
+      <div class="card-title">📋 بنود المصروفات</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>اسم البند الجديد</label>
+          <input type="text" id="new-expcat-name" placeholder="مثال: وقود">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="addExpenseCategory()">➕ إضافة بند</button>
+
+      <div class="table-wrap" style="margin-top:20px;">
+        <table>
+          <thead><tr><th>#</th><th>اسم البند</th><th></th></tr></thead>
+          <tbody id="expcats-tbody"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
 </main>
@@ -1114,8 +1367,95 @@
   </div>
 </div>
 
+<!-- Edit expense category modal -->
+<div id="edit-expcat-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200;display:flex;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:24px;min-width:300px;">
+    <div style="font-weight:700;font-size:16px;margin-bottom:16px;color:var(--primary);">✏️ تعديل اسم البند</div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>الاسم الجديد</label>
+      <input type="text" id="edit-expcat-val">
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-primary" onclick="saveEditExpCat()">حفظ</button>
+      <button class="btn" style="background:var(--bg);" onclick="closeEditExpCat()">إلغاء</button>
+    </div>
+  </div>
+</div>
+</div><!-- /#app-shell -->
+
+<!-- Reset password modal (admin resetting another user's password) -->
+<div id="reset-password-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200;display:flex;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:24px;min-width:300px;">
+    <div style="font-weight:700;font-size:16px;margin-bottom:16px;color:var(--primary);">🔑 إعادة تعيين كلمة المرور</div>
+    <div id="reset-password-username" style="color:var(--text-muted);font-size:13px;margin-bottom:12px;"></div>
+    <div class="form-group" style="margin-bottom:16px;">
+      <label>كلمة المرور الجديدة</label>
+      <input type="text" id="reset-password-val" placeholder="كلمة مرور جديدة">
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-primary" onclick="confirmResetPassword()">حفظ</button>
+      <button class="btn" style="background:var(--bg);" onclick="closeResetPassword()">إلغاء</button>
+    </div>
+  </div>
+</div>
+
 <script>
+// ============ TOAST NOTIFICATIONS ============
+function showToast(message, type = 'success', duration = 2600) {
+  const container = document.getElementById('toast-container');
+  const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+  const toast = document.createElement('div');
+  toast.className = 'toast ' + type;
+  toast.innerHTML = `<span class="toast-icon">${icons[type] || icons.success}</span><span class="toast-msg">${message}</span>`;
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add('closing');
+    setTimeout(() => toast.remove(), 200);
+  }, duration);
+}
+
+// ============ CONFIRM MODAL (Promise-based, replaces window.confirm) ============
+function showConfirm(message, options = {}) {
+  const {
+    title = 'تأكيد العملية',
+    icon = '⚠️',
+    confirmText = 'تأكيد',
+    cancelText = 'إلغاء',
+    danger = true
+  } = options;
+
+  return new Promise((resolve) => {
+    const modal = document.getElementById('confirm-modal');
+    document.getElementById('confirm-icon').textContent = icon;
+    document.getElementById('confirm-title').textContent = title;
+    document.getElementById('confirm-message').textContent = message;
+
+    const yesBtn = document.getElementById('confirm-yes-btn');
+    const noBtn = document.getElementById('confirm-no-btn');
+    yesBtn.textContent = confirmText;
+    noBtn.textContent = cancelText;
+    yesBtn.className = danger ? 'btn btn-danger' : 'btn btn-success';
+    yesBtn.style.cssText = 'font-size:14px;padding:11px;';
+
+    modal.classList.add('show');
+
+    function cleanup(result) {
+      modal.classList.remove('show');
+      yesBtn.removeEventListener('click', onYes);
+      noBtn.removeEventListener('click', onNo);
+      resolve(result);
+    }
+    function onYes() { cleanup(true); }
+    function onNo() { cleanup(false); }
+
+    yesBtn.addEventListener('click', onYes);
+    noBtn.addEventListener('click', onNo);
+  });
+}
+
 // ============ DATA STORE ============
+const DEFAULT_EXPENSE_CATEGORY = 'مصروفات أخرى';
 let data = {
   income: [],
   expenses: [],
@@ -1123,8 +1463,14 @@ let data = {
   employees: [],
   salaryHistory: [],
   paymentMethods: ['كاش', 'فيزا', 'ماستركارد', 'حوالة مصرفية'],
-  ownerPhone: ''
+  expenseCategories: ['إيجار', 'كهرباء وماء', 'صيانة', 'نظافة', 'اتصالات وإنترنت', 'مصروفات أخرى'],
+  ownerPhone: '',
+  users: [
+    { id: 1, username: 'admin', password: 'admin123', role: 'admin', employeeId: null }
+  ]
 };
+
+let currentUser = null;
 
 let _isSaving = false;
 
@@ -1175,6 +1521,12 @@ async function loadData() {
   if (!data.paymentMethods || !data.paymentMethods.length)
     data.paymentMethods = ['كاش', 'فيزا', 'ماستركارد', 'حوالة مصرفية'];
   if (data.ownerPhone === undefined) data.ownerPhone = '';
+  if (!data.users || !data.users.length)
+    data.users = [{ id: 1, username: 'admin', password: 'admin123', role: 'admin', employeeId: null }];
+  if (!data.expenseCategories || !data.expenseCategories.length)
+    data.expenseCategories = ['إيجار', 'كهرباء وماء', 'صيانة', 'نظافة', 'اتصالات وإنترنت', 'مصروفات أخرى'];
+  if (!data.expenseCategories.includes(DEFAULT_EXPENSE_CATEGORY))
+    data.expenseCategories.push(DEFAULT_EXPENSE_CATEGORY);
 }
 
 // ============ NAVIGATION ============
@@ -1186,13 +1538,14 @@ function showPage(name, el) {
   if (target) target.classList.add('active');
 
   if (name === 'dashboard') updateDashboard();
-  if (name === 'income') { setToday('income-date'); renderIncomeTable(); renderIncomeTodaySummary(); }
-  if (name === 'expenses') { setToday('exp-date'); renderExpenseTable(); }
+  if (name === 'income') { setToday('income-date'); setToday('income-filter-from'); setToday('income-filter-to'); renderIncomeTable(); renderIncomeTodaySummary(); }
+  if (name === 'expenses') { setToday('exp-date'); populateExpenseCategorySelect(); renderExpenseTable(); }
   if (name === 'purchases') { setToday('pur-date'); renderPurchaseTable(); }
   if (name === 'employees') renderEmployeesTable();
   if (name === 'salaries') { setToday('sal-pay-date'); setToday('adv-date'); setToday('ded-date'); renderSalPayTable(); renderAdvEmpSelect(); renderSalHistory(); }
   if (name === 'suppliers') renderSuppliersTable();
-  if (name === 'settings') { renderMethodsTable(); loadOwnerPhoneField(); }
+  if (name === 'settings') { renderMethodsTable(); loadOwnerPhoneField(); renderUsersTable(); populateEmployeeLinkSelect(); renderExpCatsTable(); }
+  if (name === 'mysalary') renderMySalaryPage();
   if (name === 'reports') {}
 }
 
@@ -1281,13 +1634,14 @@ function addIncome() {
   const method = document.getElementById('income-method').value;
   const amount = parseFloat(document.getElementById('income-amount').value);
   const note = document.getElementById('income-note').value;
-  if (!date || !amount || amount <= 0) return alert('يرجى إدخال التاريخ والمبلغ');
+  if (!date || !amount || amount <= 0) { showToast('يرجى إدخال التاريخ والمبلغ', 'error'); return; }
   data.income.push({ id: Date.now(), date, method, amount, note });
   saveData();
   document.getElementById('income-amount').value = '';
   document.getElementById('income-note').value = '';
   renderIncomeTable();
   renderIncomeTodaySummary();
+  showToast('تم تسجيل الإيراد بنجاح', 'success');
 }
 
 const methodColorPalette = ['var(--success)', 'var(--primary-light)', 'var(--accent)', '#8E44AD', '#16A085', '#D35400', '#2C3E50', '#C0392B'];
@@ -1301,6 +1655,13 @@ function populateIncomeMethodSelect() {
   const current = sel.value;
   sel.innerHTML = data.paymentMethods.map(m => `<option value="${m}">${m}</option>`).join('');
   if (data.paymentMethods.includes(current)) sel.value = current;
+}
+
+function populateExpenseCategorySelect() {
+  const sel = document.getElementById('exp-desc');
+  const current = sel.value;
+  sel.innerHTML = data.expenseCategories.map(c => `<option value="${c}">${c}</option>`).join('');
+  if (data.expenseCategories.includes(current)) sel.value = current;
 }
 
 function renderIncomeTodaySummary() {
@@ -1342,15 +1703,17 @@ function renderIncomeTable() {
   document.getElementById('income-total').textContent = rows.length ? `الإجمالي: ${fmt(total)} دينار` : '';
 }
 
-function deleteIncome(id) {
-  if (!confirm('هل تريد حذف هذا السجل؟')) return;
+async function deleteIncome(id) {
+  const ok = await showConfirm('هل تريد حذف هذا السجل؟', { title: 'حذف الإيراد', icon: '🗑️' });
+  if (!ok) return;
   data.income = data.income.filter(r => r.id !== id);
   saveData(); renderIncomeTable(); renderIncomeTodaySummary();
+  showToast('تم حذف السجل بنجاح', 'success');
 }
 
 function clearIncomeFilter() {
-  document.getElementById('income-filter-from').value = '';
-  document.getElementById('income-filter-to').value = '';
+  document.getElementById('income-filter-from').value = today();
+  document.getElementById('income-filter-to').value = today();
   renderIncomeTable();
 }
 
@@ -1359,12 +1722,13 @@ function addExpense() {
   const date = document.getElementById('exp-date').value;
   const desc = document.getElementById('exp-desc').value;
   const amount = parseFloat(document.getElementById('exp-amount').value);
-  if (!date || !desc || !amount || amount <= 0) return alert('يرجى إدخال جميع الحقول');
+  if (!date || !desc || !amount || amount <= 0) { showToast('يرجى إدخال جميع الحقول', 'error'); return; }
   data.expenses.push({ id: Date.now(), date, desc, amount });
   saveData();
   document.getElementById('exp-desc').value = '';
   document.getElementById('exp-amount').value = '';
   renderExpenseTable();
+  showToast('تم تسجيل المصروف بنجاح', 'success');
 }
 
 function renderExpenseTable() {
@@ -1379,7 +1743,7 @@ function renderExpenseTable() {
     <tr>
       <td>${i + 1}</td>
       <td>${fmtDate(r.date)}</td>
-      <td>${r.desc}</td>
+      <td><span class="badge badge-warning">${r.desc}</span></td>
       <td style="font-weight:700;color:var(--danger)">${fmt(r.amount)} دينار</td>
       <td><button class="btn btn-danger btn-sm" onclick="deleteExpense(${r.id})">حذف</button></td>
     </tr>
@@ -1387,10 +1751,12 @@ function renderExpenseTable() {
   document.getElementById('expense-total').textContent = rows.length ? `الإجمالي: ${fmt(total)} دينار` : '';
 }
 
-function deleteExpense(id) {
-  if (!confirm('هل تريد حذف هذا السجل؟')) return;
+async function deleteExpense(id) {
+  const ok = await showConfirm('هل تريد حذف هذا السجل؟', { title: 'حذف المصروف', icon: '🗑️' });
+  if (!ok) return;
   data.expenses = data.expenses.filter(r => r.id !== id);
   saveData(); renderExpenseTable();
+  showToast('تم حذف السجل بنجاح', 'success');
 }
 
 function clearExpFilter() {
@@ -1412,13 +1778,13 @@ function addPurchase() {
   const invoice = document.getElementById('pur-invoice').value.trim();
   const amount = parseFloat(document.getElementById('pur-amount').value);
   const note = document.getElementById('pur-note').value;
-  if (!date || !amount || amount <= 0) return alert('يرجى إدخال التاريخ والمبلغ');
+  if (!date || !amount || amount <= 0) { showToast('يرجى إدخال التاريخ والمبلغ', 'error'); return; }
 
   let supplier = '', dueDate = '';
   if (currentPayType === 'credit') {
     supplier = document.getElementById('pur-supplier').value;
     dueDate = document.getElementById('pur-due').value;
-    if (!supplier || !dueDate) return alert('يرجى إدخال اسم المورد وتاريخ الاستحقاق للشراء الآجل');
+    if (!supplier || !dueDate) { showToast('يرجى إدخال اسم المورد وتاريخ الاستحقاق للشراء الآجل', 'error'); return; }
   }
 
   data.purchases.push({
@@ -1436,6 +1802,7 @@ function addPurchase() {
   document.getElementById('pay-type-select').value = 'cash';
   setPayType('cash');
   renderPurchaseTable();
+  showToast('تم تسجيل فاتورة الشراء بنجاح', 'success');
 }
 
 function renderPurchaseTable() {
@@ -1465,10 +1832,12 @@ function renderPurchaseTable() {
   document.getElementById('purchase-total').textContent = rows.length ? `الإجمالي: ${fmt(total)} دينار` : '';
 }
 
-function deletePurchase(id) {
-  if (!confirm('هل تريد حذف هذا السجل؟')) return;
+async function deletePurchase(id) {
+  const ok = await showConfirm('هل تريد حذف هذا السجل؟', { title: 'حذف المشترى', icon: '🗑️' });
+  if (!ok) return;
   data.purchases = data.purchases.filter(r => r.id !== id);
   saveData(); renderPurchaseTable();
+  showToast('تم حذف السجل بنجاح', 'success');
 }
 
 function clearPurFilter() {
@@ -1484,7 +1853,7 @@ function addEmployee() {
   const salary = parseFloat(document.getElementById('emp-salary').value);
   const join = document.getElementById('emp-join').value;
   const phone = document.getElementById('emp-phone').value.trim();
-  if (!name || !role || !salary) return alert('يرجى إدخال جميع الحقول');
+  if (!name || !role || !salary) { showToast('يرجى إدخال جميع الحقول', 'error'); return; }
   data.employees.push({ id: Date.now(), name, role, salary, join, phone });
   saveData();
   document.getElementById('emp-name').value = '';
@@ -1493,6 +1862,7 @@ function addEmployee() {
   document.getElementById('emp-join').value = '';
   document.getElementById('emp-phone').value = '';
   renderEmployeesTable();
+  showToast('تم إضافة الموظف بنجاح', 'success');
 }
 
 function renderEmployeesTable() {
@@ -1524,20 +1894,23 @@ function openEditSalary(id) {
 
 function saveEditSalary() {
   const val = parseFloat(document.getElementById('edit-salary-val').value);
-  if (!val || val <= 0) return alert('يرجى إدخال راتب صحيح');
+  if (!val || val <= 0) { showToast('يرجى إدخال راتب صحيح', 'error'); return; }
   const emp = data.employees.find(e => e.id === editingEmpId);
   emp.salary = val;
   saveData(); renderEmployeesTable(); closeEditSalary();
+  showToast('تم تحديث الراتب بنجاح', 'success');
 }
 
 function closeEditSalary() {
   document.getElementById('edit-salary-modal').style.display = 'none';
 }
 
-function deleteEmployee(id) {
-  if (!confirm('هل تريد حذف هذا الموظف؟')) return;
+async function deleteEmployee(id) {
+  const ok = await showConfirm('هل تريد حذف هذا الموظف؟ سيتم فقط حذفه من قائمة الموظفين.', { title: 'حذف موظف', icon: '🗑️' });
+  if (!ok) return;
   data.employees = data.employees.filter(e => e.id !== id);
   saveData(); renderEmployeesTable();
+  showToast('تم حذف الموظف بنجاح', 'success');
 }
 
 // ============ SALARIES ============
@@ -1575,7 +1948,7 @@ function renderSalPayTable() {
 function confirmPaySalaries() {
   const date = document.getElementById('sal-pay-date').value;
   const period = document.getElementById('sal-period').value;
-  if (!date) return alert('يرجى تحديد تاريخ الصرف');
+  if (!date) { showToast('يرجى تحديد تاريخ الصرف', 'error'); return; }
   let count = 0;
   data.employees.forEach(e => {
     const chk = document.getElementById('sal-chk-' + e.id);
@@ -1591,7 +1964,7 @@ function confirmPaySalaries() {
     }
   });
   saveData();
-  alert(`✅ تم صرف رواتب ${count} موظف`);
+  showToast(`تم صرف رواتب ${count} موظف بنجاح`, 'success');
   renderSalHistory();
   showSalaryTab('history');
 }
@@ -1609,7 +1982,7 @@ function addDeduction() {
   const amount = parseFloat(document.getElementById('ded-amount').value);
   const date = document.getElementById('ded-date').value;
   const note = document.getElementById('ded-note').value;
-  if (!empId || !amount || !date) return alert('يرجى إدخال جميع الحقول');
+  if (!empId || !amount || !date) { showToast('يرجى إدخال جميع الحقول', 'error'); return; }
   const emp = data.employees.find(e => e.id === empId);
   const record = {
     id: Date.now(), date, employeeId: empId,
@@ -1620,12 +1993,12 @@ function addDeduction() {
   saveData();
   document.getElementById('ded-amount').value = '';
   document.getElementById('ded-note').value = '';
-  alert('✅ تم تسجيل الخصم');
+  showToast('تم تسجيل الخصم', 'success');
   renderSalHistory();
 }
 
 function notifyLastAdvance(channel) {
-  if (!lastAdvanceRecord) return alert('يرجى تسجيل سلفة أولاً');
+  if (!lastAdvanceRecord) { showToast('يرجى تسجيل سلفة أولاً', 'error'); return; }
   const emp = data.employees.find(e => e.id === lastAdvanceRecord.employeeId);
   const msg = `💸 إشعار سلفة\n\nالموظف: ${emp.name}\nالمبلغ: ${fmt(lastAdvanceRecord.amount)} دينار\nالتاريخ: ${fmtDate(lastAdvanceRecord.date)}${lastAdvanceRecord.note ? '\nملاحظة: ' + lastAdvanceRecord.note : ''}`;
   if (channel === 'whatsapp') sendWhatsApp(emp.phone, msg);
@@ -1633,7 +2006,7 @@ function notifyLastAdvance(channel) {
 }
 
 function notifyLastDeduction(channel) {
-  if (!lastDeductionRecord) return alert('يرجى تسجيل خصم أولاً');
+  if (!lastDeductionRecord) { showToast('يرجى تسجيل خصم أولاً', 'error'); return; }
   const emp = data.employees.find(e => e.id === lastDeductionRecord.employeeId);
   const msg = `➖ إشعار خصم\n\nالموظف: ${emp.name}\nالمبلغ: ${fmt(lastDeductionRecord.amount)} دينار\nالتاريخ: ${fmtDate(lastDeductionRecord.date)}${lastDeductionRecord.note ? '\nالسبب: ' + lastDeductionRecord.note : ''}`;
   if (channel === 'whatsapp') sendWhatsApp(emp.phone, msg);
@@ -1659,7 +2032,7 @@ function addAdvance() {
   const amount = parseFloat(document.getElementById('adv-amount').value);
   const date = document.getElementById('adv-date').value;
   const note = document.getElementById('adv-note').value;
-  if (!empId || !amount || !date) return alert('يرجى إدخال جميع الحقول');
+  if (!empId || !amount || !date) { showToast('يرجى إدخال جميع الحقول', 'error'); return; }
   const emp = data.employees.find(e => e.id === empId);
   const record = {
     id: Date.now(), date, employeeId: empId,
@@ -1670,7 +2043,7 @@ function addAdvance() {
   saveData();
   document.getElementById('adv-amount').value = '';
   document.getElementById('adv-note').value = '';
-  alert('✅ تم تسجيل السلفة');
+  showToast('تم تسجيل السلفة', 'success');
   renderSalHistory();
 }
 
@@ -1690,10 +2063,12 @@ function renderSalHistory() {
   `).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد بيانات</td></tr>';
 }
 
-function deleteSalHistory(id) {
-  if (!confirm('هل تريد حذف هذا السجل؟')) return;
+async function deleteSalHistory(id) {
+  const ok = await showConfirm('هل تريد حذف هذا السجل؟', { title: 'حذف سجل الراتب/السلفة', icon: '🗑️' });
+  if (!ok) return;
   data.salaryHistory = data.salaryHistory.filter(r => r.id !== id);
   saveData(); renderSalHistory();
+  showToast('تم حذف السجل بنجاح', 'success');
 }
 
 // ============ SUPPLIERS / DEBTS ============
@@ -1732,10 +2107,11 @@ function openPayDebt(id) {
 function confirmPayDebt() {
   const amount = parseFloat(document.getElementById('pay-debt-amount').value);
   const p = data.purchases.find(x => x.id === payingDebtId);
-  if (!amount || amount <= 0 || amount > p.remaining) return alert('مبلغ غير صحيح');
+  if (!amount || amount <= 0 || amount > p.remaining) { showToast('مبلغ غير صحيح', 'error'); return; }
   p.paid = parseFloat(p.paid) + amount;
   p.remaining = parseFloat(p.remaining) - amount;
   saveData(); closePayDebt(); renderSuppliersTable();
+  showToast('تم تسجيل الدفعة بنجاح', 'success');
 }
 
 function closePayDebt() {
@@ -1755,7 +2131,7 @@ function showReportTab(tab) {
 function generatePL() {
   const from = document.getElementById('pl-from').value;
   const to = document.getElementById('pl-to').value;
-  if (!from || !to) return alert('يرجى تحديد الفترة');
+  if (!from || !to) { showToast('يرجى تحديد الفترة', 'error'); return; }
 
   const income = data.income.filter(r => r.date >= from && r.date <= to).reduce((s, r) => s + parseFloat(r.amount), 0);
   const expenses = data.expenses.filter(r => r.date >= from && r.date <= to).reduce((s, r) => s + parseFloat(r.amount), 0);
@@ -1860,12 +2236,12 @@ function buildIncomeSummaryMessage() {
 }
 
 function sendIncomeSummaryWhatsApp() {
-  if (!data.ownerPhone) return alert('يرجى إضافة رقم هاتف صاحب العمل أولاً من صفحة الإعدادات');
+  if (!data.ownerPhone) { showToast('يرجى إضافة رقم هاتف صاحب العمل أولاً من صفحة الإعدادات', 'error'); return; }
   sendWhatsApp(data.ownerPhone, buildIncomeSummaryMessage());
 }
 
 function sendIncomeSummarySMS() {
-  if (!data.ownerPhone) return alert('يرجى إضافة رقم هاتف صاحب العمل أولاً من صفحة الإعدادات');
+  if (!data.ownerPhone) { showToast('يرجى إضافة رقم هاتف صاحب العمل أولاً من صفحة الإعدادات', 'error'); return; }
   sendSMS(data.ownerPhone, buildIncomeSummaryMessage());
 }
 
@@ -1874,7 +2250,7 @@ function saveOwnerPhone() {
   const val = document.getElementById('owner-phone').value.trim();
   data.ownerPhone = val.replace(/[^0-9]/g, '');
   saveData();
-  alert('✅ تم حفظ رقم صاحب العمل');
+  showToast('تم حفظ رقم صاحب العمل', 'success');
 }
 
 function loadOwnerPhoneField() {
@@ -1888,14 +2264,14 @@ function cleanPhone(p) {
 
 function sendWhatsApp(phone, message) {
   const clean = cleanPhone(phone);
-  if (!clean) return alert('لا يوجد رقم هاتف مسجل لهذا الشخص. أضفه من الإعدادات أو من بيانات الموظف.');
+  if (!clean) { showToast('لا يوجد رقم هاتف مسجل لهذا الشخص. أضفه من الإعدادات أو من بيانات الموظف.', 'error'); return; }
   const url = `https://wa.me/${clean}?text=${encodeURIComponent(message)}`;
   window.open(url, '_blank');
 }
 
 function sendSMS(phone, message) {
   const clean = cleanPhone(phone);
-  if (!clean) return alert('لا يوجد رقم هاتف مسجل لهذا الشخص. أضفه من الإعدادات أو من بيانات الموظف.');
+  if (!clean) { showToast('لا يوجد رقم هاتف مسجل لهذا الشخص. أضفه من الإعدادات أو من بيانات الموظف.', 'error'); return; }
   // sms: URI scheme - body param works on most mobile browsers (iOS uses &body=, Android often uses ?body=)
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const url = isIOS
@@ -1922,8 +2298,8 @@ function renderMethodsTable() {
 function addPaymentMethod() {
   const input = document.getElementById('new-method-name');
   const name = input.value.trim();
-  if (!name) return alert('يرجى إدخال اسم طريقة الدفع');
-  if (data.paymentMethods.includes(name)) return alert('هذه الطريقة موجودة بالفعل');
+  if (!name) { showToast('يرجى إدخال اسم طريقة الدفع', 'error'); return; }
+  if (data.paymentMethods.includes(name)) { showToast('هذه الطريقة موجودة بالفعل', 'error'); return; }
   data.paymentMethods.push(name);
   saveData();
   input.value = '';
@@ -1941,9 +2317,9 @@ function openEditMethod(index) {
 
 function saveEditMethod() {
   const newName = document.getElementById('edit-method-val').value.trim();
-  if (!newName) return alert('يرجى إدخال اسم صحيح');
+  if (!newName) { showToast('يرجى إدخال اسم صحيح', 'error'); return; }
   const oldName = data.paymentMethods[editingMethodIndex];
-  if (newName !== oldName && data.paymentMethods.includes(newName)) return alert('هذا الاسم موجود بالفعل');
+  if (newName !== oldName && data.paymentMethods.includes(newName)) { showToast('هذا الاسم موجود بالفعل', 'error'); return; }
 
   // Update name in methods list
   data.paymentMethods[editingMethodIndex] = newName;
@@ -1956,24 +2332,346 @@ function saveEditMethod() {
   renderIncomeTable();
   renderIncomeTodaySummary();
   closeEditMethod();
+  showToast('تم تعديل طريقة الدفع بنجاح', 'success');
 }
 
 function closeEditMethod() {
   document.getElementById('edit-method-modal').style.display = 'none';
 }
 
-function deletePaymentMethod(index) {
+async function deletePaymentMethod(index) {
   const name = data.paymentMethods[index];
   const inUse = data.income.some(r => r.method === name);
+  let ok;
   if (inUse) {
-    if (!confirm(`طريقة "${name}" مستخدمة في سجلات إيراد سابقة. حذفها لن يحذف السجلات لكنها ستبقى بهذا الاسم القديم. هل تريد الاستمرار؟`)) return;
+    ok = await showConfirm(`طريقة "${name}" مستخدمة في سجلات إيراد سابقة. حذفها لن يحذف السجلات لكنها ستبقى بهذا الاسم القديم. هل تريد الاستمرار؟`, { title: 'تأكيد الحذف', icon: '⚠️' });
   } else {
-    if (!confirm(`هل تريد حذف طريقة الدفع "${name}"؟`)) return;
+    ok = await showConfirm(`هل تريد حذف طريقة الدفع "${name}"؟`, { title: 'حذف طريقة دفع', icon: '🗑️' });
   }
+  if (!ok) return;
   data.paymentMethods.splice(index, 1);
   saveData();
   renderMethodsTable();
   populateIncomeMethodSelect();
+  showToast('تم حذف طريقة الدفع بنجاح', 'success');
+}
+
+// ============ EXPENSE CATEGORIES ============
+function renderExpCatsTable() {
+  const tbody = document.getElementById('expcats-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = data.expenseCategories.map((c, i) => {
+    const isProtected = c === DEFAULT_EXPENSE_CATEGORY;
+    return `
+    <tr>
+      <td>${i + 1}</td>
+      <td style="font-weight:600">${c}</td>
+      <td>${isProtected
+        ? '<span style="color:var(--text-muted);font-size:12px;">افتراضي - محمي</span>'
+        : `<button class="btn btn-primary btn-sm" onclick="openEditExpCat(${i})">تعديل</button> <button class="btn btn-danger btn-sm" onclick="deleteExpenseCategory(${i})" style="margin-right:4px;">حذف</button>`}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد بنود</td></tr>';
+}
+
+function addExpenseCategory() {
+  const input = document.getElementById('new-expcat-name');
+  const name = input.value.trim();
+  if (!name) { showToast('يرجى إدخال اسم البند', 'error'); return; }
+  if (data.expenseCategories.includes(name)) { showToast('هذا البند موجود بالفعل', 'error'); return; }
+  data.expenseCategories.push(name);
+  saveData();
+  input.value = '';
+  renderExpCatsTable();
+  populateExpenseCategorySelect();
+  showToast('تم إضافة البند بنجاح', 'success');
+}
+
+let editingExpCatIndex = null;
+function openEditExpCat(index) {
+  const name = data.expenseCategories[index];
+  if (name === DEFAULT_EXPENSE_CATEGORY) return; // safety guard, button shouldn't exist for this row
+  editingExpCatIndex = index;
+  document.getElementById('edit-expcat-val').value = name;
+  document.getElementById('edit-expcat-modal').style.display = 'flex';
+  document.getElementById('edit-expcat-modal').classList.remove('hidden');
+}
+
+function saveEditExpCat() {
+  const newName = document.getElementById('edit-expcat-val').value.trim();
+  if (!newName) { showToast('يرجى إدخال اسم صحيح', 'error'); return; }
+  const oldName = data.expenseCategories[editingExpCatIndex];
+  if (oldName === DEFAULT_EXPENSE_CATEGORY) { showToast('لا يمكن تعديل هذا البند الافتراضي', 'error'); closeEditExpCat(); return; }
+  if (newName !== oldName && data.expenseCategories.includes(newName)) { showToast('هذا الاسم موجود بالفعل', 'error'); return; }
+  if (newName === DEFAULT_EXPENSE_CATEGORY && oldName !== DEFAULT_EXPENSE_CATEGORY) { showToast('هذا الاسم محجوز للبند الافتراضي', 'error'); return; }
+
+  data.expenseCategories[editingExpCatIndex] = newName;
+  data.expenses.forEach(r => { if (r.desc === oldName) r.desc = newName; });
+
+  saveData();
+  renderExpCatsTable();
+  populateExpenseCategorySelect();
+  renderExpenseTable();
+  closeEditExpCat();
+  showToast('تم تعديل البند بنجاح', 'success');
+}
+
+function closeEditExpCat() {
+  document.getElementById('edit-expcat-modal').style.display = 'none';
+}
+
+async function deleteExpenseCategory(index) {
+  const name = data.expenseCategories[index];
+  if (name === DEFAULT_EXPENSE_CATEGORY) { showToast('لا يمكن حذف هذا البند الافتراضي', 'error'); return; }
+
+  const inUse = data.expenses.some(r => r.desc === name);
+  let ok;
+  if (inUse) {
+    ok = await showConfirm(`البند "${name}" مستخدم في سجلات مصروفات سابقة. سيتم نقل تلك السجلات إلى بند "${DEFAULT_EXPENSE_CATEGORY}". هل تريد الاستمرار؟`, { title: 'تأكيد الحذف', icon: '⚠️' });
+  } else {
+    ok = await showConfirm(`هل تريد حذف البند "${name}"؟`, { title: 'حذف بند', icon: '🗑️' });
+  }
+  if (!ok) return;
+
+  // Reassign any expenses using this category to the protected default
+  data.expenses.forEach(r => { if (r.desc === name) r.desc = DEFAULT_EXPENSE_CATEGORY; });
+  data.expenseCategories.splice(index, 1);
+
+  saveData();
+  renderExpCatsTable();
+  populateExpenseCategorySelect();
+  renderExpenseTable();
+  showToast('تم حذف البند بنجاح', 'success');
+}
+
+// ============ CHANGE / RESET PASSWORD ============
+function changeMyPassword() {
+  const current = document.getElementById('change-pw-current').value;
+  const newPw = document.getElementById('change-pw-new').value;
+  const confirm_ = document.getElementById('change-pw-confirm').value;
+
+  if (!current || !newPw || !confirm_) { showToast('يرجى تعبئة جميع الحقول', 'error'); return; }
+  if (currentUser.password !== current) { showToast('كلمة المرور الحالية غير صحيحة', 'error'); return; }
+  if (newPw !== confirm_) { showToast('كلمة المرور الجديدة غير متطابقة مع التأكيد', 'error'); return; }
+  if (newPw.length < 4) { showToast('يرجى استخدام كلمة مرور من 4 أحرف/أرقام على الأقل', 'error'); return; }
+
+  const user = data.users.find(u => u.id === currentUser.id);
+  user.password = newPw;
+  currentUser.password = newPw;
+  saveData();
+
+  document.getElementById('change-pw-current').value = '';
+  document.getElementById('change-pw-new').value = '';
+  document.getElementById('change-pw-confirm').value = '';
+  showToast('تم تغيير كلمة المرور بنجاح', 'success');
+}
+
+let resettingUserId = null;
+function openResetPassword(userId) {
+  resettingUserId = userId;
+  const user = data.users.find(u => u.id === userId);
+  document.getElementById('reset-password-username').textContent = 'المستخدم: ' + user.username;
+  document.getElementById('reset-password-val').value = '';
+  document.getElementById('reset-password-modal').style.display = 'flex';
+  document.getElementById('reset-password-modal').classList.remove('hidden');
+}
+
+function confirmResetPassword() {
+  const newPw = document.getElementById('reset-password-val').value;
+  if (!newPw || newPw.length < 4) { showToast('يرجى إدخال كلمة مرور من 4 أحرف/أرقام على الأقل', 'error'); return; }
+  const user = data.users.find(u => u.id === resettingUserId);
+  user.password = newPw;
+  saveData();
+  closeResetPassword();
+  showToast('تم تغيير كلمة المرور بنجاح', 'success');
+}
+
+function closeResetPassword() {
+  document.getElementById('reset-password-modal').style.display = 'none';
+}
+
+// ============ USERS MANAGEMENT (admin only) ============
+function populateEmployeeLinkSelect() {
+  const sel = document.getElementById('new-user-employee-link');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">-- بدون ربط --</option>' +
+    data.employees.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+}
+
+function addUser() {
+  const username = document.getElementById('new-user-username').value.trim();
+  const password = document.getElementById('new-user-password').value;
+  const role = document.getElementById('new-user-role').value;
+  const employeeLink = document.getElementById('new-user-employee-link').value;
+
+  if (!username || !password) { showToast('يرجى إدخال اسم المستخدم وكلمة المرور', 'error'); return; }
+  if (data.users.some(u => u.username === username)) { showToast('اسم المستخدم موجود بالفعل', 'error'); return; }
+  if (role === 'employee' && !employeeLink) { showToast('يرجى ربط هذا المستخدم بموظف من القائمة', 'error'); return; }
+
+  data.users.push({
+    id: Date.now(),
+    username, password, role,
+    employeeId: role === 'employee' ? parseInt(employeeLink) : null
+  });
+  saveData();
+  document.getElementById('new-user-username').value = '';
+  document.getElementById('new-user-password').value = '';
+  renderUsersTable();
+  showToast('تم إضافة المستخدم', 'success');
+}
+
+function renderUsersTable() {
+  const tbody = document.getElementById('users-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = data.users.map((u, i) => {
+    const emp = u.employeeId ? data.employees.find(e => e.id === u.employeeId) : null;
+    return `
+    <tr>
+      <td>${i + 1}</td>
+      <td style="font-weight:600">${u.username}</td>
+      <td><span class="badge badge-info">${ROLE_LABELS[u.role] || u.role}</span></td>
+      <td style="color:var(--text-muted)">${emp ? emp.name : '-'}</td>
+      <td>${u.username === 'admin' ? '<span style="color:var(--text-muted);font-size:12px;">محمي</span>' : `<button class="btn btn-primary btn-sm" onclick="openResetPassword(${u.id})">إعادة تعيين كلمة المرور</button> <button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id})" style="margin-right:4px;">حذف</button>`}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">لا يوجد مستخدمون</td></tr>';
+}
+
+async function deleteUser(id) {
+  const user = data.users.find(u => u.id === id);
+  if (user && user.username === 'admin') { showToast('لا يمكن حذف حساب المدير الرئيسي', 'error'); return; }
+  const ok = await showConfirm('هل تريد حذف هذا المستخدم؟', { title: 'حذف مستخدم', icon: '🗑️' });
+  if (!ok) return;
+  data.users = data.users.filter(u => u.id !== id);
+  saveData();
+  renderUsersTable();
+  showToast('تم حذف المستخدم بنجاح', 'success');
+}
+
+// ============ MY SALARY PAGE (employee role) ============
+function renderMySalaryPage() {
+  if (!currentUser || currentUser.role !== 'employee' || !currentUser.employeeId) return;
+  const emp = data.employees.find(e => e.id === currentUser.employeeId);
+  if (!emp) return;
+
+  document.getElementById('my-base-salary').textContent = fmt(emp.salary);
+
+  const myRecords = data.salaryHistory.filter(r => r.employeeId === currentUser.employeeId);
+  const totalAdvances = myRecords.filter(r => r.type === 'سلفة').reduce((s, r) => s + parseFloat(r.amount), 0);
+  const totalDeductions = myRecords.filter(r => r.type === 'خصم').reduce((s, r) => s + parseFloat(r.amount), 0);
+
+  document.getElementById('my-total-advances').textContent = fmt(totalAdvances);
+  document.getElementById('my-total-deductions').textContent = fmt(totalDeductions);
+
+  const sorted = [...myRecords].sort((a, b) => b.date.localeCompare(a.date));
+  document.getElementById('my-history-tbody').innerHTML = sorted.map(r => `
+    <tr>
+      <td>${fmtDate(r.date)}</td>
+      <td>${r.type === 'راتب' ? '<span class="badge badge-success">راتب</span>' : r.type === 'سلفة' ? '<span class="badge badge-warning">سلفة</span>' : '<span class="badge badge-danger">خصم</span>'}</td>
+      <td style="font-weight:700;color:var(--primary)">${fmt(r.amount)} دينار</td>
+      <td style="color:var(--text-muted)">${r.note || '-'}</td>
+    </tr>
+  `).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد سجلات</td></tr>';
+}
+
+// ============ AUTH: LOGIN / LOGOUT / ROLES ============
+const ROLE_LABELS = {
+  admin: '👑 مدير النظام',
+  owner: '💼 صاحب العمل',
+  cashier: '🖥️ كاشير',
+  employee: '👤 موظف'
+};
+
+function handleLogin() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errBox = document.getElementById('login-error');
+  errBox.classList.add('hidden');
+
+  if (!username || !password) {
+    errBox.textContent = 'يرجى إدخال اسم المستخدم وكلمة المرور';
+    errBox.classList.remove('hidden');
+    return;
+  }
+
+  const user = data.users.find(u => u.username === username && u.password === password);
+  if (!user) {
+    errBox.textContent = 'اسم المستخدم أو كلمة المرور غير صحيحة';
+    errBox.classList.remove('hidden');
+    return;
+  }
+
+  currentUser = user;
+  try { sessionStorage.setItem('current_user_id', String(user.id)); } catch(e) {}
+  showApp();
+}
+
+function handleLogout() {
+  currentUser = null;
+  try { sessionStorage.removeItem('current_user_id'); } catch(e) {}
+  document.getElementById('app-shell').classList.add('hidden');
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('login-username').value = '';
+  document.getElementById('login-password').value = '';
+}
+
+function showApp() {
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app-shell').classList.remove('hidden');
+  document.getElementById('current-user-name').textContent = currentUser.username;
+  document.getElementById('current-user-role').textContent = ROLE_LABELS[currentUser.role] || '';
+  applyRoleVisibility();
+
+  // Land on an appropriate default page for the role
+  if (currentUser.role === 'employee') {
+    showPage('mysalary');
+  } else if (currentUser.role === 'owner') {
+    showPage('reports');
+  } else if (currentUser.role === 'cashier') {
+    showPage('income');
+  } else {
+    showPage('dashboard');
+  }
+}
+
+function applyRoleVisibility() {
+  const role = currentUser.role;
+
+  const sectionMap = {
+    'nav-section-dashboard': ['admin', 'owner', 'cashier'],
+    'nav-section-daily': ['admin', 'cashier'],
+    'nav-section-employees': ['admin'],
+    'nav-section-reports': ['admin', 'owner'],
+    'nav-section-myinfo': ['employee'],
+    'nav-section-settings': ['admin', 'owner', 'cashier', 'employee']
+  };
+
+  Object.keys(sectionMap).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = sectionMap[id].includes(role) ? '' : 'none';
+  });
+
+  // Cashier: hide purchases nav item (cashier only handles income+expenses)
+  const purchasesNav = document.getElementById('nav-purchases');
+  if (purchasesNav) purchasesNav.style.display = (role === 'admin') ? '' : 'none';
+
+  // Users management card only for admin (settings page itself is nav-hidden for others,
+  // but guard here too in case settings is reached directly)
+  const usersCard = document.getElementById('users-management-card');
+  if (usersCard) usersCard.style.display = (role === 'admin') ? '' : 'none';
+}
+
+function tryRestoreSession() {
+  try {
+    const savedId = sessionStorage.getItem('current_user_id');
+    if (savedId) {
+      const user = data.users.find(u => u.id === parseInt(savedId));
+      if (user) {
+        currentUser = user;
+        showApp();
+        return true;
+      }
+    }
+  } catch(e) {}
+  return false;
 }
 
 // ============ INIT ============
@@ -1984,11 +2682,14 @@ async function initApp() {
   await loadData();
 
   populateIncomeMethodSelect();
+  populateExpenseCategorySelect();
   setToday('income-date');
   setToday('exp-date');
   setToday('pur-date');
   updateDashboard();
   renderIncomeTodaySummary();
+
+  tryRestoreSession();
 
   // Real-time sync listener — updates UI when data changes from another device
   if (window._fbListenData) {
@@ -1997,6 +2698,10 @@ async function initApp() {
       if (!data.paymentMethods || !data.paymentMethods.length)
         data.paymentMethods = ['كاش', 'فيزا', 'ماستركارد', 'حوالة مصرفية'];
       if (data.ownerPhone === undefined) data.ownerPhone = '';
+      if (!data.expenseCategories || !data.expenseCategories.length)
+        data.expenseCategories = ['إيجار', 'كهرباء وماء', 'صيانة', 'نظافة', 'اتصالات وإنترنت', DEFAULT_EXPENSE_CATEGORY];
+      if (!data.expenseCategories.includes(DEFAULT_EXPENSE_CATEGORY))
+        data.expenseCategories.push(DEFAULT_EXPENSE_CATEGORY);
       setSyncStatus('synced');
       // Refresh whatever page is currently active
       const activePage = document.querySelector('.page.active');
@@ -2005,15 +2710,17 @@ async function initApp() {
         const fns = {
           dashboard: updateDashboard,
           income: () => { renderIncomeTable(); renderIncomeTodaySummary(); },
-          expenses: renderExpenseTable,
+          expenses: () => { populateExpenseCategorySelect(); renderExpenseTable(); },
           purchases: renderPurchaseTable,
           employees: renderEmployeesTable,
           salaries: () => { renderSalPayTable(); renderSalHistory(); },
           suppliers: renderSuppliersTable,
-          settings: () => { renderMethodsTable(); loadOwnerPhoneField(); }
+          settings: () => { renderMethodsTable(); loadOwnerPhoneField(); renderUsersTable(); populateEmployeeLinkSelect(); renderExpCatsTable(); },
+          mysalary: renderMySalaryPage
         };
         if (fns[id]) fns[id]();
         populateIncomeMethodSelect();
+        populateExpenseCategorySelect();
       }
     });
   }
@@ -2038,6 +2745,13 @@ function closeMobileMenu() {
 }
 document.getElementById('mobile-menu-btn').addEventListener('click', openMobileMenu);
 document.getElementById('mobile-overlay').addEventListener('click', closeMobileMenu);
+
+document.getElementById('login-password').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') handleLogin();
+});
+document.getElementById('login-username').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') document.getElementById('login-password').focus();
+});
 
 // Start app when Firebase is ready (or immediately if already loaded)
 if (window._firebaseReady) {
