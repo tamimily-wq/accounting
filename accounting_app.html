@@ -1540,6 +1540,23 @@ async function saveData() {
   }
 }
 
+function sanitizeData() {
+  if (!data.paymentMethods || !data.paymentMethods.length)
+    data.paymentMethods = ['كاش', 'فيزا', 'ماستركارد', 'حوالة مصرفية'];
+  if (data.ownerPhone === undefined) data.ownerPhone = '';
+  if (!data.users || !data.users.length)
+    data.users = [{ id: 1, username: 'admin', password: 'admin123', role: 'admin', employeeId: null }];
+  if (!data.expenseCategories || !data.expenseCategories.length)
+    data.expenseCategories = ['إيجار', 'كهرباء وماء', 'صيانة', 'نظافة', 'اتصالات وإنترنت', DEFAULT_EXPENSE_CATEGORY];
+  if (!data.expenseCategories.includes(DEFAULT_EXPENSE_CATEGORY))
+    data.expenseCategories.push(DEFAULT_EXPENSE_CATEGORY);
+  if (!data.income) data.income = [];
+  if (!data.expenses) data.expenses = [];
+  if (!data.purchases) data.purchases = [];
+  if (!data.employees) data.employees = [];
+  if (!data.salaryHistory) data.salaryHistory = [];
+}
+
 async function loadData() {
   try {
     if (window._fbLoadData) {
@@ -1554,16 +1571,7 @@ async function loadData() {
   } catch(e) {
     console.error('Load error:', e);
   }
-  // Ensure required fields
-  if (!data.paymentMethods || !data.paymentMethods.length)
-    data.paymentMethods = ['كاش', 'فيزا', 'ماستركارد', 'حوالة مصرفية'];
-  if (data.ownerPhone === undefined) data.ownerPhone = '';
-  if (!data.users || !data.users.length)
-    data.users = [{ id: 1, username: 'admin', password: 'admin123', role: 'admin', employeeId: null }];
-  if (!data.expenseCategories || !data.expenseCategories.length)
-    data.expenseCategories = ['إيجار', 'كهرباء وماء', 'صيانة', 'نظافة', 'اتصالات وإنترنت', 'مصروفات أخرى'];
-  if (!data.expenseCategories.includes(DEFAULT_EXPENSE_CATEGORY))
-    data.expenseCategories.push(DEFAULT_EXPENSE_CATEGORY);
+  sanitizeData();
 }
 
 // ============ NAVIGATION ============
@@ -2629,6 +2637,10 @@ function handleLogin() {
     return;
   }
 
+  if (!data.users || !data.users.length) {
+    sanitizeData();
+  }
+
   const user = data.users.find(u => u.username === username && u.password === password);
   if (!user) {
     errBox.textContent = 'اسم المستخدم أو كلمة المرور غير صحيحة';
@@ -2718,6 +2730,9 @@ document.getElementById('today-date').textContent = new Date().toLocaleDateStrin
 async function initApp() {
   setSyncStatus('saving');
   await loadData();
+  // Persist any auto-repaired fields (e.g. missing users array) back to the cloud
+  // so the next real-time snapshot doesn't wipe them out again.
+  saveData();
 
   populateIncomeMethodSelect();
   populateExpenseCategorySelect();
@@ -2733,13 +2748,7 @@ async function initApp() {
   if (window._fbListenData) {
     window._fbListenData((remoteData) => {
       data = remoteData;
-      if (!data.paymentMethods || !data.paymentMethods.length)
-        data.paymentMethods = ['كاش', 'فيزا', 'ماستركارد', 'حوالة مصرفية'];
-      if (data.ownerPhone === undefined) data.ownerPhone = '';
-      if (!data.expenseCategories || !data.expenseCategories.length)
-        data.expenseCategories = ['إيجار', 'كهرباء وماء', 'صيانة', 'نظافة', 'اتصالات وإنترنت', DEFAULT_EXPENSE_CATEGORY];
-      if (!data.expenseCategories.includes(DEFAULT_EXPENSE_CATEGORY))
-        data.expenseCategories.push(DEFAULT_EXPENSE_CATEGORY);
+      sanitizeData();
       setSyncStatus('synced');
       // Refresh whatever page is currently active
       const activePage = document.querySelector('.page.active');
