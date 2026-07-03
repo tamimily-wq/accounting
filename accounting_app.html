@@ -2,8 +2,52 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>برنامج المحاسبة اليومي</title>
+
+<!-- PWA: installable app metadata -->
+<meta name="theme-color" content="#1B4F72">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="المحاسبة">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%231B4F72'/%3E%3Ctext x='50' y='68' font-size='55' text-anchor='middle' fill='white'%3E%F0%9F%93%8A%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%231B4F72'/%3E%3Ctext x='50' y='68' font-size='55' text-anchor='middle' fill='white'%3E%F0%9F%93%8A%3C/text%3E%3C/svg%3E">
+<link rel="manifest" id="pwa-manifest-link">
+
+<script>
+  // Build the PWA manifest at runtime as a Blob, so the whole app stays one file.
+  (function() {
+    const manifest = {
+      name: "برنامج المحاسبة اليومي",
+      short_name: "المحاسبة",
+      description: "برنامج محاسبة يومي للإيرادات والمصروفات والمشتريات والرواتب",
+      start_url: window.location.pathname,
+      scope: window.location.pathname,
+      display: "standalone",
+      orientation: "portrait-primary",
+      background_color: "#F0F4F8",
+      theme_color: "#1B4F72",
+      dir: "rtl",
+      lang: "ar",
+      icons: [
+        {
+          src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%231B4F72'/%3E%3Ctext x='50' y='68' font-size='55' text-anchor='middle' fill='white'%3E%F0%9F%93%8A%3C/text%3E%3C/svg%3E",
+          sizes: "192x192",
+          type: "image/svg+xml"
+        },
+        {
+          src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%231B4F72'/%3E%3Ctext x='50' y='68' font-size='55' text-anchor='middle' fill='white'%3E%F0%9F%93%8A%3C/text%3E%3C/svg%3E",
+          sizes: "512x512",
+          type: "image/svg+xml"
+        }
+      ]
+    };
+    const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+    document.getElementById('pwa-manifest-link').setAttribute('href', URL.createObjectURL(blob));
+  })();
+</script>
+
   <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -845,11 +889,15 @@
           <input type="number" id="pur-amount" placeholder="0.00" step="0.01">
         </div>
         <div class="form-group">
-          <label>طريقة الدفع</label>
+          <label>نوع الدفع</label>
           <select id="pay-type-select" onchange="setPayType(this.value)">
             <option value="cash">نقدي</option>
             <option value="credit">آجل</option>
           </select>
+        </div>
+        <div class="form-group">
+          <label>طريقة الدفع</label>
+          <select id="pur-method"></select>
         </div>
       </div>
 
@@ -883,7 +931,7 @@
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>#</th><th>التاريخ</th><th>رقم الفاتورة</th><th>المبلغ</th><th>نوع الدفع</th><th>المورد</th><th>الاستحقاق</th><th>الحالة</th><th></th></tr></thead>
+          <thead><tr><th>#</th><th>التاريخ</th><th>رقم الفاتورة</th><th>المبلغ</th><th>نوع الدفع</th><th>طريقة الدفع</th><th>المورد</th><th>الاستحقاق</th><th>الحالة</th><th></th></tr></thead>
           <tbody id="purchase-tbody"></tbody>
         </table>
       </div>
@@ -1179,7 +1227,7 @@
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>التاريخ</th><th>رقم الفاتورة</th><th>المبلغ</th><th>نوع الدفع</th><th>المورد</th><th>الاستحقاق</th></tr></thead>
+            <thead><tr><th>التاريخ</th><th>رقم الفاتورة</th><th>المبلغ</th><th>نوع الدفع</th><th>طريقة الدفع</th><th>المورد</th><th>الاستحقاق</th></tr></thead>
             <tbody id="prep-tbody"></tbody>
           </table>
         </div>
@@ -1246,6 +1294,50 @@
   <div id="page-settings" class="page">
     <div class="page-header">
       <div class="page-title">⚙️ الإعدادات</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📲 تثبيت التطبيق على الجهاز</div>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;line-height:1.7;">
+        ثبّت البرنامج على شاشتك الرئيسية ليعمل كتطبيق مستقل بدون فتح المتصفح أو كتابة الرابط في كل مرة.
+      </p>
+      <button class="btn btn-primary" id="install-app-btn" onclick="triggerInstallPrompt()">📲 تثبيت التطبيق الآن</button>
+      <div id="install-app-note" style="margin-top:12px;font-size:12.5px;color:var(--text-muted);line-height:1.7;"></div>
+    </div>
+
+    <div class="card" id="storage-mode-card">
+      <div class="card-title">🌐 وضع تشغيل البرنامج</div>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.7;">
+        اختر كيف يتم حفظ البيانات:<br>
+        <strong>أونلاين:</strong> البيانات تُحفظ على الإنترنت (Firebase) وتتزامن بين كل الأجهزة تلقائياً.<br>
+        <strong>محلي / بدون إنترنت:</strong> البيانات تُحفظ على هذا الجهاز فقط، ولا تتزامن مع أجهزة أخرى، ولا تحتاج إنترنت.
+      </p>
+      <div class="toggle-group">
+        <button class="toggle-btn" id="mode-online-btn" onclick="switchStorageMode('online')">🌐 أونلاين (متزامن)</button>
+        <button class="toggle-btn" id="mode-offline-btn" onclick="switchStorageMode('offline')">💾 محلي (بدون إنترنت)</button>
+      </div>
+      <div id="storage-mode-note" style="margin-top:14px;font-size:12.5px;color:var(--text-muted);"></div>
+    </div>
+
+    <div class="card" id="backup-card">
+      <div class="card-title">💾 النسخ الاحتياطي</div>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;line-height:1.7;">
+        احفظ نسخة من كل بيانات البرنامج (إيرادات، مصروفات، مشتريات، موظفين، مستخدمين...) كملف على جهازك، أو استرجع نسخة سابقة.
+      </p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="exportBackup()">⬇️ تنزيل نسخة احتياطية</button>
+        <button class="btn" style="background:var(--accent);color:#fff;" onclick="document.getElementById('backup-file-input').click()">⬆️ استيراد نسخة احتياطية</button>
+        <input type="file" id="backup-file-input" accept="application/json" class="hidden" onchange="importBackup(event)">
+      </div>
+      <div style="margin-top:10px;font-size:12px;color:var(--text-muted);">آخر نسخة احتياطية: <span id="last-backup-time">لا يوجد سجل</span></div>
+    </div>
+
+    <div class="card" id="reset-db-card">
+      <div class="card-title">🗑️ تصفير قاعدة البيانات</div>
+      <p style="font-size:13px;color:var(--danger);margin-bottom:14px;line-height:1.7;font-weight:600;">
+        ⚠️ هذا الإجراء يحذف كل البيانات نهائياً (الإيرادات، المصروفات، المشتريات، الموظفين، السجلات) في الوضع الحالي (<span id="reset-mode-label">أونلاين</span>) فقط. لا يمكن التراجع عنه إلا باستيراد نسخة احتياطية سابقة.
+      </p>
+      <button class="btn btn-danger" style="font-size:14px;padding:10px 20px;" onclick="resetDatabase()">🗑️ تصفير قاعدة البيانات (للتجارب)</button>
     </div>
 
     <div class="card">
@@ -1437,6 +1529,61 @@ function enableEnterNavigation(fieldIds, submitFn) {
   });
 }
 
+// ============ PWA INSTALL PROMPT ============
+let deferredInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  updateInstallUI();
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  updateInstallUI();
+  showToast('تم تثبيت التطبيق بنجاح على جهازك', 'success');
+});
+
+function isRunningStandalone() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+
+function updateInstallUI() {
+  const btn = document.getElementById('install-app-btn');
+  const note = document.getElementById('install-app-note');
+  if (!btn || !note) return;
+
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+  if (isRunningStandalone()) {
+    btn.classList.add('hidden');
+    note.textContent = '✅ التطبيق مثبت بالفعل ويعمل الآن كتطبيق مستقل.';
+    return;
+  }
+
+  if (deferredInstallPrompt) {
+    btn.classList.remove('hidden');
+    note.textContent = 'اضغط الزر أعلاه وسيظهر لك خيار "تثبيت" أو "إضافة إلى الشاشة الرئيسية".';
+  } else if (isIOS) {
+    btn.classList.add('hidden');
+    note.textContent = 'على آيفون/آيباد: اضغط زر المشاركة 📤 في Safari ← اختر "إضافة إلى الشاشة الرئيسية" (Add to Home Screen).';
+  } else {
+    btn.classList.add('hidden');
+    note.textContent = 'إذا لم يظهر زر التثبيت، افتح قائمة المتصفح (⋮) وابحث عن "تثبيت التطبيق" أو "إضافة إلى الشاشة الرئيسية".';
+  }
+}
+
+async function triggerInstallPrompt() {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  const { outcome } = await deferredInstallPrompt.userChoice;
+  if (outcome === 'accepted') {
+    showToast('جاري تثبيت التطبيق...', 'success');
+  }
+  deferredInstallPrompt = null;
+  updateInstallUI();
+}
+
 // ============ TOAST NOTIFICATIONS ============
 function showToast(message, type = 'success', duration = 2600) {
   const container = document.getElementById('toast-container');
@@ -1511,6 +1658,202 @@ let currentUser = null;
 
 let _isSaving = false;
 
+// ============ STORAGE MODE (Online/Firebase vs Offline/Local) ============
+// Stored per-device in localStorage (not synced), so switching mode doesn't
+// touch the shared accounting data itself.
+const STORAGE_MODE_KEY = 'accounting_storage_mode'; // 'online' | 'offline'
+
+function getStorageMode() {
+  try {
+    return localStorage.getItem(STORAGE_MODE_KEY) || 'online';
+  } catch(e) {
+    return 'online';
+  }
+}
+
+function setStorageMode(mode) {
+  try {
+    localStorage.setItem(STORAGE_MODE_KEY, mode);
+  } catch(e) {}
+}
+
+function isOfflineMode() {
+  return getStorageMode() === 'offline';
+}
+
+function renderStorageModeUI() {
+  const mode = getStorageMode();
+  const onlineBtn = document.getElementById('mode-online-btn');
+  const offlineBtn = document.getElementById('mode-offline-btn');
+  const note = document.getElementById('storage-mode-note');
+  if (!onlineBtn || !offlineBtn) return;
+
+  onlineBtn.classList.toggle('active', mode === 'online');
+  offlineBtn.classList.toggle('active', mode === 'offline');
+
+  if (note) {
+    note.textContent = mode === 'online'
+      ? 'الوضع الحالي: أونلاين — هذا الجهاز يقرأ ويكتب من Firebase ويتزامن مع كل الأجهزة الأخرى.'
+      : 'الوضع الحالي: محلي — هذا الجهاز يستخدم بياناته الخاصة المخزّنة عليه فقط، ولن يرى أو يؤثر على بيانات الأجهزة الأخرى حتى تعيده لوضع أونلاين.';
+  }
+
+  const resetLabel = document.getElementById('reset-mode-label');
+  if (resetLabel) resetLabel.textContent = mode === 'online' ? 'أونلاين' : 'محلي';
+
+  const lastBackupEl = document.getElementById('last-backup-time');
+  if (lastBackupEl) {
+    try {
+      const last = localStorage.getItem('accounting_last_backup');
+      lastBackupEl.textContent = last ? last : 'لا يوجد سجل';
+    } catch(e) {}
+  }
+}
+
+async function switchStorageMode(newMode) {
+  const current = getStorageMode();
+  if (newMode === current) return;
+
+  const goingOffline = newMode === 'offline';
+  const ok = await showConfirm(
+    goingOffline
+      ? 'سينتقل هذا الجهاز للعمل بدون إنترنت. البيانات المُدخلة بعد الآن ستُحفظ على هذا الجهاز فقط ولن تظهر على الأجهزة الأخرى حتى تعيده لوضع أونلاين. هل تريد الاستمرار؟'
+      : 'سيعود هذا الجهاز للعمل أونلاين ويتزامن مع Firebase. بيانات الوضع المحلي المخزّنة على هذا الجهاز ستبقى محفوظة هنا لكن لن تُستخدم في الوضع أونلاين. هل تريد الاستمرار؟',
+    { title: goingOffline ? 'التبديل للوضع المحلي' : 'التبديل للوضع أونلاين', icon: '🌐' }
+  );
+  if (!ok) return;
+
+  setStorageMode(newMode);
+  showToast(goingOffline ? 'تم التبديل للوضع المحلي' : 'تم التبديل للوضع أونلاين', 'success');
+
+  // Reload data from the newly selected source and refresh the whole UI
+  await loadData();
+  renderStorageModeUI();
+  populateIncomeMethodSelect();
+  populateExpenseCategorySelect();
+  updateDashboard();
+
+  const activePage = document.querySelector('.page.active');
+  if (activePage) showPage(activePage.id.replace('page-', ''));
+}
+
+// ============ BACKUP: EXPORT / IMPORT ============
+function exportBackup() {
+  try {
+    const payload = {
+      _backupInfo: {
+        app: 'برنامج المحاسبة اليومي',
+        exportedAt: new Date().toISOString(),
+        mode: isOfflineMode() ? 'offline' : 'online'
+      },
+      data: data
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const stamp = today().replaceAll('-', '');
+    a.href = url;
+    a.download = `نسخة-احتياطية-المحاسبة-${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    const nowLabel = new Date().toLocaleString('en-US');
+    try { localStorage.setItem('accounting_last_backup', nowLabel); } catch(e) {}
+    renderStorageModeUI();
+
+    showToast('تم تنزيل النسخة الاحتياطية بنجاح', 'success');
+  } catch(e) {
+    console.error(e);
+    showToast('حدث خطأ أثناء إنشاء النسخة الاحتياطية', 'error');
+  }
+}
+
+async function importBackup(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const ok = await showConfirm(
+    'استيراد نسخة احتياطية سيستبدل كل البيانات الحالية في هذا الوضع (' + (isOfflineMode() ? 'المحلي' : 'الأونلاين') + ') بالكامل. تأكد أنك أخذت نسخة احتياطية من البيانات الحالية إن أردت الرجوع إليها لاحقاً. هل تريد الاستمرار؟',
+    { title: 'استيراد نسخة احتياطية', icon: '⬆️' }
+  );
+  if (!ok) { event.target.value = ''; return; }
+
+  try {
+    const text = await file.text();
+    const parsed = JSON.parse(text);
+    const importedData = parsed && parsed.data ? parsed.data : parsed; // support raw data.json too
+
+    if (!importedData || typeof importedData !== 'object') {
+      showToast('ملف غير صالح، تأكد أنه نسخة احتياطية صحيحة', 'error');
+      event.target.value = '';
+      return;
+    }
+
+    data = importedData;
+    sanitizeData();
+    await saveData();
+
+    populateIncomeMethodSelect();
+    populateExpenseCategorySelect();
+    updateDashboard();
+    renderStorageModeUI();
+
+    const activePage = document.querySelector('.page.active');
+    if (activePage) showPage(activePage.id.replace('page-', ''));
+
+    showToast('تم استيراد النسخة الاحتياطية بنجاح', 'success');
+  } catch(e) {
+    console.error(e);
+    showToast('تعذّر قراءة الملف، تأكد أنه ملف نسخة احتياطية صحيح (JSON)', 'error');
+  } finally {
+    event.target.value = '';
+  }
+}
+
+// ============ RESET DATABASE (for testing) ============
+async function resetDatabase() {
+  const modeLabel = isOfflineMode() ? 'المحلي' : 'الأونلاين';
+  const firstConfirm = await showConfirm(
+    `سيتم حذف كل البيانات نهائياً في الوضع ${modeLabel} (الإيرادات، المصروفات، المشتريات، الموظفين، الرواتب، السجلات) وإعادة إنشاء حساب المدير الافتراضي فقط. هل أنت متأكد؟`,
+    { title: 'تصفير قاعدة البيانات', icon: '🗑️' }
+  );
+  if (!firstConfirm) return;
+
+  const secondConfirm = await showConfirm(
+    'هذا تأكيد أخير — لا يمكن التراجع عن هذا الإجراء إلا برفع نسخة احتياطية سابقة. هل تريد المتابعة فعلاً؟',
+    { title: 'تأكيد نهائي', icon: '⚠️' }
+  );
+  if (!secondConfirm) return;
+
+  data = {
+    income: [],
+    expenses: [],
+    purchases: [],
+    employees: [],
+    salaryHistory: [],
+    paymentMethods: ['كاش', 'فيزا', 'ماستركارد', 'حوالة مصرفية'],
+    ownerPhone: '',
+    expenseCategories: ['إيجار', 'كهرباء وماء', 'صيانة', 'نظافة', 'اتصالات وإنترنت', DEFAULT_EXPENSE_CATEGORY],
+    users: [{ id: 1, username: 'admin', password: 'admin123', role: 'admin', employeeId: null }]
+  };
+
+  await saveData();
+
+  populateIncomeMethodSelect();
+  populateExpenseCategorySelect();
+  updateDashboard();
+  renderStorageModeUI();
+  renderUsersTable();
+  renderMethodsTable();
+  renderExpCatsTable();
+
+  showToast('تم تصفير قاعدة البيانات بنجاح', 'success');
+
+  // Force logout since the current session's user may no longer exist
+  handleLogout();
+}
+
 function setSyncStatus(status) {
   const el = document.getElementById('sync-status');
   const el2 = document.getElementById('sync-status-mobile');
@@ -1519,11 +1862,23 @@ function setSyncStatus(status) {
   else if (status === 'saved')  { text = '✅ محفوظ';           color = '#2ECC71'; }
   else if (status === 'error')  { text = '❌ خطأ في الحفظ';   color = '#E74C3C'; }
   else if (status === 'synced') { text = '🔁 متزامن';          color = '#2ECC71'; }
+  else if (status === 'offline'){ text = '💾 وضع محلي (بدون إنترنت)'; color = '#F39C12'; }
   if (el)  { el.textContent = text;  el.style.color = color; }
   if (el2) { el2.textContent = text; el2.style.color = color; }
 }
 
 async function saveData() {
+  if (isOfflineMode()) {
+    try {
+      localStorage.setItem('accounting_data_offline', JSON.stringify(data));
+      setSyncStatus('offline');
+    } catch(e) {
+      setSyncStatus('error');
+      console.error(e);
+    }
+    return;
+  }
+
   setSyncStatus('saving');
   try {
     if (window._fbSaveData) {
@@ -1558,6 +1913,18 @@ function sanitizeData() {
 }
 
 async function loadData() {
+  if (isOfflineMode()) {
+    try {
+      const saved = localStorage.getItem('accounting_data_offline');
+      if (saved) data = JSON.parse(saved);
+    } catch(e) {
+      console.error('Local load error:', e);
+    }
+    sanitizeData();
+    setSyncStatus('offline');
+    return;
+  }
+
   try {
     if (window._fbLoadData) {
       const remote = await window._fbLoadData();
@@ -1589,7 +1956,7 @@ function showPage(name, el) {
   if (name === 'employees') renderEmployeesTable();
   if (name === 'salaries') { setToday('sal-pay-date'); setToday('adv-date'); setToday('ded-date'); renderSalPayTable(); renderAdvEmpSelect(); renderSalHistory(); }
   if (name === 'suppliers') renderSuppliersTable();
-  if (name === 'settings') { renderMethodsTable(); loadOwnerPhoneField(); renderUsersTable(); populateEmployeeLinkSelect(); renderExpCatsTable(); }
+  if (name === 'settings') { renderMethodsTable(); loadOwnerPhoneField(); renderUsersTable(); populateEmployeeLinkSelect(); renderExpCatsTable(); renderStorageModeUI(); updateInstallUI(); }
   if (name === 'mysalary') renderMySalaryPage();
   if (name === 'reports') {}
 }
@@ -1700,6 +2067,13 @@ function populateIncomeMethodSelect() {
   const current = sel.value;
   sel.innerHTML = data.paymentMethods.map(m => `<option value="${m}">${m}</option>`).join('');
   if (data.paymentMethods.includes(current)) sel.value = current;
+
+  const purSel = document.getElementById('pur-method');
+  if (purSel) {
+    const purCurrent = purSel.value;
+    purSel.innerHTML = data.paymentMethods.map(m => `<option value="${m}">${m}</option>`).join('');
+    if (data.paymentMethods.includes(purCurrent)) purSel.value = purCurrent;
+  }
 }
 
 function populateExpenseCategorySelect() {
@@ -1822,6 +2196,7 @@ function addPurchase() {
   const date = document.getElementById('pur-date').value;
   const invoice = document.getElementById('pur-invoice').value.trim();
   const amount = parseFloat(document.getElementById('pur-amount').value);
+  const method = document.getElementById('pur-method').value;
   const note = document.getElementById('pur-note').value;
   if (!date || !amount || amount <= 0) { showToast('يرجى إدخال التاريخ والمبلغ', 'error'); return; }
 
@@ -1833,7 +2208,7 @@ function addPurchase() {
   }
 
   data.purchases.push({
-    id: Date.now(), date, invoice, amount, payType: currentPayType,
+    id: Date.now(), date, invoice, amount, payType: currentPayType, method,
     supplier, dueDate, note,
     paid: currentPayType === 'cash' ? amount : 0,
     remaining: currentPayType === 'cash' ? 0 : amount
@@ -1868,12 +2243,13 @@ function renderPurchaseTable() {
       <td style="font-weight:600;color:var(--primary)">${r.invoice || '-'}</td>
       <td style="font-weight:700;color:var(--accent)">${fmt(r.amount)} دينار</td>
       <td>${r.payType === 'cash' ? '<span class="badge badge-success">نقدي</span>' : '<span class="badge badge-warning">آجل</span>'}</td>
+      <td><span class="badge badge-info">${r.method || 'كاش'}</span></td>
       <td>${r.supplier || '-'}</td>
       <td>${r.dueDate ? fmtDate(r.dueDate) : '-'}</td>
       <td>${isPaid ? '<span class="badge badge-success">مسدد</span>' : isOverdue ? '<span class="badge badge-danger">متأخر</span>' : '<span class="badge badge-info">معلق</span>'}</td>
       <td><button class="btn btn-danger btn-sm" onclick="deletePurchase(${r.id})">حذف</button></td>
     </tr>`;
-  }).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد بيانات</td></tr>';
+  }).join('') || '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد بيانات</td></tr>';
   document.getElementById('purchase-total').textContent = rows.length ? `الإجمالي: ${fmt(total)} دينار` : '';
 }
 
@@ -2243,10 +2619,11 @@ function generatePurchaseReport() {
       <td style="font-weight:600;color:var(--primary)">${r.invoice || '-'}</td>
       <td style="font-weight:700;color:var(--accent)">${fmt(r.amount)} دينار</td>
       <td>${r.payType === 'cash' ? '<span class="badge badge-success">نقدي</span>' : '<span class="badge badge-warning">آجل</span>'}</td>
+      <td><span class="badge badge-info">${r.method || 'كاش'}</span></td>
       <td>${r.supplier || '-'}</td>
       <td>${r.dueDate ? fmtDate(r.dueDate) : '-'}</td>
     </tr>
-  `).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">لا توجد بيانات</td></tr>';
+  `).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);">لا توجد بيانات</td></tr>';
   document.getElementById('prep-total').textContent = rows.length ? `الإجمالي: ${fmt(total)} دينار` : '';
 }
 
@@ -2707,6 +3084,16 @@ function applyRoleVisibility() {
   // but guard here too in case settings is reached directly)
   const usersCard = document.getElementById('users-management-card');
   if (usersCard) usersCard.style.display = (role === 'admin') ? '' : 'none';
+
+  // Storage mode switch only for admin — it affects the whole shared system
+  const storageCard = document.getElementById('storage-mode-card');
+  if (storageCard) storageCard.style.display = (role === 'admin') ? '' : 'none';
+
+  // Backup and database reset are sensitive, admin-only actions
+  const backupCard = document.getElementById('backup-card');
+  if (backupCard) backupCard.style.display = (role === 'admin') ? '' : 'none';
+  const resetCard = document.getElementById('reset-db-card');
+  if (resetCard) resetCard.style.display = (role === 'admin') ? '' : 'none';
 }
 
 function tryRestoreSession() {
@@ -2728,7 +3115,7 @@ function tryRestoreSession() {
 document.getElementById('today-date').textContent = new Date().toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
 async function initApp() {
-  setSyncStatus('saving');
+  setSyncStatus(isOfflineMode() ? 'offline' : 'saving');
   await loadData();
   // Persist any auto-repaired fields (e.g. missing users array) back to the cloud
   // so the next real-time snapshot doesn't wipe them out again.
@@ -2744,9 +3131,11 @@ async function initApp() {
 
   tryRestoreSession();
 
-  // Real-time sync listener — updates UI when data changes from another device
-  if (window._fbListenData) {
+  // Real-time sync listener — updates UI when data changes from another device.
+  // Skipped entirely in offline mode so remote data never overwrites local data.
+  if (window._fbListenData && !isOfflineMode()) {
     window._fbListenData((remoteData) => {
+      if (isOfflineMode()) return; // extra guard in case mode changed after subscribing
       data = remoteData;
       sanitizeData();
       setSyncStatus('synced');
@@ -2762,7 +3151,7 @@ async function initApp() {
           employees: renderEmployeesTable,
           salaries: () => { renderSalPayTable(); renderSalHistory(); },
           suppliers: renderSuppliersTable,
-          settings: () => { renderMethodsTable(); loadOwnerPhoneField(); renderUsersTable(); populateEmployeeLinkSelect(); renderExpCatsTable(); },
+          settings: () => { renderMethodsTable(); loadOwnerPhoneField(); renderUsersTable(); populateEmployeeLinkSelect(); renderExpCatsTable(); renderStorageModeUI(); },
           mysalary: renderMySalaryPage
         };
         if (fns[id]) fns[id]();
@@ -2782,7 +3171,7 @@ function wireAllFormNavigation() {
   enableEnterNavigation(['exp-date', 'exp-desc', 'exp-amount'], addExpense);
 
   enableEnterNavigation(
-    ['pur-date', 'pur-invoice', 'pur-amount', 'pay-type-select', 'pur-supplier', 'pur-due', 'pur-note'],
+    ['pur-date', 'pur-invoice', 'pur-amount', 'pay-type-select', 'pur-method', 'pur-supplier', 'pur-due', 'pur-note'],
     addPurchase
   );
 
