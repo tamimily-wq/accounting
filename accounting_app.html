@@ -118,6 +118,11 @@
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
+  html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+
   body {
     font-family: 'Tajawal', sans-serif;
     background: var(--bg);
@@ -196,6 +201,8 @@
   #main {
     margin-right: var(--sidebar-w);
     flex: 1;
+    min-width: 0;
+    max-width: 100%;
     padding: 24px;
     min-height: 100vh;
   }
@@ -258,6 +265,9 @@
     border: 1px solid var(--border);
     padding: 20px;
     margin-bottom: 20px;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    max-width: 100%;
   }
 
   .card-title {
@@ -388,7 +398,7 @@
   .tab.active { background: var(--card); color: var(--primary); box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
 
   /* TOGGLE */
-  .toggle-group { display: flex; gap: 8px; }
+  .toggle-group { display: flex; gap: 8px; flex-wrap: wrap; }
   .toggle-btn {
     padding: 8px 16px;
     border-radius: 8px;
