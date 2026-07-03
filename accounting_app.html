@@ -337,10 +337,11 @@
   .btn-sm { padding: 5px 12px; font-size: 12px; }
 
   /* TABLE */
-  .table-wrap { overflow-x: auto; }
+  .table-wrap { overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; }
 
   table {
     width: 100%;
+    min-width: 640px;
     border-collapse: collapse;
     font-size: 13.5px;
   }
@@ -355,12 +356,14 @@
     padding: 10px 12px;
     text-align: right;
     border-bottom: 2px solid var(--border);
+    white-space: nowrap;
   }
 
   td {
     padding: 10px 12px;
     border-bottom: 1px solid var(--border);
     vertical-align: middle;
+    white-space: nowrap;
   }
 
   tr:last-child td { border-bottom: none; }
