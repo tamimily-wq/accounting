@@ -568,7 +568,7 @@
 
   .confirm-icon { font-size: 40px; margin-bottom: 10px; }
   .confirm-title { font-size: 16px; font-weight: 800; color: var(--text); margin-bottom: 8px; }
-  .confirm-message { font-size: 13.5px; color: var(--text-muted); margin-bottom: 22px; line-height: 1.6; }
+  .confirm-message { font-size: 13.5px; color: var(--text-muted); margin-bottom: 22px; line-height: 1.6; white-space: pre-line; text-align: right; }
   .confirm-actions { display: flex; gap: 10px; }
   .confirm-actions .btn { flex: 1; justify-content: center; padding: 11px; }
 
@@ -1312,6 +1312,9 @@
         <strong>أونلاين:</strong> البيانات تُحفظ على الإنترنت (Firebase) وتتزامن بين كل الأجهزة تلقائياً.<br>
         <strong>محلي / بدون إنترنت:</strong> البيانات تُحفظ على هذا الجهاز فقط، ولا تتزامن مع أجهزة أخرى، ولا تحتاج إنترنت.
       </p>
+      <div style="background:#FFF3CD;border:1px solid #F0D68A;border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:12.5px;color:#856404;line-height:1.7;">
+        ⚠️ <strong>مهم:</strong> لا توجد مزامنة تلقائية بين الوضعين إطلاقاً. البيانات المُدخلة في وضع معيّن تبقى فيه فقط، ولا تنتقل للوضع الآخر إلا يدوياً عبر "تصدير/استيراد نسخة احتياطية" أدناه.
+      </div>
       <div class="toggle-group">
         <button class="toggle-btn" id="mode-online-btn" onclick="switchStorageMode('online')">🌐 أونلاين (متزامن)</button>
         <button class="toggle-btn" id="mode-offline-btn" onclick="switchStorageMode('offline')">💾 محلي (بدون إنترنت)</button>
@@ -1716,8 +1719,8 @@ async function switchStorageMode(newMode) {
   const goingOffline = newMode === 'offline';
   const ok = await showConfirm(
     goingOffline
-      ? 'سينتقل هذا الجهاز للعمل بدون إنترنت. البيانات المُدخلة بعد الآن ستُحفظ على هذا الجهاز فقط ولن تظهر على الأجهزة الأخرى حتى تعيده لوضع أونلاين. هل تريد الاستمرار؟'
-      : 'سيعود هذا الجهاز للعمل أونلاين ويتزامن مع Firebase. بيانات الوضع المحلي المخزّنة على هذا الجهاز ستبقى محفوظة هنا لكن لن تُستخدم في الوضع أونلاين. هل تريد الاستمرار؟',
+      ? '⚠️ تنبيه هام: كل وضع (أونلاين/محلي) له بياناته الخاصة المنفصلة تماماً — لا تتم أي مزامنة تلقائية بينهما إطلاقاً.\n\nما تدخله الآن في الوضع المحلي لن يظهر أبداً في الوضع الأونلاين حتى لو عدت إليه لاحقاً، إلا إذا استخدمت "تصدير/استيراد نسخة احتياطية" يدوياً من الإعدادات لنقل البيانات بنفسك.\n\nهل تريد المتابعة؟'
+      : '⚠️ تنبيه هام: كل وضع (أونلاين/محلي) له بياناته الخاصة المنفصلة تماماً — لا تتم أي مزامنة تلقائية بينهما إطلاقاً.\n\nستعود الآن لرؤية بيانات الوضع الأونلاين فقط. أي بيانات أدخلتها في الوضع المحلي ستبقى محفوظة هناك لكنها لن تظهر هنا، إلا إذا استخدمت "تصدير/استيراد نسخة احتياطية" يدوياً من الإعدادات لنقلها.\n\nهل تريد المتابعة؟',
     { title: goingOffline ? 'التبديل للوضع المحلي' : 'التبديل للوضع أونلاين', icon: '🌐' }
   );
   if (!ok) return;
