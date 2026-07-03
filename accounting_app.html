@@ -341,10 +341,11 @@
 
   table {
     width: 100%;
-    min-width: 640px;
     border-collapse: collapse;
     font-size: 13.5px;
   }
+
+  table.table-wide { min-width: 640px; }
 
   th {
     background: var(--bg);
@@ -831,7 +832,7 @@
         <button class="btn btn-sm" style="background:var(--bg);color:var(--text-muted)" onclick="clearIncomeFilter()">اليوم</button>
       </div>
       <div class="table-wrap">
-        <table>
+        <table class="table-wide">
           <thead><tr><th>#</th><th>التاريخ</th><th>طريقة الدفع</th><th>المبلغ</th><th>ملاحظات</th><th></th></tr></thead>
           <tbody id="income-tbody"></tbody>
         </table>
@@ -874,7 +875,7 @@
         <button class="btn btn-sm" style="background:var(--bg);color:var(--text-muted)" onclick="clearExpFilter()">مسح</button>
       </div>
       <div class="table-wrap">
-        <table>
+        <table class="table-wide">
           <thead><tr><th>#</th><th>التاريخ</th><th>البند</th><th>المبلغ</th><th></th></tr></thead>
           <tbody id="expense-tbody"></tbody>
         </table>
@@ -941,7 +942,10 @@
     </div>
 
     <div class="card">
-      <div class="card-title">📋 سجل المشتريات</div>
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+        <span>📋 سجل المشتريات</span>
+        <button class="btn btn-sm" id="pur-view-toggle-btn" style="background:var(--bg);color:var(--primary);border:1px solid var(--border);" onclick="togglePurchaseView()">📄 عرض كل التفاصيل</button>
+      </div>
       <div class="filter-row">
         <div class="form-group"><label>من</label><input type="date" id="pur-filter-from"></div>
         <div class="form-group"><label>إلى</label><input type="date" id="pur-filter-to"></div>
@@ -949,8 +953,8 @@
         <button class="btn btn-sm" style="background:var(--bg);color:var(--text-muted)" onclick="clearPurFilter()">مسح</button>
       </div>
       <div class="table-wrap">
-        <table>
-          <thead><tr><th>#</th><th>التاريخ</th><th>رقم الفاتورة</th><th>المبلغ</th><th>نوع الدفع</th><th>طريقة الدفع</th><th>المورد</th><th>الاستحقاق</th><th>الحالة</th><th></th></tr></thead>
+        <table id="purchase-table">
+          <thead id="purchase-thead"></thead>
           <tbody id="purchase-tbody"></tbody>
         </table>
       </div>
@@ -986,7 +990,7 @@
     <div class="card">
       <div class="card-title">📋 الأصناف الناقصة الحالية</div>
       <div class="table-wrap">
-        <table>
+        <table class="table-wide">
           <thead><tr><th>#</th><th>الصنف</th><th>الكمية</th><th>ملاحظة</th><th>أضافه</th><th>التاريخ</th><th></th></tr></thead>
           <tbody id="shoppinglist-tbody"></tbody>
         </table>
@@ -1011,7 +1015,7 @@
     <div class="card">
       <div class="card-title">✅ الأصناف المُشتراة سابقاً</div>
       <div class="table-wrap">
-        <table>
+        <table class="table-wide">
           <thead><tr><th>#</th><th>الصنف</th><th>الكمية</th><th>تاريخ الإضافة</th><th>تاريخ الشراء</th><th></th></tr></thead>
           <tbody id="shoppinglist-done-tbody"></tbody>
         </table>
@@ -1055,7 +1059,7 @@
     <div class="card">
       <div class="card-title">📋 قائمة الموظفين</div>
       <div class="table-wrap">
-        <table>
+        <table class="table-wide">
           <thead><tr><th>#</th><th>الاسم</th><th>التخصص</th><th>الراتب</th><th>الهاتف</th><th>تاريخ التعيين</th><th>إجراءات</th></tr></thead>
           <tbody id="employees-tbody"></tbody>
         </table>
@@ -1109,7 +1113,7 @@
           </div>
         </div>
         <div class="table-wrap">
-          <table>
+          <table class="table-wide">
             <thead><tr><th>الموظف</th><th>التخصص</th><th>الراتب</th><th>صرف؟</th><th>المبلغ المصروف</th><th>إشعار</th></tr></thead>
             <tbody id="sal-pay-tbody"></tbody>
           </table>
@@ -1185,7 +1189,7 @@
       <div class="card">
         <div class="card-title">📋 سجل الرواتب والسلف</div>
         <div class="table-wrap">
-          <table>
+          <table class="table-wide">
             <thead><tr><th>#</th><th>التاريخ</th><th>الموظف</th><th>النوع</th><th>المبلغ</th><th>ملاحظات</th><th></th></tr></thead>
             <tbody id="sal-history-tbody"></tbody>
           </table>
@@ -1203,7 +1207,7 @@
     <div class="card">
       <div class="card-title">📋 الديون المستحقة</div>
       <div class="table-wrap">
-        <table>
+        <table class="table-wide">
           <thead><tr><th>#</th><th>المورد</th><th>تاريخ الشراء</th><th>المبلغ الأصلي</th><th>المدفوع</th><th>المتبقي</th><th>الاستحقاق</th><th>الحالة</th><th>دفع</th></tr></thead>
           <tbody id="suppliers-tbody"></tbody>
         </table>
@@ -1287,7 +1291,7 @@
         </div>
         <div id="irep-breakdown" class="report-grid" style="grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;"></div>
         <div class="table-wrap">
-          <table>
+          <table class="table-wide">
             <thead><tr><th>التاريخ</th><th>طريقة الدفع</th><th>المبلغ</th><th>ملاحظات</th></tr></thead>
             <tbody id="irep-tbody"></tbody>
           </table>
@@ -1306,7 +1310,7 @@
           <button class="btn btn-primary btn-sm" onclick="generatePurchaseReport()">📊 إنشاء</button>
         </div>
         <div class="table-wrap">
-          <table>
+          <table class="table-wide">
             <thead><tr><th>التاريخ</th><th>رقم الفاتورة</th><th>المبلغ</th><th>نوع الدفع</th><th>طريقة الدفع</th><th>المورد</th><th>الاستحقاق</th></tr></thead>
             <tbody id="prep-tbody"></tbody>
           </table>
@@ -1325,7 +1329,7 @@
           <button class="btn btn-primary btn-sm" onclick="generateSalaryReport()">📊 إنشاء</button>
         </div>
         <div class="table-wrap">
-          <table>
+          <table class="table-wide">
             <thead><tr><th>التاريخ</th><th>الموظف</th><th>النوع</th><th>المبلغ</th></tr></thead>
             <tbody id="srep-tbody"></tbody>
           </table>
@@ -1363,7 +1367,7 @@
     <div class="card">
       <div class="card-title">📋 سجلي (رواتب، سلف، خصومات)</div>
       <div class="table-wrap">
-        <table>
+        <table class="table-wide">
           <thead><tr><th>التاريخ</th><th>النوع</th><th>المبلغ</th><th>ملاحظات</th></tr></thead>
           <tbody id="my-history-tbody"></tbody>
         </table>
@@ -1477,7 +1481,7 @@
       <button class="btn btn-primary" onclick="addUser()">➕ إضافة مستخدم</button>
 
       <div class="table-wrap" style="margin-top:20px;">
-        <table>
+        <table class="table-wide">
           <thead><tr><th>#</th><th>اسم المستخدم</th><th>الدور</th><th>مرتبط بموظف</th><th>يضيف نواقص؟</th><th></th></tr></thead>
           <tbody id="users-tbody"></tbody>
         </table>
@@ -1506,7 +1510,7 @@
       <button class="btn btn-primary" onclick="addPaymentMethod()">➕ إضافة طريقة دفع</button>
 
       <div class="table-wrap" style="margin-top:20px;">
-        <table>
+        <table class="table-wide">
           <thead><tr><th>#</th><th>اسم طريقة الدفع</th><th></th></tr></thead>
           <tbody id="methods-tbody"></tbody>
         </table>
@@ -1524,7 +1528,7 @@
       <button class="btn btn-primary" onclick="addExpenseCategory()">➕ إضافة بند</button>
 
       <div class="table-wrap" style="margin-top:20px;">
-        <table>
+        <table class="table-wide">
           <thead><tr><th>#</th><th>اسم البند</th><th></th></tr></thead>
           <tbody id="expcats-tbody"></tbody>
         </table>
@@ -2327,6 +2331,15 @@ function addPurchase() {
   showToast('تم تسجيل فاتورة الشراء بنجاح', 'success');
 }
 
+let purchaseViewMode = 'compact'; // 'compact' | 'full'
+
+function togglePurchaseView() {
+  purchaseViewMode = purchaseViewMode === 'compact' ? 'full' : 'compact';
+  const btn = document.getElementById('pur-view-toggle-btn');
+  if (btn) btn.textContent = purchaseViewMode === 'compact' ? '📄 عرض كل التفاصيل' : '📋 عرض مختصر';
+  renderPurchaseTable();
+}
+
 function renderPurchaseTable() {
   const from = document.getElementById('pur-filter-from').value;
   const to = document.getElementById('pur-filter-to').value;
@@ -2334,24 +2347,51 @@ function renderPurchaseTable() {
   if (from) rows = rows.filter(r => r.date >= from);
   if (to) rows = rows.filter(r => r.date <= to);
   const total = rows.reduce((s, r) => s + parseFloat(r.amount), 0);
+
+  const isFull = purchaseViewMode === 'full';
+  const purchaseTableEl = document.getElementById('purchase-table');
+  if (purchaseTableEl) purchaseTableEl.classList.toggle('table-wide', isFull);
+
+  const thead = document.getElementById('purchase-thead');
+  thead.innerHTML = isFull
+    ? '<tr><th>#</th><th>التاريخ</th><th>رقم الفاتورة</th><th>المبلغ</th><th>نوع الدفع</th><th>طريقة الدفع</th><th>المورد</th><th>الاستحقاق</th><th>الحالة</th><th></th></tr>'
+    : '<tr><th>#</th><th>رقم الفاتورة</th><th>التاريخ</th><th>المبلغ</th><th>الحالة</th><th></th></tr>';
+
   const tbody = document.getElementById('purchase-tbody');
+  const colCount = isFull ? 9 : 5;
+
   tbody.innerHTML = rows.map((r, i) => {
     const isOverdue = r.payType === 'credit' && r.dueDate < today() && r.remaining > 0;
     const isPaid = r.payType === 'cash' || r.remaining <= 0;
+    const statusBadge = isPaid ? '<span class="badge badge-success">مسدد</span>' : isOverdue ? '<span class="badge badge-danger">متأخر</span>' : '<span class="badge badge-info">معلق</span>';
+
+    if (isFull) {
+      return `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${fmtDate(r.date)}</td>
+        <td style="font-weight:600;color:var(--primary)">${r.invoice || '-'}</td>
+        <td style="font-weight:700;color:var(--accent)">${fmt(r.amount)} دينار</td>
+        <td>${r.payType === 'cash' ? '<span class="badge badge-success">نقدي</span>' : '<span class="badge badge-warning">آجل</span>'}</td>
+        <td><span class="badge badge-info">${r.method || 'كاش'}</span></td>
+        <td>${r.supplier || '-'}</td>
+        <td>${r.dueDate ? fmtDate(r.dueDate) : '-'}</td>
+        <td>${statusBadge}</td>
+        <td><button class="btn btn-danger btn-sm" onclick="deletePurchase(${r.id})">حذف</button></td>
+      </tr>`;
+    }
+
     return `
     <tr>
       <td>${i + 1}</td>
-      <td>${fmtDate(r.date)}</td>
       <td style="font-weight:600;color:var(--primary)">${r.invoice || '-'}</td>
+      <td>${fmtDate(r.date)}</td>
       <td style="font-weight:700;color:var(--accent)">${fmt(r.amount)} دينار</td>
-      <td>${r.payType === 'cash' ? '<span class="badge badge-success">نقدي</span>' : '<span class="badge badge-warning">آجل</span>'}</td>
-      <td><span class="badge badge-info">${r.method || 'كاش'}</span></td>
-      <td>${r.supplier || '-'}</td>
-      <td>${r.dueDate ? fmtDate(r.dueDate) : '-'}</td>
-      <td>${isPaid ? '<span class="badge badge-success">مسدد</span>' : isOverdue ? '<span class="badge badge-danger">متأخر</span>' : '<span class="badge badge-info">معلق</span>'}</td>
+      <td>${statusBadge}</td>
       <td><button class="btn btn-danger btn-sm" onclick="deletePurchase(${r.id})">حذف</button></td>
     </tr>`;
-  }).join('') || '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد بيانات</td></tr>';
+  }).join('') || `<tr><td colspan="${colCount}" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد بيانات</td></tr>`;
+
   document.getElementById('purchase-total').textContent = rows.length ? `الإجمالي: ${fmt(total)} دينار` : '';
 }
 
