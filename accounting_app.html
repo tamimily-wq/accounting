@@ -678,6 +678,9 @@
     <div class="nav-item" data-page="purchases" id="nav-purchases">
       <span class="icon">🛒</span> المشتريات
     </div>
+    <div class="nav-item" data-page="shoppinglist" id="nav-shoppinglist">
+      <span class="icon">📝</span> قائمة النواقص
+    </div>
   </div>
 
   <div class="nav-section" id="nav-section-employees">
@@ -939,6 +942,67 @@
         </table>
       </div>
       <div id="purchase-total" style="text-align:left;padding-top:12px;font-weight:700;color:var(--accent);font-size:15px;"></div>
+    </div>
+  </div>
+
+  <!-- ===== SHOPPING / MISSING ITEMS LIST ===== -->
+  <div id="page-shoppinglist" class="page">
+    <div class="page-header">
+      <div class="page-title">📝 قائمة النواقص</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">➕ إضافة صنف ناقص</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>اسم الصنف</label>
+          <input type="text" id="sl-item-name" placeholder="مثال: أكياس تسوق">
+        </div>
+        <div class="form-group">
+          <label>الكمية</label>
+          <input type="text" id="sl-item-qty" placeholder="مثال: 5 كراتين">
+        </div>
+        <div class="form-group">
+          <label>ملاحظة (اختياري)</label>
+          <input type="text" id="sl-item-note" placeholder="اختياري">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="addShoppingItem()">✔ إضافة للقائمة</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📋 الأصناف الناقصة الحالية</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>الصنف</th><th>الكمية</th><th>ملاحظة</th><th>أضافه</th><th>التاريخ</th><th></th></tr></thead>
+          <tbody id="shoppinglist-tbody"></tbody>
+        </table>
+      </div>
+      <div id="shoppinglist-empty-note" style="text-align:center;color:var(--text-muted);padding:16px;font-size:13px;"></div>
+    </div>
+
+    <div class="card" id="shoppinglist-send-card">
+      <div class="card-title">📤 إرسال القائمة لمسؤول المشتريات</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>رقم هاتف مسؤول المشتريات</label>
+          <input type="tel" id="purchaser-phone-inline" placeholder="9665XXXXXXXX">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn" style="background:#25D366;color:#fff;" onclick="sendShoppingListWhatsApp()">📲 إرسال القائمة (واتساب)</button>
+        <button class="btn" style="background:#566573;color:#fff;" onclick="sendShoppingListSMS()">✉️ إرسال القائمة (SMS)</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">✅ الأصناف المُشتراة سابقاً</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>الصنف</th><th>الكمية</th><th>تاريخ الإضافة</th><th>تاريخ الشراء</th><th></th></tr></thead>
+          <tbody id="shoppinglist-done-tbody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -1389,12 +1453,19 @@
           <label>ربط بموظف (للدور "موظف" فقط)</label>
           <select id="new-user-employee-link"></select>
         </div>
+        <div class="form-group">
+          <label>صلاحية إضافية</label>
+          <label style="display:flex;align-items:center;gap:8px;font-weight:500;font-size:13px;color:var(--text);cursor:pointer;padding-top:9px;">
+            <input type="checkbox" id="new-user-can-shopping" style="width:18px;height:18px;cursor:pointer;">
+            يمكنه إضافة أصناف لقائمة النواقص
+          </label>
+        </div>
       </div>
       <button class="btn btn-primary" onclick="addUser()">➕ إضافة مستخدم</button>
 
       <div class="table-wrap" style="margin-top:20px;">
         <table>
-          <thead><tr><th>#</th><th>اسم المستخدم</th><th>الدور</th><th>مرتبط بموظف</th><th></th></tr></thead>
+          <thead><tr><th>#</th><th>اسم المستخدم</th><th>الدور</th><th>مرتبط بموظف</th><th>يضيف نواقص؟</th><th></th></tr></thead>
           <tbody id="users-tbody"></tbody>
         </table>
       </div>
@@ -1411,7 +1482,7 @@
       <button class="btn btn-primary" onclick="saveOwnerPhone()">✔ حفظ الرقم</button>
     </div>
 
-    <div class="card">
+    <div class="card" id="payment-methods-card">
       <div class="card-title">💳 طرق الدفع (الإيرادات)</div>
       <div class="form-row">
         <div class="form-group">
@@ -1429,7 +1500,7 @@
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="expense-categories-card">
       <div class="card-title">📋 بنود المصروفات</div>
       <div class="form-row">
         <div class="form-group">
@@ -1655,8 +1726,10 @@ let data = {
   paymentMethods: ['كاش', 'فيزا', 'ماستركارد', 'حوالة مصرفية'],
   expenseCategories: ['إيجار', 'كهرباء وماء', 'صيانة', 'نظافة', 'اتصالات وإنترنت', 'مصروفات أخرى'],
   ownerPhone: '',
+  purchaserPhone: '',
+  shoppingList: [],
   users: [
-    { id: 1, username: 'admin', password: 'admin123', role: 'admin', employeeId: null }
+    { id: 1, username: 'admin', password: 'admin123', role: 'admin', employeeId: null, canAddShoppingItems: true }
   ]
 };
 
@@ -1916,6 +1989,11 @@ function sanitizeData() {
   if (!data.purchases) data.purchases = [];
   if (!data.employees) data.employees = [];
   if (!data.salaryHistory) data.salaryHistory = [];
+  if (!data.shoppingList) data.shoppingList = [];
+  if (data.purchaserPhone === undefined) data.purchaserPhone = '';
+  data.users.forEach(u => {
+    if (u.canAddShoppingItems === undefined) u.canAddShoppingItems = (u.role === 'admin');
+  });
 }
 
 async function loadData() {
@@ -1959,6 +2037,11 @@ function showPage(name, el) {
   if (name === 'income') { setToday('income-date'); setToday('income-filter-from'); setToday('income-filter-to'); renderIncomeTable(); renderIncomeTodaySummary(); }
   if (name === 'expenses') { setToday('exp-date'); populateExpenseCategorySelect(); renderExpenseTable(); }
   if (name === 'purchases') { setToday('pur-date'); renderPurchaseTable(); }
+  if (name === 'shoppinglist') {
+    renderShoppingList();
+    const phoneInput = document.getElementById('purchaser-phone-inline');
+    if (phoneInput && !phoneInput.value) phoneInput.value = data.purchaserPhone || '';
+  }
   if (name === 'employees') renderEmployeesTable();
   if (name === 'salaries') { setToday('sal-pay-date'); setToday('adv-date'); setToday('ded-date'); renderSalPayTable(); renderAdvEmpSelect(); renderSalHistory(); }
   if (name === 'suppliers') renderSuppliersTable();
@@ -2271,6 +2354,131 @@ function clearPurFilter() {
   document.getElementById('pur-filter-from').value = '';
   document.getElementById('pur-filter-to').value = '';
   renderPurchaseTable();
+}
+
+// ============ SHOPPING / MISSING ITEMS LIST ============
+function addShoppingItem() {
+  const name = document.getElementById('sl-item-name').value.trim();
+  const qty = document.getElementById('sl-item-qty').value.trim();
+  const note = document.getElementById('sl-item-note').value.trim();
+  if (!name) { showToast('يرجى إدخال اسم الصنف', 'error'); return; }
+
+  const addedByName = currentUser ? currentUser.username : 'غير معروف';
+
+  data.shoppingList.push({
+    id: Date.now(),
+    name, qty, note,
+    addedBy: addedByName,
+    addedDate: today(),
+    purchased: false,
+    purchasedDate: null
+  });
+  saveData();
+
+  document.getElementById('sl-item-name').value = '';
+  document.getElementById('sl-item-qty').value = '';
+  document.getElementById('sl-item-note').value = '';
+  renderShoppingList();
+  showToast('تمت إضافة الصنف للقائمة', 'success');
+}
+
+function renderShoppingList() {
+  const tbody = document.getElementById('shoppinglist-tbody');
+  const doneTbody = document.getElementById('shoppinglist-done-tbody');
+  const emptyNote = document.getElementById('shoppinglist-empty-note');
+  if (!tbody) return;
+
+  const pending = data.shoppingList.filter(i => !i.purchased).sort((a, b) => b.addedDate.localeCompare(a.addedDate));
+  const done = data.shoppingList.filter(i => i.purchased).sort((a, b) => (b.purchasedDate || '').localeCompare(a.purchasedDate || ''));
+
+  tbody.innerHTML = pending.map((item, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td style="font-weight:600">${item.name}</td>
+      <td>${item.qty || '-'}</td>
+      <td style="color:var(--text-muted)">${item.note || '-'}</td>
+      <td><span class="badge badge-info">${item.addedBy}</span></td>
+      <td>${fmtDate(item.addedDate)}</td>
+      <td>
+        <button class="btn btn-success btn-sm" onclick="markShoppingItemPurchased(${item.id})">تم الشراء</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteShoppingItem(${item.id})" style="margin-right:4px;">حذف</button>
+      </td>
+    </tr>
+  `).join('');
+
+  emptyNote.textContent = pending.length === 0 ? '🎉 لا توجد أصناف ناقصة حالياً' : '';
+
+  if (doneTbody) {
+    doneTbody.innerHTML = done.slice(0, 30).map((item, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${item.name}</td>
+        <td>${item.qty || '-'}</td>
+        <td>${fmtDate(item.addedDate)}</td>
+        <td>${item.purchasedDate ? fmtDate(item.purchasedDate) : '-'}</td>
+        <td><button class="btn btn-danger btn-sm" onclick="deleteShoppingItem(${item.id})">حذف</button></td>
+      </tr>
+    `).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد أصناف مُشتراة بعد</td></tr>';
+  }
+}
+
+async function markShoppingItemPurchased(id) {
+  const ok = await showConfirm('هل تم شراء هذا الصنف بالفعل؟', { title: 'تأكيد الشراء', icon: '✅', danger: false });
+  if (!ok) return;
+  const item = data.shoppingList.find(i => i.id === id);
+  if (item) {
+    item.purchased = true;
+    item.purchasedDate = today();
+  }
+  saveData();
+  renderShoppingList();
+  showToast('تم نقل الصنف إلى المُشتراة', 'success');
+}
+
+async function deleteShoppingItem(id) {
+  const ok = await showConfirm('هل تريد حذف هذا الصنف من القائمة؟', { title: 'حذف صنف', icon: '🗑️' });
+  if (!ok) return;
+  data.shoppingList = data.shoppingList.filter(i => i.id !== id);
+  saveData();
+  renderShoppingList();
+  showToast('تم حذف الصنف بنجاح', 'success');
+}
+
+function buildShoppingListMessage() {
+  const pending = data.shoppingList.filter(i => !i.purchased).sort((a, b) => a.addedDate.localeCompare(b.addedDate));
+  if (!pending.length) return null;
+
+  let lines = pending.map((item, i) =>
+    `${i + 1}. ${item.name}${item.qty ? ' — الكمية: ' + item.qty : ''}${item.note ? ' (' + item.note + ')' : ''}`
+  );
+
+  return `📝 قائمة النواقص (${fmtDate(today())})\n\n${lines.join('\n')}\n\nالعدد الإجمالي: ${pending.length} صنف`;
+}
+
+function sendShoppingListWhatsApp() {
+  const msg = buildShoppingListMessage();
+  if (!msg) { showToast('لا توجد أصناف ناقصة حالياً لإرسالها', 'error'); return; }
+  const phoneField = document.getElementById('purchaser-phone-inline').value.trim();
+  const phone = phoneField || data.purchaserPhone;
+  if (!phone) { showToast('يرجى إدخال رقم هاتف مسؤول المشتريات أولاً', 'error'); return; }
+  if (phoneField && phoneField !== data.purchaserPhone) {
+    data.purchaserPhone = phoneField.replace(/[^0-9]/g, '');
+    saveData();
+  }
+  sendWhatsApp(phone, msg);
+}
+
+function sendShoppingListSMS() {
+  const msg = buildShoppingListMessage();
+  if (!msg) { showToast('لا توجد أصناف ناقصة حالياً لإرسالها', 'error'); return; }
+  const phoneField = document.getElementById('purchaser-phone-inline').value.trim();
+  const phone = phoneField || data.purchaserPhone;
+  if (!phone) { showToast('يرجى إدخال رقم هاتف مسؤول المشتريات أولاً', 'error'); return; }
+  if (phoneField && phoneField !== data.purchaserPhone) {
+    data.purchaserPhone = phoneField.replace(/[^0-9]/g, '');
+    saveData();
+  }
+  sendSMS(phone, msg);
 }
 
 // ============ EMPLOYEES ============
@@ -2930,6 +3138,7 @@ function addUser() {
   const password = document.getElementById('new-user-password').value;
   const role = document.getElementById('new-user-role').value;
   const employeeLink = document.getElementById('new-user-employee-link').value;
+  const canAddShoppingItems = document.getElementById('new-user-can-shopping').checked;
 
   if (!username || !password) { showToast('يرجى إدخال اسم المستخدم وكلمة المرور', 'error'); return; }
   if (data.users.some(u => u.username === username)) { showToast('اسم المستخدم موجود بالفعل', 'error'); return; }
@@ -2938,11 +3147,13 @@ function addUser() {
   data.users.push({
     id: Date.now(),
     username, password, role,
-    employeeId: role === 'employee' ? parseInt(employeeLink) : null
+    employeeId: role === 'employee' ? parseInt(employeeLink) : null,
+    canAddShoppingItems: role === 'admin' ? true : canAddShoppingItems
   });
   saveData();
   document.getElementById('new-user-username').value = '';
   document.getElementById('new-user-password').value = '';
+  document.getElementById('new-user-can-shopping').checked = false;
   renderUsersTable();
   showToast('تم إضافة المستخدم', 'success');
 }
@@ -2952,15 +3163,34 @@ function renderUsersTable() {
   if (!tbody) return;
   tbody.innerHTML = data.users.map((u, i) => {
     const emp = u.employeeId ? data.employees.find(e => e.id === u.employeeId) : null;
+    const isAdmin = u.username === 'admin';
     return `
     <tr>
       <td>${i + 1}</td>
       <td style="font-weight:600">${u.username}</td>
       <td><span class="badge badge-info">${ROLE_LABELS[u.role] || u.role}</span></td>
       <td style="color:var(--text-muted)">${emp ? emp.name : '-'}</td>
-      <td>${u.username === 'admin' ? '<span style="color:var(--text-muted);font-size:12px;">محمي</span>' : `<button class="btn btn-primary btn-sm" onclick="openResetPassword(${u.id})">إعادة تعيين كلمة المرور</button> <button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id})" style="margin-right:4px;">حذف</button>`}</td>
+      <td style="text-align:center;">
+        <input type="checkbox" ${u.canAddShoppingItems ? 'checked' : ''} ${isAdmin ? 'disabled' : ''}
+          onchange="toggleUserShoppingPermission(${u.id}, this.checked)"
+          style="width:18px;height:18px;cursor:${isAdmin ? 'default' : 'pointer'};">
+      </td>
+      <td>${isAdmin ? '<span style="color:var(--text-muted);font-size:12px;">محمي</span>' : `<button class="btn btn-primary btn-sm" onclick="openResetPassword(${u.id})">إعادة تعيين كلمة المرور</button> <button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id})" style="margin-right:4px;">حذف</button>`}</td>
     </tr>`;
-  }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">لا يوجد مستخدمون</td></tr>';
+  }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;">لا يوجد مستخدمون</td></tr>';
+}
+
+function toggleUserShoppingPermission(userId, checked) {
+  const user = data.users.find(u => u.id === userId);
+  if (!user) return;
+  user.canAddShoppingItems = checked;
+  saveData();
+  showToast(checked ? 'تم منح صلاحية إضافة النواقص' : 'تم إلغاء صلاحية إضافة النواقص', 'success');
+  // If the currently logged-in user's own permission changed, refresh their nav immediately
+  if (currentUser && currentUser.id === userId) {
+    currentUser.canAddShoppingItems = checked;
+    applyRoleVisibility();
+  }
 }
 
 async function deleteUser(id) {
@@ -3070,7 +3300,6 @@ function applyRoleVisibility() {
 
   const sectionMap = {
     'nav-section-dashboard': ['admin', 'owner', 'cashier'],
-    'nav-section-daily': ['admin', 'cashier'],
     'nav-section-employees': ['admin'],
     'nav-section-reports': ['admin', 'owner'],
     'nav-section-myinfo': ['employee'],
@@ -3082,9 +3311,29 @@ function applyRoleVisibility() {
     if (el) el.style.display = sectionMap[id].includes(role) ? '' : 'none';
   });
 
+  // "العمليات اليومية" section: shown if the user can see ANY item inside it
+  // (income/expenses for admin+cashier, or shopping list for anyone granted permission)
+  const dailySection = document.getElementById('nav-section-daily');
+  const canSeeIncomeExpenses = (role === 'admin' || role === 'cashier');
+  const canSeeShoppingListItem = role === 'admin' || !!currentUser.canAddShoppingItems;
+  if (dailySection) dailySection.style.display = (canSeeIncomeExpenses || canSeeShoppingListItem) ? '' : 'none';
+
+  const incomeNav = document.querySelector('.nav-item[data-page="income"]');
+  if (incomeNav) incomeNav.style.display = canSeeIncomeExpenses ? '' : 'none';
+  const expensesNav = document.querySelector('.nav-item[data-page="expenses"]');
+  if (expensesNav) expensesNav.style.display = canSeeIncomeExpenses ? '' : 'none';
+
   // Cashier: hide purchases nav item (cashier only handles income+expenses)
   const purchasesNav = document.getElementById('nav-purchases');
   if (purchasesNav) purchasesNav.style.display = (role === 'admin') ? '' : 'none';
+
+  // Shopping/missing-items list: visible to admin always, and to any user
+  // (regardless of role) who was explicitly granted permission to add items.
+  const shoppingNav = document.getElementById('nav-shoppinglist');
+  const canUseShoppingList = role === 'admin' || !!currentUser.canAddShoppingItems;
+  if (shoppingNav) shoppingNav.style.display = canUseShoppingList ? '' : 'none';
+  const sendCard = document.getElementById('shoppinglist-send-card');
+  if (sendCard) sendCard.style.display = (role === 'admin') ? '' : 'none';
 
   // Users management card only for admin (settings page itself is nav-hidden for others,
   // but guard here too in case settings is reached directly)
@@ -3100,6 +3349,12 @@ function applyRoleVisibility() {
   if (backupCard) backupCard.style.display = (role === 'admin') ? '' : 'none';
   const resetCard = document.getElementById('reset-db-card');
   if (resetCard) resetCard.style.display = (role === 'admin') ? '' : 'none';
+
+  // Payment methods and expense categories affect the whole shared system — admin only
+  const methodsCard = document.getElementById('payment-methods-card');
+  if (methodsCard) methodsCard.style.display = (role === 'admin') ? '' : 'none';
+  const expCatsCard = document.getElementById('expense-categories-card');
+  if (expCatsCard) expCatsCard.style.display = (role === 'admin') ? '' : 'none';
 }
 
 function tryRestoreSession() {
@@ -3154,6 +3409,7 @@ async function initApp() {
           income: () => { renderIncomeTable(); renderIncomeTodaySummary(); },
           expenses: () => { populateExpenseCategorySelect(); renderExpenseTable(); },
           purchases: renderPurchaseTable,
+          shoppinglist: renderShoppingList,
           employees: renderEmployeesTable,
           salaries: () => { renderSalPayTable(); renderSalHistory(); },
           suppliers: renderSuppliersTable,
@@ -3197,6 +3453,7 @@ function wireAllFormNavigation() {
   enableEnterNavigation(['owner-phone'], saveOwnerPhone);
   enableEnterNavigation(['new-method-name'], addPaymentMethod);
   enableEnterNavigation(['new-expcat-name'], addExpenseCategory);
+  enableEnterNavigation(['sl-item-name', 'sl-item-qty', 'sl-item-note'], addShoppingItem);
 }
 
 // Bind nav clicks via addEventListener
