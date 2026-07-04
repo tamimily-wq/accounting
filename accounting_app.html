@@ -825,7 +825,10 @@
     </div>
 
     <div class="card">
-      <div class="card-title">📋 سجل الإيرادات</div>
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+        <span>📋 سجل الإيرادات</span>
+        <button class="btn btn-sm" id="income-view-toggle-btn" style="background:var(--bg);color:var(--primary);border:1px solid var(--border);" onclick="toggleIncomeView()">📄 عرض كل التفاصيل</button>
+      </div>
       <div class="filter-row">
         <div class="form-group">
           <label>من</label>
@@ -839,8 +842,8 @@
         <button class="btn btn-sm" style="background:var(--bg);color:var(--text-muted)" onclick="clearIncomeFilter()">اليوم</button>
       </div>
       <div class="table-wrap">
-        <table class="table-wide">
-          <thead><tr><th>#</th><th>التاريخ</th><th>طريقة الدفع</th><th>المبلغ</th><th>ملاحظات</th><th></th></tr></thead>
+        <table id="income-table">
+          <thead id="income-thead"></thead>
           <tbody id="income-tbody"></tbody>
         </table>
       </div>
@@ -882,7 +885,7 @@
         <button class="btn btn-sm" style="background:var(--bg);color:var(--text-muted)" onclick="clearExpFilter()">مسح</button>
       </div>
       <div class="table-wrap">
-        <table class="table-wide">
+        <table>
           <thead><tr><th>#</th><th>التاريخ</th><th>البند</th><th>المبلغ</th><th></th></tr></thead>
           <tbody id="expense-tbody"></tbody>
         </table>
@@ -995,10 +998,13 @@
     </div>
 
     <div class="card">
-      <div class="card-title">📋 الأصناف الناقصة الحالية</div>
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+        <span>📋 الأصناف الناقصة الحالية</span>
+        <button class="btn btn-sm" id="shoppinglist-view-toggle-btn" style="background:var(--bg);color:var(--primary);border:1px solid var(--border);" onclick="toggleShoppingListView()">📄 عرض كل التفاصيل</button>
+      </div>
       <div class="table-wrap">
-        <table class="table-wide">
-          <thead><tr><th>#</th><th>الصنف</th><th>الكمية</th><th>ملاحظة</th><th>أضافه</th><th>التاريخ</th><th></th></tr></thead>
+        <table id="shoppinglist-table">
+          <thead id="shoppinglist-thead"></thead>
           <tbody id="shoppinglist-tbody"></tbody>
         </table>
       </div>
@@ -1064,10 +1070,13 @@
     </div>
 
     <div class="card">
-      <div class="card-title">📋 قائمة الموظفين</div>
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+        <span>📋 قائمة الموظفين</span>
+        <button class="btn btn-sm" id="emp-view-toggle-btn" style="background:var(--bg);color:var(--primary);border:1px solid var(--border);" onclick="toggleEmployeesView()">📄 عرض كل التفاصيل</button>
+      </div>
       <div class="table-wrap">
-        <table class="table-wide">
-          <thead><tr><th>#</th><th>الاسم</th><th>التخصص</th><th>الراتب</th><th>الهاتف</th><th>تاريخ التعيين</th><th>إجراءات</th></tr></thead>
+        <table id="employees-table">
+          <thead id="employees-thead"></thead>
           <tbody id="employees-tbody"></tbody>
         </table>
       </div>
@@ -1194,10 +1203,13 @@
     <!-- HISTORY -->
     <div id="sal-tab-history" class="hidden">
       <div class="card">
-        <div class="card-title">📋 سجل الرواتب والسلف</div>
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+          <span>📋 سجل الرواتب والسلف</span>
+          <button class="btn btn-sm" id="salhist-view-toggle-btn" style="background:var(--bg);color:var(--primary);border:1px solid var(--border);" onclick="toggleSalHistoryView()">📄 عرض كل التفاصيل</button>
+        </div>
         <div class="table-wrap">
-          <table class="table-wide">
-            <thead><tr><th>#</th><th>التاريخ</th><th>الموظف</th><th>النوع</th><th>المبلغ</th><th>ملاحظات</th><th></th></tr></thead>
+          <table id="salhist-table">
+            <thead id="salhist-thead"></thead>
             <tbody id="sal-history-tbody"></tbody>
           </table>
         </div>
@@ -1212,10 +1224,13 @@
     </div>
 
     <div class="card">
-      <div class="card-title">📋 الديون المستحقة</div>
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+        <span>📋 الديون المستحقة</span>
+        <button class="btn btn-sm" id="suppliers-view-toggle-btn" style="background:var(--bg);color:var(--primary);border:1px solid var(--border);" onclick="toggleSuppliersView()">📄 عرض كل التفاصيل</button>
+      </div>
       <div class="table-wrap">
-        <table class="table-wide">
-          <thead><tr><th>#</th><th>المورد</th><th>تاريخ الشراء</th><th>المبلغ الأصلي</th><th>المدفوع</th><th>المتبقي</th><th>الاستحقاق</th><th>الحالة</th><th>دفع</th></tr></thead>
+        <table id="suppliers-table">
+          <thead id="suppliers-thead"></thead>
           <tbody id="suppliers-tbody"></tbody>
         </table>
       </div>
@@ -2234,6 +2249,15 @@ function renderIncomeTodaySummary() {
     </div>`;
 }
 
+let incomeViewMode = 'compact'; // 'compact' | 'full'
+
+function toggleIncomeView() {
+  incomeViewMode = incomeViewMode === 'compact' ? 'full' : 'compact';
+  const btn = document.getElementById('income-view-toggle-btn');
+  if (btn) btn.textContent = incomeViewMode === 'compact' ? '📄 عرض كل التفاصيل' : '📋 عرض مختصر';
+  renderIncomeTable();
+}
+
 function renderIncomeTable() {
   const from = document.getElementById('income-filter-from').value;
   const to = document.getElementById('income-filter-to').value;
@@ -2241,17 +2265,40 @@ function renderIncomeTable() {
   if (from) rows = rows.filter(r => r.date >= from);
   if (to) rows = rows.filter(r => r.date <= to);
   const total = rows.reduce((s, r) => s + parseFloat(r.amount), 0);
+
+  const isFull = incomeViewMode === 'full';
+  const tableEl = document.getElementById('income-table');
+  if (tableEl) tableEl.classList.toggle('table-wide', isFull);
+
+  const thead = document.getElementById('income-thead');
+  thead.innerHTML = isFull
+    ? '<tr><th>#</th><th>التاريخ</th><th>طريقة الدفع</th><th>المبلغ</th><th>ملاحظات</th><th></th></tr>'
+    : '<tr><th>#</th><th>التاريخ</th><th>المبلغ</th><th></th></tr>';
+
+  const colCount = isFull ? 6 : 4;
   const tbody = document.getElementById('income-tbody');
-  tbody.innerHTML = rows.map((r, i) => `
+
+  tbody.innerHTML = rows.map((r, i) => {
+    if (isFull) {
+      return `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${fmtDate(r.date)}</td>
+        <td><span class="badge badge-info">${r.method || 'كاش'}</span></td>
+        <td style="font-weight:700;color:var(--success)">${fmt(r.amount)} دينار</td>
+        <td style="color:var(--text-muted)">${r.note || '-'}</td>
+        <td><button class="btn btn-danger btn-sm" onclick="deleteIncome(${r.id})">حذف</button></td>
+      </tr>`;
+    }
+    return `
     <tr>
       <td>${i + 1}</td>
       <td>${fmtDate(r.date)}</td>
-      <td><span class="badge badge-info">${r.method || 'كاش'}</span></td>
       <td style="font-weight:700;color:var(--success)">${fmt(r.amount)} دينار</td>
-      <td style="color:var(--text-muted)">${r.note || '-'}</td>
       <td><button class="btn btn-danger btn-sm" onclick="deleteIncome(${r.id})">حذف</button></td>
-    </tr>
-  `).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد بيانات</td></tr>';
+    </tr>`;
+  }).join('') || `<tr><td colspan="${colCount}" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد بيانات</td></tr>`;
+
   document.getElementById('income-total').textContent = rows.length ? `الإجمالي: ${fmt(total)} دينار` : '';
 }
 
@@ -2462,6 +2509,15 @@ function addShoppingItem() {
   showToast('تمت إضافة الصنف للقائمة', 'success');
 }
 
+let shoppingListViewMode = 'compact'; // 'compact' | 'full'
+
+function toggleShoppingListView() {
+  shoppingListViewMode = shoppingListViewMode === 'compact' ? 'full' : 'compact';
+  const btn = document.getElementById('shoppinglist-view-toggle-btn');
+  if (btn) btn.textContent = shoppingListViewMode === 'compact' ? '📄 عرض كل التفاصيل' : '📋 عرض مختصر';
+  renderShoppingList();
+}
+
 function renderShoppingList() {
   const tbody = document.getElementById('shoppinglist-tbody');
   const doneTbody = document.getElementById('shoppinglist-done-tbody');
@@ -2471,20 +2527,42 @@ function renderShoppingList() {
   const pending = data.shoppingList.filter(i => !i.purchased).sort((a, b) => b.addedDate.localeCompare(a.addedDate));
   const done = data.shoppingList.filter(i => i.purchased).sort((a, b) => (b.purchasedDate || '').localeCompare(a.purchasedDate || ''));
 
-  tbody.innerHTML = pending.map((item, i) => `
+  const isFull = shoppingListViewMode === 'full';
+  const tableEl = document.getElementById('shoppinglist-table');
+  if (tableEl) tableEl.classList.toggle('table-wide', isFull);
+
+  const thead = document.getElementById('shoppinglist-thead');
+  thead.innerHTML = isFull
+    ? '<tr><th>#</th><th>الصنف</th><th>الكمية</th><th>ملاحظة</th><th>أضافه</th><th>التاريخ</th><th></th></tr>'
+    : '<tr><th>#</th><th>الصنف</th><th>الكمية</th><th></th></tr>';
+
+  const colCount = isFull ? 7 : 4;
+
+  tbody.innerHTML = pending.map((item, i) => {
+    const actions = `
+        <button class="btn btn-success btn-sm" onclick="markShoppingItemPurchased(${item.id})">تم الشراء</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteShoppingItem(${item.id})" style="margin-right:4px;">حذف</button>`;
+
+    if (isFull) {
+      return `
+      <tr>
+        <td>${i + 1}</td>
+        <td style="font-weight:600">${item.name}</td>
+        <td>${item.qty || '-'}</td>
+        <td style="color:var(--text-muted)">${item.note || '-'}</td>
+        <td><span class="badge badge-info">${item.addedBy}</span></td>
+        <td>${fmtDate(item.addedDate)}</td>
+        <td>${actions}</td>
+      </tr>`;
+    }
+    return `
     <tr>
       <td>${i + 1}</td>
       <td style="font-weight:600">${item.name}</td>
       <td>${item.qty || '-'}</td>
-      <td style="color:var(--text-muted)">${item.note || '-'}</td>
-      <td><span class="badge badge-info">${item.addedBy}</span></td>
-      <td>${fmtDate(item.addedDate)}</td>
-      <td>
-        <button class="btn btn-success btn-sm" onclick="markShoppingItemPurchased(${item.id})">تم الشراء</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteShoppingItem(${item.id})" style="margin-right:4px;">حذف</button>
-      </td>
-    </tr>
-  `).join('');
+      <td>${actions}</td>
+    </tr>`;
+  }).join('') || (pending.length === 0 ? '' : `<tr><td colspan="${colCount}" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد بيانات</td></tr>`);
 
   emptyNote.textContent = pending.length === 0 ? '🎉 لا توجد أصناف ناقصة حالياً' : '';
 
@@ -2580,22 +2658,53 @@ function addEmployee() {
   showToast('تم إضافة الموظف بنجاح', 'success');
 }
 
+let employeesViewMode = 'compact'; // 'compact' | 'full'
+
+function toggleEmployeesView() {
+  employeesViewMode = employeesViewMode === 'compact' ? 'full' : 'compact';
+  const btn = document.getElementById('emp-view-toggle-btn');
+  if (btn) btn.textContent = employeesViewMode === 'compact' ? '📄 عرض كل التفاصيل' : '📋 عرض مختصر';
+  renderEmployeesTable();
+}
+
 function renderEmployeesTable() {
+  const isFull = employeesViewMode === 'full';
+  const tableEl = document.getElementById('employees-table');
+  if (tableEl) tableEl.classList.toggle('table-wide', isFull);
+
+  const thead = document.getElementById('employees-thead');
+  thead.innerHTML = isFull
+    ? '<tr><th>#</th><th>الاسم</th><th>التخصص</th><th>الراتب</th><th>الهاتف</th><th>تاريخ التعيين</th><th>إجراءات</th></tr>'
+    : '<tr><th>#</th><th>الاسم</th><th>الراتب</th><th>إجراءات</th></tr>';
+
+  const colCount = isFull ? 7 : 4;
   const tbody = document.getElementById('employees-tbody');
-  tbody.innerHTML = data.employees.map((e, i) => `
+
+  tbody.innerHTML = data.employees.map((e, i) => {
+    const actions = `
+        <button class="btn btn-primary btn-sm" onclick="openEditSalary(${e.id})">تعديل الراتب</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteEmployee(${e.id})" style="margin-right:4px;">حذف</button>`;
+
+    if (isFull) {
+      return `
+      <tr>
+        <td>${i + 1}</td>
+        <td style="font-weight:600">${e.name}</td>
+        <td><span class="badge badge-info">${e.role}</span></td>
+        <td style="font-weight:700;color:var(--primary)">${fmt(e.salary)} دينار</td>
+        <td style="color:var(--text-muted);font-size:12px;">${e.phone || '<span style="color:var(--danger)">غير مسجل</span>'}</td>
+        <td style="color:var(--text-muted)">${e.join ? fmtDate(e.join) : '-'}</td>
+        <td>${actions}</td>
+      </tr>`;
+    }
+    return `
     <tr>
       <td>${i + 1}</td>
       <td style="font-weight:600">${e.name}</td>
-      <td><span class="badge badge-info">${e.role}</span></td>
       <td style="font-weight:700;color:var(--primary)">${fmt(e.salary)} دينار</td>
-      <td style="color:var(--text-muted);font-size:12px;">${e.phone || '<span style="color:var(--danger)">غير مسجل</span>'}</td>
-      <td style="color:var(--text-muted)">${e.join ? fmtDate(e.join) : '-'}</td>
-      <td>
-        <button class="btn btn-primary btn-sm" onclick="openEditSalary(${e.id})">تعديل الراتب</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteEmployee(${e.id})" style="margin-right:4px;">حذف</button>
-      </td>
-    </tr>
-  `).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px;">لا يوجد موظفون</td></tr>';
+      <td>${actions}</td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="${colCount}" style="text-align:center;color:var(--text-muted);padding:20px;">لا يوجد موظفون</td></tr>`;
 }
 
 let editingEmpId = null;
@@ -2762,20 +2871,54 @@ function addAdvance() {
   renderSalHistory();
 }
 
+let salHistoryViewMode = 'compact'; // 'compact' | 'full'
+
+function toggleSalHistoryView() {
+  salHistoryViewMode = salHistoryViewMode === 'compact' ? 'full' : 'compact';
+  const btn = document.getElementById('salhist-view-toggle-btn');
+  if (btn) btn.textContent = salHistoryViewMode === 'compact' ? '📄 عرض كل التفاصيل' : '📋 عرض مختصر';
+  renderSalHistory();
+}
+
 function renderSalHistory() {
   const rows = [...data.salaryHistory].sort((a, b) => b.date.localeCompare(a.date));
+
+  const isFull = salHistoryViewMode === 'full';
+  const tableEl = document.getElementById('salhist-table');
+  if (tableEl) tableEl.classList.toggle('table-wide', isFull);
+
+  const thead = document.getElementById('salhist-thead');
+  thead.innerHTML = isFull
+    ? '<tr><th>#</th><th>التاريخ</th><th>الموظف</th><th>النوع</th><th>المبلغ</th><th>ملاحظات</th><th></th></tr>'
+    : '<tr><th>#</th><th>الموظف</th><th>النوع</th><th>المبلغ</th><th></th></tr>';
+
+  const colCount = isFull ? 7 : 5;
   const tbody = document.getElementById('sal-history-tbody');
-  tbody.innerHTML = rows.map((r, i) => `
+
+  const typeBadge = (type) => type === 'راتب' ? '<span class="badge badge-success">راتب</span>' : type === 'سلفة' ? '<span class="badge badge-warning">سلفة</span>' : '<span class="badge badge-danger">خصم</span>';
+
+  tbody.innerHTML = rows.map((r, i) => {
+    if (isFull) {
+      return `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${fmtDate(r.date)}</td>
+        <td style="font-weight:600">${r.employeeName}</td>
+        <td>${typeBadge(r.type)}</td>
+        <td style="font-weight:700;color:var(--primary)">${fmt(r.amount)} دينار</td>
+        <td style="color:var(--text-muted)">${r.note || '-'}</td>
+        <td><button class="btn btn-danger btn-sm" onclick="deleteSalHistory(${r.id})">حذف</button></td>
+      </tr>`;
+    }
+    return `
     <tr>
       <td>${i + 1}</td>
-      <td>${fmtDate(r.date)}</td>
       <td style="font-weight:600">${r.employeeName}</td>
-      <td>${r.type === 'راتب' ? '<span class="badge badge-success">راتب</span>' : r.type === 'سلفة' ? '<span class="badge badge-warning">سلفة</span>' : '<span class="badge badge-danger">خصم</span>'}</td>
+      <td>${typeBadge(r.type)}</td>
       <td style="font-weight:700;color:var(--primary)">${fmt(r.amount)} دينار</td>
-      <td style="color:var(--text-muted)">${r.note || '-'}</td>
       <td><button class="btn btn-danger btn-sm" onclick="deleteSalHistory(${r.id})">حذف</button></td>
-    </tr>
-  `).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد بيانات</td></tr>';
+    </tr>`;
+  }).join('') || `<tr><td colspan="${colCount}" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد بيانات</td></tr>`;
 }
 
 async function deleteSalHistory(id) {
@@ -2787,25 +2930,60 @@ async function deleteSalHistory(id) {
 }
 
 // ============ SUPPLIERS / DEBTS ============
+let suppliersViewMode = 'compact'; // 'compact' | 'full'
+
+function toggleSuppliersView() {
+  suppliersViewMode = suppliersViewMode === 'compact' ? 'full' : 'compact';
+  const btn = document.getElementById('suppliers-view-toggle-btn');
+  if (btn) btn.textContent = suppliersViewMode === 'compact' ? '📄 عرض كل التفاصيل' : '📋 عرض مختصر';
+  renderSuppliersTable();
+}
+
 function renderSuppliersTable() {
   const debts = data.purchases.filter(p => p.payType === 'credit');
+
+  const isFull = suppliersViewMode === 'full';
+  const tableEl = document.getElementById('suppliers-table');
+  if (tableEl) tableEl.classList.toggle('table-wide', isFull);
+
+  const thead = document.getElementById('suppliers-thead');
+  thead.innerHTML = isFull
+    ? '<tr><th>#</th><th>المورد</th><th>تاريخ الشراء</th><th>المبلغ الأصلي</th><th>المدفوع</th><th>المتبقي</th><th>الاستحقاق</th><th>الحالة</th><th>دفع</th></tr>'
+    : '<tr><th>#</th><th>المورد</th><th>المتبقي</th><th>الاستحقاق</th><th>الحالة</th><th>دفع</th></tr>';
+
+  const colCount = isFull ? 9 : 6;
   const tbody = document.getElementById('suppliers-tbody');
+
   tbody.innerHTML = debts.sort((a, b) => a.dueDate.localeCompare(b.dueDate)).map((p, i) => {
     const isPaid = p.remaining <= 0;
     const isOverdue = !isPaid && p.dueDate < today();
+    const statusBadge = isPaid ? '<span class="badge badge-success">مسدد</span>' : isOverdue ? '<span class="badge badge-danger">متأخر</span>' : '<span class="badge badge-warning">معلق</span>';
+    const payAction = isPaid ? '-' : `<button class="btn btn-success btn-sm" onclick="openPayDebt(${p.id})">دفع</button>`;
+
+    if (isFull) {
+      return `
+      <tr>
+        <td>${i + 1}</td>
+        <td style="font-weight:600">${p.supplier}</td>
+        <td>${fmtDate(p.date)}</td>
+        <td>${fmt(p.amount)} دينار</td>
+        <td style="color:var(--success)">${fmt(p.paid)} دينار</td>
+        <td style="font-weight:700;color:${isPaid ? 'var(--success)' : 'var(--danger)'}">${fmt(p.remaining)} دينار</td>
+        <td>${fmtDate(p.dueDate)}</td>
+        <td>${statusBadge}</td>
+        <td>${payAction}</td>
+      </tr>`;
+    }
     return `
     <tr>
       <td>${i + 1}</td>
       <td style="font-weight:600">${p.supplier}</td>
-      <td>${fmtDate(p.date)}</td>
-      <td>${fmt(p.amount)} دينار</td>
-      <td style="color:var(--success)">${fmt(p.paid)} دينار</td>
       <td style="font-weight:700;color:${isPaid ? 'var(--success)' : 'var(--danger)'}">${fmt(p.remaining)} دينار</td>
       <td>${fmtDate(p.dueDate)}</td>
-      <td>${isPaid ? '<span class="badge badge-success">مسدد</span>' : isOverdue ? '<span class="badge badge-danger">متأخر</span>' : '<span class="badge badge-warning">معلق</span>'}</td>
-      <td>${isPaid ? '-' : `<button class="btn btn-success btn-sm" onclick="openPayDebt(${p.id})">دفع</button>`}</td>
+      <td>${statusBadge}</td>
+      <td>${payAction}</td>
     </tr>`;
-  }).join('') || '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد ديون</td></tr>';
+  }).join('') || `<tr><td colspan="${colCount}" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد ديون</td></tr>`;
 }
 
 let payingDebtId = null;
