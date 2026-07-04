@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>برنامج المحاسبة اليومي</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <!-- PWA: installable app metadata -->
 <meta name="theme-color" content="#1B4F72">
@@ -1485,6 +1486,45 @@
       <div style="margin-top:10px;font-size:12px;color:var(--text-muted);">آخر نسخة احتياطية: <span id="last-backup-time">لا يوجد سجل</span></div>
     </div>
 
+    <div class="card" id="excel-import-card">
+      <div class="card-title">📊 استيراد بيانات من Excel</div>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;line-height:1.7;">
+        استورد بياناتك القديمة (إيرادات، مصروفات، مشتريات) من ملفات Excel دفعة واحدة. حمّل القالب الجاهز أولاً، عبّئ بياناتك فيه، ثم ارفعه هنا.
+      </p>
+
+      <!-- Income import -->
+      <div style="border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px;">
+        <div style="font-weight:700;color:var(--primary);margin-bottom:10px;">💰 الإيرادات</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-sm" style="background:var(--bg);color:var(--primary);border:1px solid var(--border);" onclick="downloadExcelTemplate('income')">⬇️ تحميل القالب</button>
+          <button class="btn btn-sm" style="background:var(--success);color:#fff;" onclick="document.getElementById('excel-import-income').click()">⬆️ استيراد ملف Excel</button>
+          <input type="file" id="excel-import-income" accept=".xlsx,.xls" class="hidden" onchange="handleExcelImport(event, 'income')">
+        </div>
+      </div>
+
+      <!-- Expenses import -->
+      <div style="border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px;">
+        <div style="font-weight:700;color:var(--primary);margin-bottom:10px;">📤 المصروفات</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-sm" style="background:var(--bg);color:var(--primary);border:1px solid var(--border);" onclick="downloadExcelTemplate('expenses')">⬇️ تحميل القالب</button>
+          <button class="btn btn-sm" style="background:var(--success);color:#fff;" onclick="document.getElementById('excel-import-expenses').click()">⬆️ استيراد ملف Excel</button>
+          <input type="file" id="excel-import-expenses" accept=".xlsx,.xls" class="hidden" onchange="handleExcelImport(event, 'expenses')">
+        </div>
+      </div>
+
+      <!-- Purchases import -->
+      <div style="border:1px solid var(--border);border-radius:10px;padding:14px;">
+        <div style="font-weight:700;color:var(--primary);margin-bottom:10px;">🛒 المشتريات</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-sm" style="background:var(--bg);color:var(--primary);border:1px solid var(--border);" onclick="downloadExcelTemplate('purchases')">⬇️ تحميل القالب</button>
+          <button class="btn btn-sm" style="background:var(--success);color:#fff;" onclick="document.getElementById('excel-import-purchases').click()">⬆️ استيراد ملف Excel</button>
+          <input type="file" id="excel-import-purchases" accept=".xlsx,.xls" class="hidden" onchange="handleExcelImport(event, 'purchases')">
+        </div>
+      </div>
+
+      <div id="excel-import-result" style="margin-top:14px;"></div>
+    </div>
+
     <div class="card" id="reset-db-card">
       <div class="card-title">🗑️ تصفير قاعدة البيانات</div>
       <p style="font-size:13px;color:var(--danger);margin-bottom:14px;line-height:1.7;font-weight:600;">
@@ -1919,6 +1959,192 @@ async function switchStorageMode(newMode) {
 }
 
 // ============ BACKUP: EXPORT / IMPORT ============
+// ============ EXCEL IMPORT / EXPORT ============
+
+function downloadExcelTemplate(type) {
+  if (typeof XLSX === 'undefined') { showToast('تعذّر تحميل مكتبة Excel، تأكد من اتصالك بالإنترنت', 'error'); return; }
+
+  let headers, exampleRows, sheetName, fileName;
+
+  if (type === 'income') {
+    headers = ['التاريخ (YYYY-MM-DD)', 'طريقة الدفع', 'المبلغ', 'ملاحظات (اختياري)'];
+    exampleRows = [
+      ['2026-07-01', 'كاش', 250, ''],
+      ['2026-07-01', 'فيزا', 400, 'دفعة عميل']
+    ];
+    sheetName = 'الإيرادات';
+    fileName = 'قالب_استيراد_الإيرادات.xlsx';
+  } else if (type === 'expenses') {
+    headers = ['التاريخ (YYYY-MM-DD)', 'البند', 'المبلغ'];
+    exampleRows = [
+      ['2026-07-01', 'كهرباء وماء', 150],
+      ['2026-07-02', 'صيانة', 80]
+    ];
+    sheetName = 'المصروفات';
+    fileName = 'قالب_استيراد_المصروفات.xlsx';
+  } else {
+    headers = ['التاريخ (YYYY-MM-DD)', 'رقم الفاتورة', 'المبلغ', 'نوع الدفع (نقدي/آجل)', 'طريقة الدفع', 'اسم المورد (فقط للآجل)', 'تاريخ الاستحقاق (فقط للآجل)', 'ملاحظات (اختياري)'];
+    exampleRows = [
+      ['2026-07-01', 'INV-1001', 1200, 'نقدي', 'كاش', '', '', ''],
+      ['2026-07-03', 'INV-1002', 3500, 'آجل', 'حوالة مصرفية', 'مؤسسة النور للتجارة', '2026-07-20', 'دفعة أولى مستحقة']
+    ];
+    sheetName = 'المشتريات';
+    fileName = 'قالب_استيراد_المشتريات.xlsx';
+  }
+
+  const wsData = [headers, ...exampleRows];
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols'] = headers.map(() => ({ wch: 22 }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  XLSX.writeFile(wb, fileName);
+  showToast('تم تحميل القالب، عبّئ بياناتك واحذف صف المثال قبل الاستيراد', 'success');
+}
+
+function excelSerialToDateString(value) {
+  // Handles both plain "YYYY-MM-DD" text and Excel's numeric date serials
+  if (typeof value === 'number') {
+    const d = XLSX.SSF.parse_date_code(value);
+    if (d) return `${d.y}-${String(d.m).padStart(2, '0')}-${String(d.d).padStart(2, '0')}`;
+  }
+  const str = String(value || '').trim();
+  // Normalize common alternate separators (e.g. 2026/07/01) to dashes
+  const normalized = str.replace(/\//g, '-');
+  return normalized;
+}
+
+function isValidDateString(str) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(str);
+}
+
+async function handleExcelImport(event, type) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  if (typeof XLSX === 'undefined') { showToast('تعذّر تحميل مكتبة Excel، تأكد من اتصالك بالإنترنت', 'error'); event.target.value = ''; return; }
+
+  try {
+    const buffer = await file.arrayBuffer();
+    const wb = XLSX.read(buffer, { type: 'array', cellDates: false });
+    const firstSheetName = wb.SheetNames[0];
+    const sheet = wb.Sheets[firstSheetName];
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: true });
+
+    // Find the header row (contains "التاريخ") then read everything after it
+    let headerRowIndex = rows.findIndex(r => r.some(cell => String(cell).includes('التاريخ')));
+    if (headerRowIndex === -1) headerRowIndex = 0;
+    const dataRows = rows.slice(headerRowIndex + 1).filter(r => r.some(cell => String(cell).trim() !== ''));
+
+    let result;
+    if (type === 'income') result = importIncomeRows(dataRows);
+    else if (type === 'expenses') result = importExpenseRows(dataRows);
+    else result = importPurchaseRows(dataRows);
+
+    if (result.imported > 0) {
+      saveData();
+      renderIncomeTable && renderIncomeTable();
+      renderExpenseTable && renderExpenseTable();
+      renderPurchaseTable && renderPurchaseTable();
+      renderIncomeTodaySummary && renderIncomeTodaySummary();
+      updateDashboard();
+    }
+
+    const resultBox = document.getElementById('excel-import-result');
+    const hasErrors = result.errors.length > 0;
+    resultBox.innerHTML = `
+      <div style="background:${hasErrors ? '#FFF3CD' : '#D4EDDA'};border:1px solid ${hasErrors ? '#F0D68A' : '#B7DFC0'};border-radius:8px;padding:12px 14px;font-size:13px;color:${hasErrors ? '#856404' : '#1E8449'};line-height:1.8;">
+        ✅ تم استيراد <strong>${result.imported}</strong> سجل بنجاح.
+        ${hasErrors ? `<br>⚠️ تم تجاهل ${result.errors.length} صف بسبب أخطاء:<br>` + result.errors.slice(0, 8).map(e => `• ${e}`).join('<br>') + (result.errors.length > 8 ? `<br>... و${result.errors.length - 8} أخطاء أخرى` : '') : ''}
+      </div>`;
+
+    showToast(`تم استيراد ${result.imported} سجل بنجاح`, hasErrors ? 'info' : 'success');
+  } catch (e) {
+    console.error(e);
+    showToast('تعذّر قراءة الملف، تأكد أنه ملف Excel صحيح (xlsx)', 'error');
+  } finally {
+    event.target.value = '';
+  }
+}
+
+function importIncomeRows(rows) {
+  let imported = 0;
+  const errors = [];
+  rows.forEach((row, idx) => {
+    const rowNum = idx + 2;
+    const dateRaw = row[0], method = String(row[1] || '').trim(), amountRaw = row[2], note = String(row[3] || '').trim();
+    const date = excelSerialToDateString(dateRaw);
+    const amount = parseFloat(amountRaw);
+
+    if (!isValidDateString(date)) { errors.push(`صف ${rowNum}: تاريخ غير صحيح`); return; }
+    if (!amount || amount <= 0) { errors.push(`صف ${rowNum}: مبلغ غير صحيح`); return; }
+    if (!data.paymentMethods.includes(method)) { errors.push(`صف ${rowNum}: طريقة الدفع "${method}" غير معروفة`); return; }
+
+    data.income.push({ id: Date.now() + Math.random(), date, method, amount, note });
+    imported++;
+  });
+  return { imported, errors };
+}
+
+function importExpenseRows(rows) {
+  let imported = 0;
+  const errors = [];
+  rows.forEach((row, idx) => {
+    const rowNum = idx + 2;
+    const dateRaw = row[0], desc = String(row[1] || '').trim(), amountRaw = row[2];
+    const date = excelSerialToDateString(dateRaw);
+    const amount = parseFloat(amountRaw);
+
+    if (!isValidDateString(date)) { errors.push(`صف ${rowNum}: تاريخ غير صحيح`); return; }
+    if (!amount || amount <= 0) { errors.push(`صف ${rowNum}: مبلغ غير صحيح`); return; }
+    const finalDesc = data.expenseCategories.includes(desc) ? desc : DEFAULT_EXPENSE_CATEGORY;
+
+    data.expenses.push({ id: Date.now() + Math.random(), date, desc: finalDesc, amount });
+    imported++;
+  });
+  return { imported, errors };
+}
+
+function importPurchaseRows(rows) {
+  let imported = 0;
+  const errors = [];
+  rows.forEach((row, idx) => {
+    const rowNum = idx + 2;
+    const dateRaw = row[0], invoice = String(row[1] || '').trim(), amountRaw = row[2];
+    const payTypeText = String(row[3] || '').trim();
+    const method = String(row[4] || '').trim();
+    const supplier = String(row[5] || '').trim();
+    const dueDateRaw = row[6];
+    const note = String(row[7] || '').trim();
+
+    const date = excelSerialToDateString(dateRaw);
+    const amount = parseFloat(amountRaw);
+
+    if (!isValidDateString(date)) { errors.push(`صف ${rowNum}: تاريخ غير صحيح`); return; }
+    if (!amount || amount <= 0) { errors.push(`صف ${rowNum}: مبلغ غير صحيح`); return; }
+    if (payTypeText !== 'نقدي' && payTypeText !== 'آجل') { errors.push(`صف ${rowNum}: نوع الدفع يجب أن يكون "نقدي" أو "آجل"`); return; }
+    if (!data.paymentMethods.includes(method)) { errors.push(`صف ${rowNum}: طريقة الدفع "${method}" غير معروفة`); return; }
+
+    const payType = payTypeText === 'نقدي' ? 'cash' : 'credit';
+    let dueDate = '';
+    if (payType === 'credit') {
+      if (!supplier) { errors.push(`صف ${rowNum}: اسم المورد مطلوب للشراء الآجل`); return; }
+      dueDate = excelSerialToDateString(dueDateRaw);
+      if (!isValidDateString(dueDate)) { errors.push(`صف ${rowNum}: تاريخ الاستحقاق غير صحيح`); return; }
+    }
+
+    data.purchases.push({
+      id: Date.now() + Math.random(), date, invoice, amount, payType, method,
+      supplier: payType === 'credit' ? supplier : '',
+      dueDate: payType === 'credit' ? dueDate : '',
+      note,
+      paid: payType === 'cash' ? amount : 0,
+      remaining: payType === 'cash' ? 0 : amount
+    });
+    imported++;
+  });
+  return { imported, errors };
+}
+
 function exportBackup() {
   try {
     const payload = {
@@ -3716,6 +3942,8 @@ function applyRoleVisibility() {
   if (backupCard) backupCard.style.display = (role === 'admin') ? '' : 'none';
   const resetCard = document.getElementById('reset-db-card');
   if (resetCard) resetCard.style.display = (role === 'admin') ? '' : 'none';
+  const excelCard = document.getElementById('excel-import-card');
+  if (excelCard) excelCard.style.display = (role === 'admin') ? '' : 'none';
 
   // Payment methods and expense categories affect the whole shared system — admin only
   const methodsCard = document.getElementById('payment-methods-card');
