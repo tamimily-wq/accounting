@@ -758,6 +758,9 @@
     <div class="nav-item" data-page="suppliers">
       <span class="icon">🏪</span> ديون الموردين
     </div>
+    <div class="nav-item" data-page="supplierstatement">
+      <span class="icon">📑</span> كشف حساب الموردين
+    </div>
     <div class="nav-item" data-page="reports">
       <span class="icon">📈</span> التقارير
     </div>
@@ -973,7 +976,7 @@
       <div id="credit-fields" class="form-row hidden">
         <div class="form-group">
           <label>اسم المورد</label>
-          <input type="text" id="pur-supplier" placeholder="اسم المورد">
+          <select id="pur-supplier"></select>
         </div>
         <div class="form-group">
           <label>تاريخ الاستحقاق</label>
@@ -1301,6 +1304,63 @@
           <button class="btn btn-success" onclick="confirmPayDebt()">تأكيد الدفع</button>
           <button class="btn" style="background:var(--bg);" onclick="closePayDebt()">إلغاء</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SUPPLIER STATEMENT (كشف حساب الموردين) ===== -->
+  <div id="page-supplierstatement" class="page">
+    <div class="page-header">
+      <div class="page-title">📑 كشف حساب الموردين</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔍 اختر المورد</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>المورد</label>
+          <select id="stmt-supplier-select" onchange="generateSupplierStatement()"></select>
+        </div>
+      </div>
+    </div>
+
+    <div id="stmt-empty-note" style="text-align:center;color:var(--text-muted);padding:30px;font-size:13px;"></div>
+
+    <div id="stmt-result" class="hidden">
+      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);">
+        <div class="stat-card purchase">
+          <div class="stat-label">إجمالي الفواتير</div>
+          <div class="stat-value" id="stmt-total-invoices">0.00</div>
+          <div class="stat-sub">دينار</div>
+        </div>
+        <div class="stat-card income">
+          <div class="stat-label">إجمالي المسدد</div>
+          <div class="stat-value" id="stmt-total-paid">0.00</div>
+          <div class="stat-sub">دينار</div>
+        </div>
+        <div class="stat-card expense">
+          <div class="stat-label">إجمالي المتبقي (الدين الحالي)</div>
+          <div class="stat-value" id="stmt-total-remaining">0.00</div>
+          <div class="stat-sub">دينار</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+          <span>📋 كل فواتير هذا المورد</span>
+          <button class="btn btn-sm" id="stmt-view-toggle-btn" style="background:var(--bg);color:var(--primary);border:1px solid var(--border);" onclick="toggleSupplierStatementView()">📄 عرض كل التفاصيل</button>
+        </div>
+        <div class="table-wrap">
+          <table id="stmt-table">
+            <thead id="stmt-thead"></thead>
+            <tbody id="stmt-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card" id="stmt-info-card">
+        <div class="card-title">ℹ️ بيانات المورد</div>
+        <div id="stmt-supplier-info" style="font-size:13.5px;color:var(--text-muted);line-height:2;"></div>
       </div>
     </div>
   </div>
@@ -1668,6 +1728,35 @@
         </table>
       </div>
     </div>
+
+    <div class="card" id="suppliers-mgmt-card">
+      <div class="card-title">📦 قائمة الموردين</div>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;line-height:1.7;">
+        سجّل كل مورد مرة واحدة هنا، ثم اختره من القائمة عند تسجيل فاتورة شراء آجلة — بدل كتابة الاسم يدوياً في كل مرة. هذا يضمن دقة كشف حساب كل مورد.
+      </p>
+      <div class="form-row">
+        <div class="form-group">
+          <label>اسم المورد</label>
+          <input type="text" id="new-supplier-name" placeholder="مثال: مؤسسة النور للتجارة">
+        </div>
+        <div class="form-group">
+          <label>رقم الهاتف (اختياري)</label>
+          <input type="tel" id="new-supplier-phone" placeholder="9665XXXXXXXX">
+        </div>
+        <div class="form-group">
+          <label>ملاحظة (اختياري)</label>
+          <input type="text" id="new-supplier-note" placeholder="اختياري">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="addSupplier()">➕ إضافة مورد</button>
+
+      <div class="table-wrap" style="margin-top:20px;">
+        <table class="table-wide">
+          <thead><tr><th>#</th><th>اسم المورد</th><th>الهاتف</th><th>ملاحظة</th><th></th></tr></thead>
+          <tbody id="suppliers-mgmt-tbody"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
 </main>
@@ -1687,6 +1776,29 @@
     <div style="display:flex;gap:8px;">
       <button class="btn btn-primary" onclick="saveEditPurchaser()">حفظ</button>
       <button class="btn" style="background:var(--bg);" onclick="closeEditPurchaser()">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit supplier modal -->
+<div id="edit-supplier-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200;display:flex;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:24px;min-width:300px;">
+    <div style="font-weight:700;font-size:16px;margin-bottom:16px;color:var(--primary);">✏️ تعديل بيانات المورد</div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>اسم المورد</label>
+      <input type="text" id="edit-supplier-name-val">
+    </div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>رقم الهاتف</label>
+      <input type="tel" id="edit-supplier-phone-val">
+    </div>
+    <div class="form-group" style="margin-bottom:16px;">
+      <label>ملاحظة</label>
+      <input type="text" id="edit-supplier-note-val">
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-primary" onclick="saveEditSupplier()">حفظ</button>
+      <button class="btn" style="background:var(--bg);" onclick="closeEditSupplier()">إلغاء</button>
     </div>
   </div>
 </div>
@@ -1919,6 +2031,7 @@ let data = {
   ownerPhone: '',
   purchaserPhone: '', // legacy single-phone field, kept for backward compatibility/migration
   purchasers: [], // [{ id, name, phone }]
+  suppliers: [], // [{ id, name, phone, note }]
   shoppingList: [],
   users: [
     { id: 1, username: 'admin', password: 'admin123', role: 'admin', employeeId: null, canAddShoppingItems: true }
@@ -2253,6 +2366,7 @@ async function importBackup(event) {
 
     populateIncomeMethodSelect();
     populateExpenseCategorySelect();
+    populateSupplierSelect();
     updateDashboard();
     renderStorageModeUI();
 
@@ -2291,14 +2405,20 @@ async function resetDatabase() {
     salaryHistory: [],
     paymentMethods: ['كاش', 'فيزا', 'ماستركارد', 'حوالة مصرفية'],
     ownerPhone: '',
+    purchaserPhone: '',
+    purchasers: [],
+    suppliers: [],
+    shoppingList: [],
     expenseCategories: ['إيجار', 'كهرباء وماء', 'صيانة', 'نظافة', 'اتصالات وإنترنت', DEFAULT_EXPENSE_CATEGORY],
-    users: [{ id: 1, username: 'admin', password: 'admin123', role: 'admin', employeeId: null }]
+    users: [{ id: 1, username: 'admin', password: 'admin123', role: 'admin', employeeId: null, canAddShoppingItems: true }]
   };
+  sanitizeData();
 
   await saveData();
 
   populateIncomeMethodSelect();
   populateExpenseCategorySelect();
+  populateSupplierSelect();
   updateDashboard();
   renderStorageModeUI();
   renderUsersTable();
@@ -2375,6 +2495,23 @@ function sanitizeData() {
   if (data.purchaserPhone && !data.purchasers.length) {
     data.purchasers.push({ id: 1, name: 'مسؤول المشتريات', phone: data.purchaserPhone });
   }
+  if (!data.suppliers) data.suppliers = [];
+  // One-time migration: auto-create supplier entries from any distinct
+  // free-text supplier names already used in past purchases, so nothing is
+  // orphaned when switching to the protected supplier list.
+  if (data.purchases && data.purchases.length) {
+    const existingNames = new Set(data.suppliers.map(s => s.name));
+    const usedNames = new Set(
+      data.purchases.filter(p => p.supplier && p.supplier.trim()).map(p => p.supplier.trim())
+    );
+    let nextId = data.suppliers.length ? Math.max(...data.suppliers.map(s => s.id)) + 1 : 1;
+    usedNames.forEach(name => {
+      if (!existingNames.has(name)) {
+        data.suppliers.push({ id: nextId++, name, phone: '', note: '' });
+        existingNames.add(name);
+      }
+    });
+  }
   data.users.forEach(u => {
     if (u.canAddShoppingItems === undefined) u.canAddShoppingItems = (u.role === 'admin');
   });
@@ -2420,7 +2557,7 @@ function showPage(name, el) {
   if (name === 'dashboard') updateDashboard();
   if (name === 'income') { setToday('income-date'); setToday('income-filter-from'); setToday('income-filter-to'); renderIncomeTable(); renderIncomeTodaySummary(); }
   if (name === 'expenses') { setToday('exp-date'); populateExpenseCategorySelect(); renderExpenseTable(); }
-  if (name === 'purchases') { setToday('pur-date'); renderPurchaseTable(); }
+  if (name === 'purchases') { setToday('pur-date'); populateSupplierSelect(); renderPurchaseTable(); }
   if (name === 'shoppinglist') {
     renderShoppingList();
     populatePurchaserSelect();
@@ -2430,7 +2567,8 @@ function showPage(name, el) {
   if (name === 'employees') renderEmployeesTable();
   if (name === 'salaries') { setToday('sal-pay-date'); setToday('adv-date'); setToday('ded-date'); renderSalPayTable(); renderAdvEmpSelect(); renderSalHistory(); }
   if (name === 'suppliers') renderSuppliersTable();
-  if (name === 'settings') { renderMethodsTable(); loadOwnerPhoneField(); renderUsersTable(); populateEmployeeLinkSelect(); renderExpCatsTable(); renderPurchasersTable(); renderStorageModeUI(); updateInstallUI(); }
+  if (name === 'supplierstatement') { populateSupplierStatementSelect(); generateSupplierStatement(); }
+  if (name === 'settings') { renderMethodsTable(); loadOwnerPhoneField(); renderUsersTable(); populateEmployeeLinkSelect(); renderExpCatsTable(); renderPurchasersTable(); renderSuppliersManagementTable(); renderStorageModeUI(); updateInstallUI(); }
   if (name === 'mysalary') renderMySalaryPage();
   if (name === 'reports') {}
 }
@@ -2548,6 +2686,19 @@ function populateIncomeMethodSelect() {
     purSel.innerHTML = data.paymentMethods.map(m => `<option value="${m}">${m}</option>`).join('');
     if (data.paymentMethods.includes(purCurrent)) purSel.value = purCurrent;
   }
+}
+
+function populateSupplierSelect() {
+  const sel = document.getElementById('pur-supplier');
+  if (!sel) return;
+  const current = sel.value;
+  if (!data.suppliers.length) {
+    sel.innerHTML = '<option value="">-- لا يوجد موردون مضافون، أضفهم من الإعدادات --</option>';
+    return;
+  }
+  sel.innerHTML = '<option value="">-- اختر المورد --</option>' +
+    data.suppliers.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+  if (data.suppliers.some(s => s.name === current)) sel.value = current;
 }
 
 function populateExpenseCategorySelect() {
@@ -3391,11 +3542,119 @@ function confirmPayDebt() {
   p.paid = parseFloat(p.paid) + amount;
   p.remaining = parseFloat(p.remaining) - amount;
   saveData(); closePayDebt(); renderSuppliersTable();
+  if (document.getElementById('page-supplierstatement')?.classList.contains('active')) generateSupplierStatement();
   showToast('تم تسجيل الدفعة بنجاح', 'success');
 }
 
 function closePayDebt() {
   document.getElementById('pay-debt-modal').style.display = 'none';
+}
+
+// ============ SUPPLIER STATEMENT (كشف حساب الموردين) ============
+function populateSupplierStatementSelect() {
+  const sel = document.getElementById('stmt-supplier-select');
+  if (!sel) return;
+  const current = sel.value;
+  if (!data.suppliers.length) {
+    sel.innerHTML = '<option value="">-- لا يوجد موردون مضافون بعد --</option>';
+    return;
+  }
+  sel.innerHTML = '<option value="">-- اختر مورداً --</option>' +
+    data.suppliers.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+  if (data.suppliers.some(s => s.name === current)) sel.value = current;
+}
+
+let supplierStatementViewMode = 'compact'; // 'compact' | 'full'
+
+function toggleSupplierStatementView() {
+  supplierStatementViewMode = supplierStatementViewMode === 'compact' ? 'full' : 'compact';
+  const btn = document.getElementById('stmt-view-toggle-btn');
+  if (btn) btn.textContent = supplierStatementViewMode === 'compact' ? '📄 عرض كل التفاصيل' : '📋 عرض مختصر';
+  generateSupplierStatement();
+}
+
+function generateSupplierStatement() {
+  const sel = document.getElementById('stmt-supplier-select');
+  const name = sel ? sel.value : '';
+  const emptyNote = document.getElementById('stmt-empty-note');
+  const resultBox = document.getElementById('stmt-result');
+
+  if (!name) {
+    resultBox.classList.add('hidden');
+    emptyNote.textContent = data.suppliers.length
+      ? 'اختر مورداً من القائمة أعلاه لعرض كشف حسابه.'
+      : 'لا يوجد موردون مضافون بعد. أضفهم من ⚙️ الإعدادات ← بطاقة "قائمة الموردين".';
+    return;
+  }
+
+  const invoices = data.purchases
+    .filter(p => p.payType === 'credit' && p.supplier === name)
+    .sort((a, b) => b.date.localeCompare(a.date));
+
+  emptyNote.textContent = '';
+  resultBox.classList.remove('hidden');
+
+  const totalInvoices = invoices.reduce((s, p) => s + parseFloat(p.amount), 0);
+  const totalPaid = invoices.reduce((s, p) => s + parseFloat(p.paid), 0);
+  const totalRemaining = invoices.reduce((s, p) => s + parseFloat(p.remaining), 0);
+
+  document.getElementById('stmt-total-invoices').textContent = fmt(totalInvoices);
+  document.getElementById('stmt-total-paid').textContent = fmt(totalPaid);
+  const remainingEl = document.getElementById('stmt-total-remaining');
+  remainingEl.textContent = fmt(totalRemaining);
+  remainingEl.style.color = totalRemaining > 0 ? 'var(--danger)' : 'var(--success)';
+
+  const isFull = supplierStatementViewMode === 'full';
+  const tableEl = document.getElementById('stmt-table');
+  if (tableEl) tableEl.classList.toggle('table-wide', isFull);
+
+  const thead = document.getElementById('stmt-thead');
+  thead.innerHTML = isFull
+    ? '<tr><th>#</th><th>التاريخ</th><th>رقم الفاتورة</th><th>المبلغ</th><th>المسدد</th><th>المتبقي</th><th>الاستحقاق</th><th>الحالة</th></tr>'
+    : '<tr><th>#</th><th>التاريخ</th><th>المتبقي</th><th>الحالة</th></tr>';
+
+  const colCount = isFull ? 8 : 4;
+  const tbody = document.getElementById('stmt-tbody');
+
+  tbody.innerHTML = invoices.map((p, i) => {
+    const isPaid = p.remaining <= 0;
+    const isOverdue = !isPaid && p.dueDate < today();
+    const statusBadge = isPaid ? '<span class="badge badge-success">مسدد</span>' : isOverdue ? '<span class="badge badge-danger">متأخر</span>' : '<span class="badge badge-warning">معلق</span>';
+
+    if (isFull) {
+      return `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${fmtDate(p.date)}</td>
+        <td style="font-weight:600;color:var(--primary)">${p.invoice || '-'}</td>
+        <td>${fmt(p.amount)} دينار</td>
+        <td style="color:var(--success)">${fmt(p.paid)} دينار</td>
+        <td style="font-weight:700;color:${isPaid ? 'var(--success)' : 'var(--danger)'}">${fmt(p.remaining)} دينار</td>
+        <td>${fmtDate(p.dueDate)}</td>
+        <td>${statusBadge}</td>
+      </tr>`;
+    }
+    return `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${fmtDate(p.date)}</td>
+      <td style="font-weight:700;color:${isPaid ? 'var(--success)' : 'var(--danger)'}">${fmt(p.remaining)} دينار</td>
+      <td>${statusBadge}</td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="${colCount}" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد فواتير آجلة لهذا المورد</td></tr>`;
+
+  // Supplier info card
+  const supplier = data.suppliers.find(s => s.name === name);
+  const infoBox = document.getElementById('stmt-supplier-info');
+  if (supplier) {
+    infoBox.innerHTML = `
+      <div>📞 الهاتف: ${supplier.phone || 'غير مسجل'}</div>
+      <div>📝 ملاحظة: ${supplier.note || '-'}</div>
+      <div>🧾 عدد الفواتير الآجلة: ${invoices.length}</div>
+    `;
+  } else {
+    infoBox.innerHTML = '';
+  }
 }
 
 // ============ REPORTS ============
@@ -3593,6 +3852,7 @@ async function refreshCriticalListsFromCloud() {
     if (remote.expenseCategories) data.expenseCategories = remote.expenseCategories;
     if (remote.users) data.users = remote.users;
     if (remote.purchasers) data.purchasers = remote.purchasers;
+    if (remote.suppliers) data.suppliers = remote.suppliers;
     sanitizeData();
   } catch (e) {
     console.warn('Could not refresh critical lists from cloud before save:', e);
@@ -3867,6 +4127,120 @@ async function deletePurchaser2(id) {
   renderPurchasersTable();
   populatePurchaserSelect();
   showToast('تم حذف مسؤول المشتريات بنجاح', 'success');
+}
+
+// ============ SUPPLIERS (قائمة الموردين المحمية) ============
+function renderSuppliersManagementTable() {
+  const tbody = document.getElementById('suppliers-mgmt-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = data.suppliers.map((s, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td style="font-weight:600">${s.name}</td>
+      <td style="color:var(--text-muted);direction:ltr;text-align:right;">${s.phone || '-'}</td>
+      <td style="color:var(--text-muted)">${s.note || '-'}</td>
+      <td>
+        <button class="btn btn-primary btn-sm" onclick="openEditSupplier(${s.id})">تعديل</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteSupplier(${s.id})" style="margin-right:4px;">حذف</button>
+      </td>
+    </tr>
+  `).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">لا يوجد موردون مضافون</td></tr>';
+}
+
+async function addSupplier() {
+  const nameInput = document.getElementById('new-supplier-name');
+  const phoneInput = document.getElementById('new-supplier-phone');
+  const noteInput = document.getElementById('new-supplier-note');
+  const name = nameInput.value.trim();
+  const phone = phoneInput.value.trim().replace(/[^0-9]/g, '');
+  const note = noteInput.value.trim();
+
+  if (!name) { showToast('يرجى إدخال اسم المورد', 'error'); return; }
+
+  await refreshCriticalListsFromCloud();
+
+  if (data.suppliers.some(s => s.name === name)) { showToast('هذا المورد موجود بالفعل', 'error'); return; }
+
+  data.suppliers.push({ id: Date.now(), name, phone, note });
+  await saveData();
+
+  nameInput.value = '';
+  phoneInput.value = '';
+  noteInput.value = '';
+  renderSuppliersManagementTable();
+  populateSupplierSelect();
+  showToast('تم إضافة المورد بنجاح', 'success');
+}
+
+let editingSupplierId = null;
+function openEditSupplier(id) {
+  const s = data.suppliers.find(x => x.id === id);
+  if (!s) return;
+  editingSupplierId = id;
+  document.getElementById('edit-supplier-name-val').value = s.name;
+  document.getElementById('edit-supplier-phone-val').value = s.phone || '';
+  document.getElementById('edit-supplier-note-val').value = s.note || '';
+  document.getElementById('edit-supplier-modal').style.display = 'flex';
+  document.getElementById('edit-supplier-modal').classList.remove('hidden');
+}
+
+async function saveEditSupplier() {
+  const newName = document.getElementById('edit-supplier-name-val').value.trim();
+  const newPhone = document.getElementById('edit-supplier-phone-val').value.trim().replace(/[^0-9]/g, '');
+  const newNote = document.getElementById('edit-supplier-note-val').value.trim();
+  if (!newName) { showToast('يرجى إدخال اسم صحيح', 'error'); return; }
+
+  await refreshCriticalListsFromCloud();
+
+  const s = data.suppliers.find(x => x.id === editingSupplierId);
+  if (!s) { showToast('تعذّر العثور على المورد، ربما تم حذفه من جهاز آخر', 'error'); closeEditSupplier(); renderSuppliersManagementTable(); return; }
+
+  if (newName !== s.name && data.suppliers.some(x => x.name === newName)) { showToast('هذا الاسم موجود بالفعل لمورد آخر', 'error'); return; }
+
+  const oldName = s.name;
+  s.name = newName;
+  s.phone = newPhone;
+  s.note = newNote;
+
+  // Keep past purchase records pointing to the correct (possibly renamed) supplier
+  if (oldName !== newName) {
+    data.purchases.forEach(p => { if (p.supplier === oldName) p.supplier = newName; });
+  }
+
+  await saveData();
+  renderSuppliersManagementTable();
+  populateSupplierSelect();
+  renderPurchaseTable();
+  closeEditSupplier();
+  showToast('تم تعديل بيانات المورد بنجاح', 'success');
+}
+
+function closeEditSupplier() {
+  document.getElementById('edit-supplier-modal').style.display = 'none';
+}
+
+async function deleteSupplier(id) {
+  const s = data.suppliers.find(x => x.id === id);
+  if (!s) return;
+
+  const inUse = data.purchases.some(p => p.supplier === s.name);
+  let ok;
+  if (inUse) {
+    ok = await showConfirm(`المورد "${s.name}" مستخدم في فواتير مشتريات سابقة. حذفه من القائمة لن يحذف تلك الفواتير، لكن لن يظهر بعد الآن في قائمة الاختيار عند إضافة فاتورة جديدة. هل تريد الاستمرار؟`, { title: 'تأكيد الحذف', icon: '⚠️' });
+  } else {
+    ok = await showConfirm(`هل تريد حذف المورد "${s.name}"؟`, { title: 'حذف مورد', icon: '🗑️' });
+  }
+  if (!ok) return;
+
+  await refreshCriticalListsFromCloud();
+  const freshIndex = data.suppliers.findIndex(x => x.id === id);
+  if (freshIndex === -1) { showToast('هذا المورد محذوف بالفعل', 'error'); renderSuppliersManagementTable(); return; }
+
+  data.suppliers.splice(freshIndex, 1);
+  await saveData();
+  renderSuppliersManagementTable();
+  populateSupplierSelect();
+  showToast('تم حذف المورد بنجاح', 'success');
 }
 
 // ============ CHANGE / RESET PASSWORD ============
@@ -4151,6 +4525,8 @@ function applyRoleVisibility() {
   if (expCatsCard) expCatsCard.style.display = (role === 'admin') ? '' : 'none';
   const purchasersCard = document.getElementById('purchasers-card');
   if (purchasersCard) purchasersCard.style.display = (role === 'admin') ? '' : 'none';
+  const suppliersMgmtCard = document.getElementById('suppliers-mgmt-card');
+  if (suppliersMgmtCard) suppliersMgmtCard.style.display = (role === 'admin') ? '' : 'none';
 }
 
 function tryRestoreSession() {
@@ -4180,6 +4556,7 @@ async function initApp() {
 
   populateIncomeMethodSelect();
   populateExpenseCategorySelect();
+  populateSupplierSelect();
   setToday('income-date');
   setToday('exp-date');
   setToday('pur-date');
@@ -4204,17 +4581,19 @@ async function initApp() {
           dashboard: updateDashboard,
           income: () => { renderIncomeTable(); renderIncomeTodaySummary(); },
           expenses: () => { populateExpenseCategorySelect(); renderExpenseTable(); },
-          purchases: renderPurchaseTable,
+          purchases: () => { populateSupplierSelect(); renderPurchaseTable(); },
           shoppinglist: () => { renderShoppingList(); populatePurchaserSelect(); },
           employees: renderEmployeesTable,
           salaries: () => { renderSalPayTable(); renderSalHistory(); },
           suppliers: renderSuppliersTable,
-          settings: () => { renderMethodsTable(); loadOwnerPhoneField(); renderUsersTable(); populateEmployeeLinkSelect(); renderExpCatsTable(); renderPurchasersTable(); renderStorageModeUI(); },
+          supplierstatement: () => { populateSupplierStatementSelect(); generateSupplierStatement(); },
+          settings: () => { renderMethodsTable(); loadOwnerPhoneField(); renderUsersTable(); populateEmployeeLinkSelect(); renderExpCatsTable(); renderPurchasersTable(); renderSuppliersManagementTable(); renderStorageModeUI(); },
           mysalary: renderMySalaryPage
         };
         if (fns[id]) fns[id]();
         populateIncomeMethodSelect();
         populateExpenseCategorySelect();
+        populateSupplierSelect();
       }
     });
   }
@@ -4250,6 +4629,7 @@ function wireAllFormNavigation() {
   enableEnterNavigation(['new-method-name'], addPaymentMethod);
   enableEnterNavigation(['new-expcat-name'], addExpenseCategory);
   enableEnterNavigation(['new-purchaser-name', 'new-purchaser-phone'], addPurchaser);
+  enableEnterNavigation(['new-supplier-name', 'new-supplier-phone', 'new-supplier-note'], addSupplier);
   enableEnterNavigation(['sl-item-name', 'sl-item-qty', 'sl-item-note'], addShoppingItem);
 }
 
