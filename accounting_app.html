@@ -3524,38 +3524,67 @@ function renderMethodsTable() {
   `).join('') || '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد طرق دفع</td></tr>';
 }
 
-function addPaymentMethod() {
+// ============ CONCURRENCY SAFETY FOR SHARED SETTINGS ============
+// Payment methods, expense categories, and usernames are rarely-changed but
+// shared, system-wide lists. Before modifying them, pull the freshest copy
+// directly from the cloud (if online) and merge the local edit into it, so a
+// near-simultaneous edit from another device/tab is never silently
+// overwritten by an older in-memory snapshot ("last write wins" safety net).
+async function refreshCriticalListsFromCloud() {
+  if (isOfflineMode() || !window._fbLoadData) return; // nothing to reconcile locally/offline
+  try {
+    const remote = await window._fbLoadData();
+    if (!remote) return;
+    // Only pull the specific shared lists — do not overwrite any other local
+    // in-memory changes (e.g. an in-progress form elsewhere) with remote data.
+    if (remote.paymentMethods) data.paymentMethods = remote.paymentMethods;
+    if (remote.expenseCategories) data.expenseCategories = remote.expenseCategories;
+    if (remote.users) data.users = remote.users;
+    sanitizeData();
+  } catch (e) {
+    console.warn('Could not refresh critical lists from cloud before save:', e);
+  }
+}
+
+async function addPaymentMethod() {
   const input = document.getElementById('new-method-name');
   const name = input.value.trim();
   if (!name) { showToast('يرجى إدخال اسم طريقة الدفع', 'error'); return; }
+  await refreshCriticalListsFromCloud();
   if (data.paymentMethods.includes(name)) { showToast('هذه الطريقة موجودة بالفعل', 'error'); return; }
   data.paymentMethods.push(name);
-  saveData();
+  await saveData();
   input.value = '';
   renderMethodsTable();
   populateIncomeMethodSelect();
+  showToast('تم إضافة طريقة الدفع بنجاح', 'success');
 }
 
-let editingMethodIndex = null;
+let editingMethodName = null;
 function openEditMethod(index) {
-  editingMethodIndex = index;
-  document.getElementById('edit-method-val').value = data.paymentMethods[index];
+  editingMethodName = data.paymentMethods[index];
+  document.getElementById('edit-method-val').value = editingMethodName;
   document.getElementById('edit-method-modal').style.display = 'flex';
   document.getElementById('edit-method-modal').classList.remove('hidden');
 }
 
-function saveEditMethod() {
+async function saveEditMethod() {
   const newName = document.getElementById('edit-method-val').value.trim();
   if (!newName) { showToast('يرجى إدخال اسم صحيح', 'error'); return; }
-  const oldName = data.paymentMethods[editingMethodIndex];
+
+  await refreshCriticalListsFromCloud();
+
+  const oldName = editingMethodName;
+  const oldIndex = data.paymentMethods.indexOf(oldName);
+  if (oldIndex === -1) { showToast('تعذّر العثور على طريقة الدفع، ربما تم تعديلها أو حذفها من جهاز آخر — أعد المحاولة', 'error'); closeEditMethod(); renderMethodsTable(); return; }
   if (newName !== oldName && data.paymentMethods.includes(newName)) { showToast('هذا الاسم موجود بالفعل', 'error'); return; }
 
   // Update name in methods list
-  data.paymentMethods[editingMethodIndex] = newName;
+  data.paymentMethods[oldIndex] = newName;
   // Update existing income records using the old name
   data.income.forEach(r => { if (r.method === oldName) r.method = newName; });
 
-  saveData();
+  await saveData();
   renderMethodsTable();
   populateIncomeMethodSelect();
   renderIncomeTable();
@@ -3578,8 +3607,13 @@ async function deletePaymentMethod(index) {
     ok = await showConfirm(`هل تريد حذف طريقة الدفع "${name}"؟`, { title: 'حذف طريقة دفع', icon: '🗑️' });
   }
   if (!ok) return;
-  data.paymentMethods.splice(index, 1);
-  saveData();
+
+  await refreshCriticalListsFromCloud();
+  const freshIndex = data.paymentMethods.indexOf(name);
+  if (freshIndex === -1) { showToast('طريقة الدفع هذه محذوفة بالفعل', 'error'); renderMethodsTable(); return; }
+
+  data.paymentMethods.splice(freshIndex, 1);
+  await saveData();
   renderMethodsTable();
   populateIncomeMethodSelect();
   showToast('تم حذف طريقة الدفع بنجاح', 'success');
@@ -3602,41 +3636,47 @@ function renderExpCatsTable() {
   }).join('') || '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد بنود</td></tr>';
 }
 
-function addExpenseCategory() {
+async function addExpenseCategory() {
   const input = document.getElementById('new-expcat-name');
   const name = input.value.trim();
   if (!name) { showToast('يرجى إدخال اسم البند', 'error'); return; }
+  await refreshCriticalListsFromCloud();
   if (data.expenseCategories.includes(name)) { showToast('هذا البند موجود بالفعل', 'error'); return; }
   data.expenseCategories.push(name);
-  saveData();
+  await saveData();
   input.value = '';
   renderExpCatsTable();
   populateExpenseCategorySelect();
   showToast('تم إضافة البند بنجاح', 'success');
 }
 
-let editingExpCatIndex = null;
+let editingExpCatName = null;
 function openEditExpCat(index) {
   const name = data.expenseCategories[index];
   if (name === DEFAULT_EXPENSE_CATEGORY) return; // safety guard, button shouldn't exist for this row
-  editingExpCatIndex = index;
+  editingExpCatName = name;
   document.getElementById('edit-expcat-val').value = name;
   document.getElementById('edit-expcat-modal').style.display = 'flex';
   document.getElementById('edit-expcat-modal').classList.remove('hidden');
 }
 
-function saveEditExpCat() {
+async function saveEditExpCat() {
   const newName = document.getElementById('edit-expcat-val').value.trim();
   if (!newName) { showToast('يرجى إدخال اسم صحيح', 'error'); return; }
-  const oldName = data.expenseCategories[editingExpCatIndex];
+
+  await refreshCriticalListsFromCloud();
+
+  const oldName = editingExpCatName;
+  const oldIndex = data.expenseCategories.indexOf(oldName);
+  if (oldIndex === -1) { showToast('تعذّر العثور على البند، ربما تم تعديله أو حذفه من جهاز آخر — أعد المحاولة', 'error'); closeEditExpCat(); renderExpCatsTable(); return; }
   if (oldName === DEFAULT_EXPENSE_CATEGORY) { showToast('لا يمكن تعديل هذا البند الافتراضي', 'error'); closeEditExpCat(); return; }
   if (newName !== oldName && data.expenseCategories.includes(newName)) { showToast('هذا الاسم موجود بالفعل', 'error'); return; }
   if (newName === DEFAULT_EXPENSE_CATEGORY && oldName !== DEFAULT_EXPENSE_CATEGORY) { showToast('هذا الاسم محجوز للبند الافتراضي', 'error'); return; }
 
-  data.expenseCategories[editingExpCatIndex] = newName;
+  data.expenseCategories[oldIndex] = newName;
   data.expenses.forEach(r => { if (r.desc === oldName) r.desc = newName; });
 
-  saveData();
+  await saveData();
   renderExpCatsTable();
   populateExpenseCategorySelect();
   renderExpenseTable();
@@ -3661,11 +3701,15 @@ async function deleteExpenseCategory(index) {
   }
   if (!ok) return;
 
+  await refreshCriticalListsFromCloud();
+  const freshIndex = data.expenseCategories.indexOf(name);
+  if (freshIndex === -1) { showToast('هذا البند محذوف بالفعل', 'error'); renderExpCatsTable(); return; }
+
   // Reassign any expenses using this category to the protected default
   data.expenses.forEach(r => { if (r.desc === name) r.desc = DEFAULT_EXPENSE_CATEGORY; });
-  data.expenseCategories.splice(index, 1);
+  data.expenseCategories.splice(freshIndex, 1);
 
-  saveData();
+  await saveData();
   renderExpCatsTable();
   populateExpenseCategorySelect();
   renderExpenseTable();
