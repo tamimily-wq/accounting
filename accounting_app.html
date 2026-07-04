@@ -1642,6 +1642,26 @@ function isRunningStandalone() {
   return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 }
 
+// Some Android/Chrome versions cache or ignore the manifest's "orientation"
+// field for already-installed PWAs. As a stronger, more reliable fallback,
+// explicitly unlock orientation via the Screen Orientation API whenever the
+// app is running in standalone (installed) mode.
+function unlockOrientationIfStandalone() {
+  if (!isRunningStandalone()) return;
+  try {
+    if (screen.orientation && typeof screen.orientation.unlock === 'function') {
+      screen.orientation.unlock();
+    }
+  } catch (e) {
+    // Some browsers throw if called outside a user gesture or without
+    // fullscreen — safe to ignore, this is a best-effort enhancement.
+    console.warn('Orientation unlock not available:', e);
+  }
+}
+
+unlockOrientationIfStandalone();
+window.addEventListener('load', unlockOrientationIfStandalone);
+
 function updateInstallUI() {
   const btn = document.getElementById('install-app-btn');
   const note = document.getElementById('install-app-note');
