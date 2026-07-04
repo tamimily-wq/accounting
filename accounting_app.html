@@ -602,6 +602,13 @@
     #main { margin-right: 0; padding: 16px; padding-top: 70px; }
     .stats-grid { grid-template-columns: 1fr 1fr; }
     .report-grid { grid-template-columns: 1fr; }
+
+    /* Force every field onto its own line on mobile, regardless of how many
+       fields are grouped in a .form-row (date pickers, selects, text inputs). */
+    .form-row { grid-template-columns: 1fr; }
+
+    .filter-row { flex-direction: column; align-items: stretch; }
+    .filter-row .form-group { width: 100%; }
   }
 </style>
 </head>
