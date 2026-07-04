@@ -3969,8 +3969,10 @@ function applyRoleVisibility() {
   const shoppingNav = document.getElementById('nav-shoppinglist');
   const canUseShoppingList = role === 'admin' || !!currentUser.canAddShoppingItems;
   if (shoppingNav) shoppingNav.style.display = canUseShoppingList ? '' : 'none';
+  // The same users allowed to manage the shopping list can also send it
+  // (WhatsApp/SMS) to the purchasing officer.
   const sendCard = document.getElementById('shoppinglist-send-card');
-  if (sendCard) sendCard.style.display = (role === 'admin') ? '' : 'none';
+  if (sendCard) sendCard.style.display = canUseShoppingList ? '' : 'none';
 
   // Users management card only for admin (settings page itself is nav-hidden for others,
   // but guard here too in case settings is reached directly)
