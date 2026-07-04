@@ -1054,9 +1054,12 @@
       <div class="card-title">📤 إرسال القائمة لمسؤول المشتريات</div>
       <div class="form-row">
         <div class="form-group">
-          <label>رقم هاتف مسؤول المشتريات</label>
-          <input type="tel" id="purchaser-phone-inline" placeholder="9665XXXXXXXX">
+          <label>اختر مسؤول المشتريات</label>
+          <select id="purchaser-select-inline"></select>
         </div>
+      </div>
+      <div id="no-purchasers-note" class="hidden" style="background:#FFF3CD;border:1px solid #F0D68A;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12.5px;color:#856404;">
+        ⚠️ لا يوجد مسؤولو مشتريات مضافون بعد. أضفهم من ⚙️ الإعدادات ← بطاقة "مسؤولو المشتريات".
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn" style="background:#25D366;color:#fff;" onclick="sendShoppingListWhatsApp()">📲 إرسال القائمة (واتساب)</button>
@@ -1640,9 +1643,54 @@
         </table>
       </div>
     </div>
+
+    <div class="card" id="purchasers-card">
+      <div class="card-title">🏪 مسؤولو المشتريات</div>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;line-height:1.7;">
+        أضف اسم ورقم هاتف كل شخص مسؤول عن استلام قائمة النواقص (يمكن إضافة أكثر من واحد).
+      </p>
+      <div class="form-row">
+        <div class="form-group">
+          <label>الاسم</label>
+          <input type="text" id="new-purchaser-name" placeholder="مثال: أحمد المشتريات">
+        </div>
+        <div class="form-group">
+          <label>رقم الهاتف (مع رمز الدولة)</label>
+          <input type="tel" id="new-purchaser-phone" placeholder="9665XXXXXXXX">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="addPurchaser()">➕ إضافة مسؤول مشتريات</button>
+
+      <div class="table-wrap" style="margin-top:20px;">
+        <table class="table-wide">
+          <thead><tr><th>#</th><th>الاسم</th><th>الهاتف</th><th></th></tr></thead>
+          <tbody id="purchasers-tbody"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
 </main>
+
+<!-- Edit purchaser modal -->
+<div id="edit-purchaser-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200;display:flex;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:24px;min-width:300px;">
+    <div style="font-weight:700;font-size:16px;margin-bottom:16px;color:var(--primary);">✏️ تعديل مسؤول المشتريات</div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>الاسم</label>
+      <input type="text" id="edit-purchaser-name-val">
+    </div>
+    <div class="form-group" style="margin-bottom:16px;">
+      <label>رقم الهاتف</label>
+      <input type="tel" id="edit-purchaser-phone-val">
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-primary" onclick="saveEditPurchaser()">حفظ</button>
+      <button class="btn" style="background:var(--bg);" onclick="closeEditPurchaser()">إلغاء</button>
+    </div>
+  </div>
+</div>
+
 
 <!-- Edit method modal -->
 <div id="edit-method-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200;display:flex;align-items:center;justify-content:center;">
@@ -1869,7 +1917,8 @@ let data = {
   paymentMethods: ['كاش', 'فيزا', 'ماستركارد', 'حوالة مصرفية'],
   expenseCategories: ['إيجار', 'كهرباء وماء', 'صيانة', 'نظافة', 'اتصالات وإنترنت', 'مصروفات أخرى'],
   ownerPhone: '',
-  purchaserPhone: '',
+  purchaserPhone: '', // legacy single-phone field, kept for backward compatibility/migration
+  purchasers: [], // [{ id, name, phone }]
   shoppingList: [],
   users: [
     { id: 1, username: 'admin', password: 'admin123', role: 'admin', employeeId: null, canAddShoppingItems: true }
@@ -2320,6 +2369,12 @@ function sanitizeData() {
   if (!data.salaryHistory) data.salaryHistory = [];
   if (!data.shoppingList) data.shoppingList = [];
   if (data.purchaserPhone === undefined) data.purchaserPhone = '';
+  if (!data.purchasers) data.purchasers = [];
+  // One-time migration: if an old single purchaser phone exists but the new
+  // list is empty, carry it over as the first entry so nothing is lost.
+  if (data.purchaserPhone && !data.purchasers.length) {
+    data.purchasers.push({ id: 1, name: 'مسؤول المشتريات', phone: data.purchaserPhone });
+  }
   data.users.forEach(u => {
     if (u.canAddShoppingItems === undefined) u.canAddShoppingItems = (u.role === 'admin');
   });
@@ -2368,13 +2423,14 @@ function showPage(name, el) {
   if (name === 'purchases') { setToday('pur-date'); renderPurchaseTable(); }
   if (name === 'shoppinglist') {
     renderShoppingList();
-    const phoneInput = document.getElementById('purchaser-phone-inline');
-    if (phoneInput && !phoneInput.value) phoneInput.value = data.purchaserPhone || '';
+    populatePurchaserSelect();
+    const noPurchasersNote = document.getElementById('no-purchasers-note');
+    if (noPurchasersNote) noPurchasersNote.classList.toggle('hidden', data.purchasers.length > 0);
   }
   if (name === 'employees') renderEmployeesTable();
   if (name === 'salaries') { setToday('sal-pay-date'); setToday('adv-date'); setToday('ded-date'); renderSalPayTable(); renderAdvEmpSelect(); renderSalHistory(); }
   if (name === 'suppliers') renderSuppliersTable();
-  if (name === 'settings') { renderMethodsTable(); loadOwnerPhoneField(); renderUsersTable(); populateEmployeeLinkSelect(); renderExpCatsTable(); renderStorageModeUI(); updateInstallUI(); }
+  if (name === 'settings') { renderMethodsTable(); loadOwnerPhoneField(); renderUsersTable(); populateEmployeeLinkSelect(); renderExpCatsTable(); renderPurchasersTable(); renderStorageModeUI(); updateInstallUI(); }
   if (name === 'mysalary') renderMySalaryPage();
   if (name === 'reports') {}
 }
@@ -2915,30 +2971,26 @@ function buildShoppingListMessage() {
   return `📝 قائمة النواقص (${fmtDate(today())})\n\n${lines.join('\n')}\n\nالعدد الإجمالي: ${pending.length} صنف`;
 }
 
+function getSelectedPurchaser() {
+  const sel = document.getElementById('purchaser-select-inline');
+  if (!sel || !sel.value) return null;
+  return data.purchasers.find(p => String(p.id) === sel.value) || null;
+}
+
 function sendShoppingListWhatsApp() {
   const msg = buildShoppingListMessage();
   if (!msg) { showToast('لا توجد أصناف ناقصة حالياً لإرسالها', 'error'); return; }
-  const phoneField = document.getElementById('purchaser-phone-inline').value.trim();
-  const phone = phoneField || data.purchaserPhone;
-  if (!phone) { showToast('يرجى إدخال رقم هاتف مسؤول المشتريات أولاً', 'error'); return; }
-  if (phoneField && phoneField !== data.purchaserPhone) {
-    data.purchaserPhone = phoneField.replace(/[^0-9]/g, '');
-    saveData();
-  }
-  sendWhatsApp(phone, msg);
+  const purchaser = getSelectedPurchaser();
+  if (!purchaser) { showToast('يرجى إضافة واختيار مسؤول مشتريات أولاً من الإعدادات', 'error'); return; }
+  sendWhatsApp(purchaser.phone, msg);
 }
 
 function sendShoppingListSMS() {
   const msg = buildShoppingListMessage();
   if (!msg) { showToast('لا توجد أصناف ناقصة حالياً لإرسالها', 'error'); return; }
-  const phoneField = document.getElementById('purchaser-phone-inline').value.trim();
-  const phone = phoneField || data.purchaserPhone;
-  if (!phone) { showToast('يرجى إدخال رقم هاتف مسؤول المشتريات أولاً', 'error'); return; }
-  if (phoneField && phoneField !== data.purchaserPhone) {
-    data.purchaserPhone = phoneField.replace(/[^0-9]/g, '');
-    saveData();
-  }
-  sendSMS(phone, msg);
+  const purchaser = getSelectedPurchaser();
+  if (!purchaser) { showToast('يرجى إضافة واختيار مسؤول مشتريات أولاً من الإعدادات', 'error'); return; }
+  sendSMS(purchaser.phone, msg);
 }
 
 // ============ EMPLOYEES ============
@@ -3540,6 +3592,7 @@ async function refreshCriticalListsFromCloud() {
     if (remote.paymentMethods) data.paymentMethods = remote.paymentMethods;
     if (remote.expenseCategories) data.expenseCategories = remote.expenseCategories;
     if (remote.users) data.users = remote.users;
+    if (remote.purchasers) data.purchasers = remote.purchasers;
     sanitizeData();
   } catch (e) {
     console.warn('Could not refresh critical lists from cloud before save:', e);
@@ -3714,6 +3767,106 @@ async function deleteExpenseCategory(index) {
   populateExpenseCategorySelect();
   renderExpenseTable();
   showToast('تم حذف البند بنجاح', 'success');
+}
+
+// ============ PURCHASERS (مسؤولو المشتريات) ============
+function renderPurchasersTable() {
+  const tbody = document.getElementById('purchasers-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = data.purchasers.map((p, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td style="font-weight:600">${p.name}</td>
+      <td style="color:var(--text-muted);direction:ltr;text-align:right;">${p.phone || '-'}</td>
+      <td>
+        <button class="btn btn-primary btn-sm" onclick="openEditPurchaser(${p.id})">تعديل</button>
+        <button class="btn btn-danger btn-sm" onclick="deletePurchaser2(${p.id})" style="margin-right:4px;">حذف</button>
+      </td>
+    </tr>
+  `).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;">لا يوجد مسؤولو مشتريات مضافون</td></tr>';
+}
+
+function populatePurchaserSelect() {
+  const sel = document.getElementById('purchaser-select-inline');
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = data.purchasers.map(p => `<option value="${p.id}">${p.name} — ${p.phone}</option>`).join('')
+    || '<option value="">لا يوجد مسؤولو مشتريات مضافون</option>';
+  if (data.purchasers.some(p => String(p.id) === current)) sel.value = current;
+}
+
+async function addPurchaser() {
+  const nameInput = document.getElementById('new-purchaser-name');
+  const phoneInput = document.getElementById('new-purchaser-phone');
+  const name = nameInput.value.trim();
+  const phone = phoneInput.value.trim().replace(/[^0-9]/g, '');
+
+  if (!name) { showToast('يرجى إدخال اسم مسؤول المشتريات', 'error'); return; }
+  if (!phone) { showToast('يرجى إدخال رقم الهاتف', 'error'); return; }
+
+  await refreshCriticalListsFromCloud();
+
+  data.purchasers.push({ id: Date.now(), name, phone });
+  await saveData();
+
+  nameInput.value = '';
+  phoneInput.value = '';
+  renderPurchasersTable();
+  populatePurchaserSelect();
+  showToast('تم إضافة مسؤول المشتريات بنجاح', 'success');
+}
+
+let editingPurchaserId = null;
+function openEditPurchaser(id) {
+  const p = data.purchasers.find(x => x.id === id);
+  if (!p) return;
+  editingPurchaserId = id;
+  document.getElementById('edit-purchaser-name-val').value = p.name;
+  document.getElementById('edit-purchaser-phone-val').value = p.phone;
+  document.getElementById('edit-purchaser-modal').style.display = 'flex';
+  document.getElementById('edit-purchaser-modal').classList.remove('hidden');
+}
+
+async function saveEditPurchaser() {
+  const newName = document.getElementById('edit-purchaser-name-val').value.trim();
+  const newPhone = document.getElementById('edit-purchaser-phone-val').value.trim().replace(/[^0-9]/g, '');
+  if (!newName) { showToast('يرجى إدخال اسم صحيح', 'error'); return; }
+  if (!newPhone) { showToast('يرجى إدخال رقم هاتف صحيح', 'error'); return; }
+
+  await refreshCriticalListsFromCloud();
+
+  const p = data.purchasers.find(x => x.id === editingPurchaserId);
+  if (!p) { showToast('تعذّر العثور على مسؤول المشتريات، ربما تم حذفه من جهاز آخر', 'error'); closeEditPurchaser(); renderPurchasersTable(); return; }
+
+  p.name = newName;
+  p.phone = newPhone;
+
+  await saveData();
+  renderPurchasersTable();
+  populatePurchaserSelect();
+  closeEditPurchaser();
+  showToast('تم تعديل بيانات مسؤول المشتريات بنجاح', 'success');
+}
+
+function closeEditPurchaser() {
+  document.getElementById('edit-purchaser-modal').style.display = 'none';
+}
+
+async function deletePurchaser2(id) {
+  const p = data.purchasers.find(x => x.id === id);
+  if (!p) return;
+  const ok = await showConfirm(`هل تريد حذف "${p.name}" من قائمة مسؤولي المشتريات؟`, { title: 'حذف مسؤول مشتريات', icon: '🗑️' });
+  if (!ok) return;
+
+  await refreshCriticalListsFromCloud();
+  const freshIndex = data.purchasers.findIndex(x => x.id === id);
+  if (freshIndex === -1) { showToast('هذا المسؤول محذوف بالفعل', 'error'); renderPurchasersTable(); return; }
+
+  data.purchasers.splice(freshIndex, 1);
+  await saveData();
+  renderPurchasersTable();
+  populatePurchaserSelect();
+  showToast('تم حذف مسؤول المشتريات بنجاح', 'success');
 }
 
 // ============ CHANGE / RESET PASSWORD ============
@@ -3996,6 +4149,8 @@ function applyRoleVisibility() {
   if (methodsCard) methodsCard.style.display = (role === 'admin') ? '' : 'none';
   const expCatsCard = document.getElementById('expense-categories-card');
   if (expCatsCard) expCatsCard.style.display = (role === 'admin') ? '' : 'none';
+  const purchasersCard = document.getElementById('purchasers-card');
+  if (purchasersCard) purchasersCard.style.display = (role === 'admin') ? '' : 'none';
 }
 
 function tryRestoreSession() {
@@ -4050,11 +4205,11 @@ async function initApp() {
           income: () => { renderIncomeTable(); renderIncomeTodaySummary(); },
           expenses: () => { populateExpenseCategorySelect(); renderExpenseTable(); },
           purchases: renderPurchaseTable,
-          shoppinglist: renderShoppingList,
+          shoppinglist: () => { renderShoppingList(); populatePurchaserSelect(); },
           employees: renderEmployeesTable,
           salaries: () => { renderSalPayTable(); renderSalHistory(); },
           suppliers: renderSuppliersTable,
-          settings: () => { renderMethodsTable(); loadOwnerPhoneField(); renderUsersTable(); populateEmployeeLinkSelect(); renderExpCatsTable(); renderStorageModeUI(); },
+          settings: () => { renderMethodsTable(); loadOwnerPhoneField(); renderUsersTable(); populateEmployeeLinkSelect(); renderExpCatsTable(); renderPurchasersTable(); renderStorageModeUI(); },
           mysalary: renderMySalaryPage
         };
         if (fns[id]) fns[id]();
@@ -4094,6 +4249,7 @@ function wireAllFormNavigation() {
   enableEnterNavigation(['owner-phone'], saveOwnerPhone);
   enableEnterNavigation(['new-method-name'], addPaymentMethod);
   enableEnterNavigation(['new-expcat-name'], addExpenseCategory);
+  enableEnterNavigation(['new-purchaser-name', 'new-purchaser-phone'], addPurchaser);
   enableEnterNavigation(['sl-item-name', 'sl-item-qty', 'sl-item-note'], addShoppingItem);
 }
 
