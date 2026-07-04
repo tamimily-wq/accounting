@@ -1064,10 +1064,13 @@
     </div>
 
     <div class="card">
-      <div class="card-title">✅ الأصناف المُشتراة سابقاً</div>
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+        <span>✅ الأصناف المُشتراة سابقاً</span>
+        <button class="btn btn-sm" id="shoppingdone-view-toggle-btn" style="background:var(--bg);color:var(--primary);border:1px solid var(--border);" onclick="toggleShoppingDoneView()">📄 عرض كل التفاصيل</button>
+      </div>
       <div class="table-wrap">
-        <table class="table-wide">
-          <thead><tr><th>#</th><th>الصنف</th><th>الكمية</th><th>تاريخ الإضافة</th><th>تاريخ الشراء</th><th></th></tr></thead>
+        <table id="shoppingdone-table">
+          <thead id="shoppingdone-thead"></thead>
           <tbody id="shoppinglist-done-tbody"></tbody>
         </table>
       </div>
@@ -1152,7 +1155,10 @@
     <!-- PAY SALARIES -->
     <div id="sal-tab-pay">
       <div class="card">
-        <div class="card-title">💵 صرف رواتب الموظفين</div>
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+          <span>💵 صرف رواتب الموظفين</span>
+          <button class="btn btn-sm" id="salpay-view-toggle-btn" style="background:var(--bg);color:var(--primary);border:1px solid var(--border);" onclick="toggleSalPayView()">📄 عرض كل التفاصيل</button>
+        </div>
         <div class="form-row" style="margin-bottom:16px;">
           <div class="form-group">
             <label>تاريخ الصرف</label>
@@ -1167,8 +1173,8 @@
           </div>
         </div>
         <div class="table-wrap">
-          <table class="table-wide">
-            <thead><tr><th>الموظف</th><th>التخصص</th><th>الراتب</th><th>صرف؟</th><th>المبلغ المصروف</th><th>إشعار</th></tr></thead>
+          <table id="sal-pay-table">
+            <thead id="sal-pay-thead"></thead>
             <tbody id="sal-pay-tbody"></tbody>
           </table>
         </div>
@@ -2555,6 +2561,15 @@ function toggleShoppingListView() {
   renderShoppingList();
 }
 
+let shoppingDoneViewMode = 'compact'; // 'compact' | 'full'
+
+function toggleShoppingDoneView() {
+  shoppingDoneViewMode = shoppingDoneViewMode === 'compact' ? 'full' : 'compact';
+  const btn = document.getElementById('shoppingdone-view-toggle-btn');
+  if (btn) btn.textContent = shoppingDoneViewMode === 'compact' ? '📄 عرض كل التفاصيل' : '📋 عرض مختصر';
+  renderShoppingList();
+}
+
 function renderShoppingList() {
   const tbody = document.getElementById('shoppinglist-tbody');
   const doneTbody = document.getElementById('shoppinglist-done-tbody');
@@ -2605,16 +2620,39 @@ function renderShoppingList() {
   emptyNote.textContent = pending.length === 0 ? '🎉 لا توجد أصناف ناقصة حالياً' : '';
 
   if (doneTbody) {
-    doneTbody.innerHTML = done.slice(0, 30).map((item, i) => `
+    const isDoneFull = shoppingDoneViewMode === 'full';
+    const doneTableEl = document.getElementById('shoppingdone-table');
+    if (doneTableEl) doneTableEl.classList.toggle('table-wide', isDoneFull);
+
+    const doneThead = document.getElementById('shoppingdone-thead');
+    if (doneThead) {
+      doneThead.innerHTML = isDoneFull
+        ? '<tr><th>#</th><th>الصنف</th><th>الكمية</th><th>تاريخ الإضافة</th><th>تاريخ الشراء</th><th></th></tr>'
+        : '<tr><th>#</th><th>الصنف</th><th>تاريخ الشراء</th><th></th></tr>';
+    }
+
+    const doneColCount = isDoneFull ? 6 : 4;
+
+    doneTbody.innerHTML = done.slice(0, 30).map((item, i) => {
+      if (isDoneFull) {
+        return `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${item.name}</td>
+          <td>${item.qty || '-'}</td>
+          <td>${fmtDate(item.addedDate)}</td>
+          <td>${item.purchasedDate ? fmtDate(item.purchasedDate) : '-'}</td>
+          <td><button class="btn-icon-delete" onclick="deleteShoppingItem(${item.id})" title="حذف">🗑️</button></td>
+        </tr>`;
+      }
+      return `
       <tr>
         <td>${i + 1}</td>
         <td>${item.name}</td>
-        <td>${item.qty || '-'}</td>
-        <td>${fmtDate(item.addedDate)}</td>
         <td>${item.purchasedDate ? fmtDate(item.purchasedDate) : '-'}</td>
         <td><button class="btn-icon-delete" onclick="deleteShoppingItem(${item.id})" title="حذف">🗑️</button></td>
-      </tr>
-    `).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد أصناف مُشتراة بعد</td></tr>';
+      </tr>`;
+    }).join('') || `<tr><td colspan="${doneColCount}" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد أصناف مُشتراة بعد</td></tr>`;
   }
 }
 
@@ -2788,23 +2826,56 @@ function showSalaryTab(tab) {
   if (tab === 'history') renderSalHistory();
 }
 
+let salPayViewMode = 'compact'; // 'compact' | 'full'
+
+function toggleSalPayView() {
+  salPayViewMode = salPayViewMode === 'compact' ? 'full' : 'compact';
+  const btn = document.getElementById('salpay-view-toggle-btn');
+  if (btn) btn.textContent = salPayViewMode === 'compact' ? '📄 عرض كل التفاصيل' : '📋 عرض مختصر';
+  renderSalPayTable();
+}
+
 function renderSalPayTable() {
+  const isFull = salPayViewMode === 'full';
+  const tableEl = document.getElementById('sal-pay-table');
+  if (tableEl) tableEl.classList.toggle('table-wide', isFull);
+
+  const thead = document.getElementById('sal-pay-thead');
+  thead.innerHTML = isFull
+    ? '<tr><th>الموظف</th><th>التخصص</th><th>الراتب</th><th>صرف؟</th><th>المبلغ المصروف</th><th>إشعار</th></tr>'
+    : '<tr><th>الموظف</th><th>صرف؟</th><th>المبلغ المصروف</th></tr>';
+
+  const colCount = isFull ? 6 : 3;
   const tbody = document.getElementById('sal-pay-tbody');
-  tbody.innerHTML = data.employees.map(e => `
+
+  tbody.innerHTML = data.employees.map(e => {
+    // Checkbox and amount input are always rendered (needed by confirmPaySalaries),
+    // notification buttons are only shown in full view.
+    if (isFull) {
+      return `
+      <tr>
+        <td style="font-weight:600">${e.name}</td>
+        <td style="color:var(--text-muted)">${e.role}</td>
+        <td style="font-weight:700;color:var(--primary)">${fmt(e.salary)} دينار</td>
+        <td><input type="checkbox" id="sal-chk-${e.id}" checked style="width:18px;height:18px;cursor:pointer;"></td>
+        <td>
+          <input type="number" id="sal-amt-${e.id}" value="${e.salary}" step="0.01" style="width:120px;">
+        </td>
+        <td>
+          <button class="btn btn-sm" style="background:#25D366;color:#fff;" onclick="notifySalaryPaid(${e.id},'whatsapp')">📲</button>
+          <button class="btn btn-sm" style="background:#566573;color:#fff;" onclick="notifySalaryPaid(${e.id},'sms')">✉️</button>
+        </td>
+      </tr>`;
+    }
+    return `
     <tr>
       <td style="font-weight:600">${e.name}</td>
-      <td style="color:var(--text-muted)">${e.role}</td>
-      <td style="font-weight:700;color:var(--primary)">${fmt(e.salary)} دينار</td>
       <td><input type="checkbox" id="sal-chk-${e.id}" checked style="width:18px;height:18px;cursor:pointer;"></td>
       <td>
-        <input type="number" id="sal-amt-${e.id}" value="${e.salary}" step="0.01" style="width:120px;">
+        <input type="number" id="sal-amt-${e.id}" value="${e.salary}" step="0.01" style="width:100px;">
       </td>
-      <td>
-        <button class="btn btn-sm" style="background:#25D366;color:#fff;" onclick="notifySalaryPaid(${e.id},'whatsapp')">📲</button>
-        <button class="btn btn-sm" style="background:#566573;color:#fff;" onclick="notifySalaryPaid(${e.id},'sms')">✉️</button>
-      </td>
-    </tr>
-  `).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);">لا يوجد موظفون</td></tr>';
+    </tr>`;
+  }).join('') || `<tr><td colspan="${colCount}" style="text-align:center;color:var(--text-muted);">لا يوجد موظفون</td></tr>`;
 }
 
 function confirmPaySalaries() {
