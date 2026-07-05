@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>برنامج المحاسبة اليومي</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <!-- PWA: installable app metadata -->
 <meta name="theme-color" content="#1B4F72">
@@ -649,6 +650,42 @@
     .filter-row { flex-direction: column; align-items: stretch; }
     .filter-row .form-group { width: 100%; }
   }
+
+  /* ===== PRINT / REPORT EXPORT (A4) ===== */
+  .print-export-btns {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  .print-export-btns .btn { font-size: 12.5px; padding: 7px 12px; }
+
+  #print-render-area {
+    display: none;
+  }
+
+  @media print {
+    @page { size: A4; margin: 12mm; }
+    body * { visibility: hidden; }
+    #print-render-area, #print-render-area * { visibility: visible; }
+    #print-render-area {
+      display: block !important;
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+    }
+    #print-render-area table { width: 100%; min-width: 0 !important; font-size: 11px; }
+    #print-render-area .table-wrap { overflow: visible !important; }
+  }
+
+  .print-header {
+    text-align: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--primary);
+  }
+  .print-header h2 { color: var(--primary); font-size: 18px; margin-bottom: 4px; }
+  .print-header .print-sub { color: var(--text-muted); font-size: 12px; }
 </style>
 </head>
 <body>
@@ -680,6 +717,9 @@
 </div>
 
 <div id="app-shell" class="hidden">
+
+<div id="print-render-area"></div>
+
 <!-- TOAST CONTAINER -->
 <div id="toast-container"></div>
 
@@ -1403,6 +1443,12 @@
           <button class="btn btn-primary btn-sm" onclick="generatePL()">📊 إنشاء التقرير</button>
         </div>
         <div id="pl-result" class="hidden">
+          <div class="print-export-btns">
+            <button class="btn" onclick="exportReportPrint('pl-export-area','تقرير الأرباح والخسائر')">🖨️ طباعة / PDF</button>
+            <button class="btn" onclick="exportReportImage('pl-export-area','تقرير_الأرباح_والخسائر')">🖼️ صورة</button>
+            <button class="btn" onclick="exportPLExcel()">📊 Excel</button>
+          </div>
+          <div id="pl-export-area">
           <div class="report-grid">
             <div>
               <div style="font-weight:700;color:var(--success);margin-bottom:12px;font-size:14px;">الإيرادات</div>
@@ -1421,6 +1467,7 @@
             <div style="font-size:13px;font-weight:600;margin-bottom:6px;">صافي الربح / الخسارة</div>
             <div style="font-size:32px;font-weight:800;" id="pl-net">0.00 دينار</div>
           </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1435,6 +1482,12 @@
           <button class="btn btn-primary btn-sm" onclick="generateIncomeReport()">📊 إنشاء</button>
         </div>
         <div id="irep-breakdown" class="report-grid" style="grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;"></div>
+        <div class="print-export-btns">
+          <button class="btn" onclick="exportReportPrint('irep-export-area','تقرير الإيرادات')">🖨️ طباعة / PDF</button>
+          <button class="btn" onclick="exportReportImage('irep-export-area','تقرير_الإيرادات')">🖼️ صورة</button>
+          <button class="btn" onclick="exportTableExcel('irep-tbody', ['التاريخ','طريقة الدفع','المبلغ','ملاحظات'], 'تقرير_الإيرادات')">📊 Excel</button>
+        </div>
+        <div id="irep-export-area">
         <div class="table-wrap">
           <table class="table-wide">
             <thead><tr><th>التاريخ</th><th>طريقة الدفع</th><th>المبلغ</th><th>ملاحظات</th></tr></thead>
@@ -1442,6 +1495,7 @@
           </table>
         </div>
         <div id="irep-total" style="padding-top:12px;font-weight:700;color:var(--success);"></div>
+        </div>
       </div>
     </div>
 
@@ -1454,6 +1508,12 @@
           <div class="form-group"><label>إلى</label><input type="date" id="prep-to"></div>
           <button class="btn btn-primary btn-sm" onclick="generatePurchaseReport()">📊 إنشاء</button>
         </div>
+        <div class="print-export-btns">
+          <button class="btn" onclick="exportReportPrint('prep-export-area','تقرير المشتريات')">🖨️ طباعة / PDF</button>
+          <button class="btn" onclick="exportReportImage('prep-export-area','تقرير_المشتريات')">🖼️ صورة</button>
+          <button class="btn" onclick="exportTableExcel('prep-tbody', ['التاريخ','رقم الفاتورة','المبلغ','نوع الدفع','طريقة الدفع','المورد','الاستحقاق'], 'تقرير_المشتريات')">📊 Excel</button>
+        </div>
+        <div id="prep-export-area">
         <div class="table-wrap">
           <table class="table-wide">
             <thead><tr><th>التاريخ</th><th>رقم الفاتورة</th><th>المبلغ</th><th>نوع الدفع</th><th>طريقة الدفع</th><th>المورد</th><th>الاستحقاق</th></tr></thead>
@@ -1461,6 +1521,7 @@
           </table>
         </div>
         <div id="prep-total" style="padding-top:12px;font-weight:700;color:var(--accent);"></div>
+        </div>
       </div>
     </div>
 
@@ -1473,6 +1534,12 @@
           <div class="form-group"><label>إلى</label><input type="date" id="srep-to"></div>
           <button class="btn btn-primary btn-sm" onclick="generateSalaryReport()">📊 إنشاء</button>
         </div>
+        <div class="print-export-btns">
+          <button class="btn" onclick="exportReportPrint('srep-export-area','تقرير الرواتب والسلف')">🖨️ طباعة / PDF</button>
+          <button class="btn" onclick="exportReportImage('srep-export-area','تقرير_الرواتب_والسلف')">🖼️ صورة</button>
+          <button class="btn" onclick="exportTableExcel('srep-tbody', ['التاريخ','الموظف','النوع','المبلغ'], 'تقرير_الرواتب_والسلف')">📊 Excel</button>
+        </div>
+        <div id="srep-export-area">
         <div class="table-wrap">
           <table class="table-wide">
             <thead><tr><th>التاريخ</th><th>الموظف</th><th>النوع</th><th>المبلغ</th></tr></thead>
@@ -1480,13 +1547,17 @@
           </table>
         </div>
         <div id="srep-total" style="padding-top:12px;font-weight:700;color:var(--primary);"></div>
+        </div>
       </div>
     </div>
 
     <!-- Collective Payroll Statement (كشف حساب جماعي للرواتب) -->
     <div id="rep-tab-payroll-statement" class="hidden">
       <div class="card">
-        <div class="card-title">📑 كشف حساب الرواتب الشهري (كل الموظفين)</div>
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+          <span>📑 كشف حساب الرواتب الشهري (كل الموظفين)</span>
+          <button class="btn btn-sm" id="payroll-stmt-view-toggle-btn" style="background:var(--bg);color:var(--primary);border:1px solid var(--border);" onclick="togglePayrollStatementView()">📄 عرض كل التفاصيل</button>
+        </div>
         <div class="filter-row">
           <div class="form-group">
             <label>الشهر</label>
@@ -1494,13 +1565,20 @@
           </div>
           <button class="btn btn-primary btn-sm" onclick="generatePayrollStatement()">📊 إنشاء الكشف</button>
         </div>
+        <div class="print-export-btns">
+          <button class="btn" onclick="exportReportPrint('payroll-stmt-export-area','كشف حساب الرواتب')">🖨️ طباعة / PDF</button>
+          <button class="btn" onclick="exportReportImage('payroll-stmt-export-area','كشف_حساب_الرواتب')">🖼️ صورة</button>
+          <button class="btn" onclick="exportPayrollStatementExcel()">📊 Excel</button>
+        </div>
+        <div id="payroll-stmt-export-area">
         <div class="table-wrap">
-          <table class="table-wide">
-            <thead><tr><th>#</th><th>الموظف</th><th>الراتب الأساسي</th><th>دورة 15</th><th>دورة 30</th><th>سلف</th><th>خصومات</th><th>مكافآت</th><th>إجمالي المصروف</th></tr></thead>
+          <table id="payroll-stmt-table">
+            <thead id="payroll-stmt-thead"></thead>
             <tbody id="payroll-stmt-tbody"></tbody>
           </table>
         </div>
         <div id="payroll-stmt-totals" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);font-size:14px;font-weight:700;"></div>
+        </div>
       </div>
     </div>
 
@@ -1998,6 +2076,107 @@ async function triggerInstallPrompt() {
   }
   deferredInstallPrompt = null;
   updateInstallUI();
+}
+
+// ============ REPORT EXPORT ENGINE (Print/PDF, Image, Excel) — A4 ============
+
+function exportReportPrint(sourceElId, title) {
+  const source = document.getElementById(sourceElId);
+  if (!source) { showToast('لا يوجد تقرير لعرضه، أنشئ التقرير أولاً', 'error'); return; }
+
+  const printArea = document.getElementById('print-render-area');
+  const now = new Date().toLocaleDateString('en-GB');
+
+  printArea.innerHTML = `
+    <div class="print-header">
+      <h2>📊 ${title}</h2>
+      <div class="print-sub">برنامج المحاسبة اليومي — تاريخ الطباعة: ${now}</div>
+    </div>
+    ${source.innerHTML}
+  `;
+
+  window.print();
+}
+
+function exportReportImage(sourceElId, fileName) {
+  const source = document.getElementById(sourceElId);
+  if (!source) { showToast('لا يوجد تقرير لعرضه، أنشئ التقرير أولاً', 'error'); return; }
+  if (typeof html2canvas === 'undefined') { showToast('تعذّر تحميل أداة التصوير، تأكد من اتصالك بالإنترنت', 'error'); return; }
+
+  showToast('جاري تجهيز الصورة...', 'info', 1500);
+
+  // Temporarily clone into a clean A4-width container for a consistent image
+  const clone = source.cloneNode(true);
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'position:fixed;top:-99999px;right:0;width:794px;background:#fff;padding:24px;direction:rtl;';
+  wrapper.appendChild(clone);
+  document.body.appendChild(wrapper);
+
+  html2canvas(wrapper, { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
+    document.body.removeChild(wrapper);
+    const link = document.createElement('a');
+    link.download = `${fileName}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    showToast('تم تنزيل الصورة بنجاح', 'success');
+  }).catch(e => {
+    document.body.removeChild(wrapper);
+    console.error(e);
+    showToast('حدث خطأ أثناء إنشاء الصورة', 'error');
+  });
+}
+
+// Generic: export any table (by tbody id) to Excel using given headers
+function exportTableExcel(tbodyId, headers, fileName) {
+  if (typeof XLSX === 'undefined') { showToast('تعذّر تحميل مكتبة Excel', 'error'); return; }
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody || !tbody.rows.length) { showToast('لا توجد بيانات لتصديرها', 'error'); return; }
+
+  const rows = [headers];
+  Array.from(tbody.rows).forEach(tr => {
+    const rowData = Array.from(tr.cells).map(td => td.innerText.trim());
+    rows.push(rowData);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = headers.map(() => ({ wch: 20 }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'تقرير');
+  XLSX.writeFile(wb, `${fileName}.xlsx`);
+  showToast('تم تصدير ملف Excel بنجاح', 'success');
+}
+
+function exportPLExcel() {
+  if (typeof XLSX === 'undefined') { showToast('تعذّر تحميل مكتبة Excel', 'error'); return; }
+  const rows = [
+    ['البند', 'المبلغ (دينار)'],
+    ['إجمالي الإيرادات', document.getElementById('pl-income').textContent],
+    ['مصروفات يومية', document.getElementById('pl-expenses').textContent],
+    ['مشتريات', document.getElementById('pl-purchases').textContent],
+    ['رواتب موظفين', document.getElementById('pl-salaries').textContent],
+    ['سلف موظفين', document.getElementById('pl-advances').textContent],
+    ['إجمالي المصروفات', document.getElementById('pl-total-exp').textContent],
+    ['صافي الربح / الخسارة', document.getElementById('pl-net').textContent],
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{ wch: 26 }, { wch: 20 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'أرباح وخسائر');
+  XLSX.writeFile(wb, 'تقرير_الأرباح_والخسائر.xlsx');
+  showToast('تم تصدير ملف Excel بنجاح', 'success');
+}
+
+function exportPayrollStatementExcel() {
+  if (typeof XLSX === 'undefined') { showToast('تعذّر تحميل مكتبة Excel', 'error'); return; }
+  const tbody = document.getElementById('payroll-stmt-tbody');
+  if (!tbody || !tbody.rows.length) { showToast('لا توجد بيانات لتصديرها، أنشئ الكشف أولاً', 'error'); return; }
+
+  const isFull = payrollStmtViewMode === 'full';
+  const headers = isFull
+    ? ['#', 'الموظف', 'الراتب الأساسي', 'دورة 15', 'دورة 30', 'دفعة كاملة', 'سلف', 'خصومات', 'مكافآت', 'إجمالي المصروف']
+    : ['#', 'الموظف', 'إجمالي المصروف'];
+
+  exportTableExcel('payroll-stmt-tbody', headers, 'كشف_حساب_الرواتب');
 }
 
 // ============ TOAST NOTIFICATIONS ============
@@ -4013,51 +4192,82 @@ function generateSalaryReport() {
   document.getElementById('srep-total').textContent = rows.length ? `الإجمالي: ${fmt(total)} دينار` : '';
 }
 
+let payrollStmtViewMode = 'compact'; // 'compact' | 'full'
+
+function togglePayrollStatementView() {
+  payrollStmtViewMode = payrollStmtViewMode === 'compact' ? 'full' : 'compact';
+  const btn = document.getElementById('payroll-stmt-view-toggle-btn');
+  if (btn) btn.textContent = payrollStmtViewMode === 'compact' ? '📄 عرض كل التفاصيل' : '📋 عرض مختصر';
+  generatePayrollStatement();
+}
+
 function generatePayrollStatement() {
   const monthInput = document.getElementById('payroll-stmt-month');
   const monthKey = monthInput.value;
   if (!monthKey) { showToast('يرجى تحديد الشهر', 'error'); return; }
 
   const records = data.salaryHistory.filter(r => r.month === monthKey);
+
+  const isFull = payrollStmtViewMode === 'full';
+  const tableEl = document.getElementById('payroll-stmt-table');
+  if (tableEl) tableEl.classList.toggle('table-wide', isFull);
+
+  const thead = document.getElementById('payroll-stmt-thead');
+  thead.innerHTML = isFull
+    ? '<tr><th>#</th><th>الموظف</th><th>الراتب الأساسي</th><th>دورة 15</th><th>دورة 30</th><th>دفعة كاملة</th><th>سلف</th><th>خصومات</th><th>مكافآت</th><th>إجمالي المصروف</th></tr>'
+    : '<tr><th>#</th><th>الموظف</th><th>إجمالي المصروف</th></tr>';
+
+  const colCount = isFull ? 10 : 3;
   const tbody = document.getElementById('payroll-stmt-tbody');
 
-  let grand = { period15: 0, period30: 0, advances: 0, deductions: 0, bonuses: 0, total: 0 };
+  let grand = { period15: 0, period30: 0, full: 0, advances: 0, deductions: 0, bonuses: 0, total: 0 };
 
   const rows = data.employees.map((e, i) => {
     const empRecords = records.filter(r => r.employeeId === e.id);
     const period15Amt = empRecords.filter(r => r.type === 'راتب' && r.period === '15').reduce((s, r) => s + parseFloat(r.amount), 0);
     const period30Amt = empRecords.filter(r => r.type === 'راتب' && r.period === '30').reduce((s, r) => s + parseFloat(r.amount), 0);
+    const fullAmt = empRecords.filter(r => r.type === 'راتب' && r.period === 'full').reduce((s, r) => s + parseFloat(r.amount), 0);
     // Advances/deductions shown here are those dated within the month, regardless of period bucket
     const advances = data.salaryHistory.filter(r => r.employeeId === e.id && r.type === 'سلفة' && getMonthKey(r.date) === monthKey).reduce((s, r) => s + parseFloat(r.amount), 0);
     const deductions = data.salaryHistory.filter(r => r.employeeId === e.id && r.type === 'خصم' && getMonthKey(r.date) === monthKey).reduce((s, r) => s + parseFloat(r.amount), 0);
     const bonuses = empRecords.filter(r => r.type === 'مكافأة').reduce((s, r) => s + parseFloat(r.amount), 0);
-    const totalPaidOut = period15Amt + period30Amt + bonuses;
+    const totalPaidOut = period15Amt + period30Amt + fullAmt + bonuses;
 
     grand.period15 += period15Amt;
     grand.period30 += period30Amt;
+    grand.full += fullAmt;
     grand.advances += advances;
     grand.deductions += deductions;
     grand.bonuses += bonuses;
     grand.total += totalPaidOut;
 
+    if (isFull) {
+      return `
+      <tr>
+        <td>${i + 1}</td>
+        <td style="font-weight:600">${e.name}</td>
+        <td style="color:var(--text-muted)">${fmt(e.salary)} دينار</td>
+        <td>${period15Amt > 0 ? fmt(period15Amt) + ' دينار' : '-'}</td>
+        <td>${period30Amt > 0 ? fmt(period30Amt) + ' دينار' : '-'}</td>
+        <td>${fullAmt > 0 ? fmt(fullAmt) + ' دينار' : '-'}</td>
+        <td style="color:var(--accent)">${advances > 0 ? fmt(advances) + ' دينار' : '-'}</td>
+        <td style="color:var(--danger)">${deductions > 0 ? fmt(deductions) + ' دينار' : '-'}</td>
+        <td style="color:var(--primary-light)">${bonuses > 0 ? fmt(bonuses) + ' دينار' : '-'}</td>
+        <td style="font-weight:700;color:var(--success)">${fmt(totalPaidOut)} دينار</td>
+      </tr>`;
+    }
     return `
     <tr>
       <td>${i + 1}</td>
       <td style="font-weight:600">${e.name}</td>
-      <td style="color:var(--text-muted)">${fmt(e.salary)} دينار</td>
-      <td>${period15Amt > 0 ? fmt(period15Amt) + ' دينار' : '-'}</td>
-      <td>${period30Amt > 0 ? fmt(period30Amt) + ' دينار' : '-'}</td>
-      <td style="color:var(--accent)">${advances > 0 ? fmt(advances) + ' دينار' : '-'}</td>
-      <td style="color:var(--danger)">${deductions > 0 ? fmt(deductions) + ' دينار' : '-'}</td>
-      <td style="color:var(--primary-light)">${bonuses > 0 ? fmt(bonuses) + ' دينار' : '-'}</td>
       <td style="font-weight:700;color:var(--success)">${fmt(totalPaidOut)} دينار</td>
     </tr>`;
-  }).join('') || '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:20px;">لا يوجد موظفون</td></tr>';
+  }).join('') || `<tr><td colspan="${colCount}" style="text-align:center;color:var(--text-muted);padding:20px;">لا يوجد موظفون</td></tr>`;
 
   tbody.innerHTML = rows;
 
   document.getElementById('payroll-stmt-totals').innerHTML = `
-    الإجماليات — دورة 15: ${fmt(grand.period15)} | دورة 30: ${fmt(grand.period30)} |
+    الإجماليات — دورة 15: ${fmt(grand.period15)} | دورة 30: ${fmt(grand.period30)} | دفعة كاملة: ${fmt(grand.full)} |
     سلف: ${fmt(grand.advances)} | خصومات: ${fmt(grand.deductions)} | مكافآت: ${fmt(grand.bonuses)} |
     <span style="color:var(--success)">الإجمالي المصروف: ${fmt(grand.total)} دينار</span>
   `;
