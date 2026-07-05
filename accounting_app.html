@@ -1169,11 +1169,11 @@
         <div class="form-row" style="margin-bottom:16px;">
           <div class="form-group">
             <label>تاريخ الصرف</label>
-            <input type="date" id="sal-pay-date">
+            <input type="date" id="sal-pay-date" onchange="renderSalPayTable()">
           </div>
           <div class="form-group">
             <label>دورة الراتب</label>
-            <select id="sal-period">
+            <select id="sal-period" onchange="renderSalPayTable()">
               <option value="15">15 الشهر</option>
               <option value="30">30 / نهاية الشهر</option>
             </select>
@@ -1376,6 +1376,7 @@
       <button class="tab" onclick="showReportTab('income-rep')">الإيرادات</button>
       <button class="tab" onclick="showReportTab('purchase-rep')">المشتريات</button>
       <button class="tab" onclick="showReportTab('salary-rep')">الرواتب</button>
+      <button class="tab" onclick="showReportTab('payroll-statement')">كشف حساب الرواتب</button>
     </div>
 
     <!-- P&L -->
@@ -1465,6 +1466,27 @@
           </table>
         </div>
         <div id="srep-total" style="padding-top:12px;font-weight:700;color:var(--primary);"></div>
+      </div>
+    </div>
+
+    <!-- Collective Payroll Statement (كشف حساب جماعي للرواتب) -->
+    <div id="rep-tab-payroll-statement" class="hidden">
+      <div class="card">
+        <div class="card-title">📑 كشف حساب الرواتب الشهري (كل الموظفين)</div>
+        <div class="filter-row">
+          <div class="form-group">
+            <label>الشهر</label>
+            <input type="month" id="payroll-stmt-month">
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="generatePayrollStatement()">📊 إنشاء الكشف</button>
+        </div>
+        <div class="table-wrap">
+          <table class="table-wide">
+            <thead><tr><th>#</th><th>الموظف</th><th>الراتب الأساسي</th><th>دورة 15</th><th>دورة 30</th><th>سلف</th><th>خصومات</th><th>مكافآت</th><th>إجمالي المصروف</th></tr></thead>
+            <tbody id="payroll-stmt-tbody"></tbody>
+          </table>
+        </div>
+        <div id="payroll-stmt-totals" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);font-size:14px;font-weight:700;"></div>
       </div>
     </div>
 
@@ -3250,6 +3272,7 @@ function showSalaryTab(tab) {
   document.querySelectorAll('#page-salaries .tab').forEach((el, i) => {
     el.classList.toggle('active', ['pay', 'advance', 'deduction', 'history'][i] === tab);
   });
+  if (tab === 'pay') renderSalPayTable();
   if (tab === 'advance') renderAdvEmpSelect();
   if (tab === 'deduction') renderDedEmpSelect();
   if (tab === 'history') renderSalHistory();
@@ -3264,32 +3287,147 @@ function toggleSalPayView() {
   renderSalPayTable();
 }
 
+// ============ PAYROLL CALCULATION ENGINE (دورة 15 / دورة 30) ============
+// Splits a given month into two sub-periods:
+//   Period 15: day 1 .. day 15
+//   Period 30: day 16 .. last day of month
+// Advances/deductions are matched to whichever sub-period their date falls in.
+// Any advance/deduction dated AFTER the actual payout date of period 30 (but
+// still within the month) is left unconsumed and rolls over to next month's
+// period 15 automatically (handled by getUnconsumedCarryover()).
+
+function getMonthKey(dateStr) {
+  return dateStr.slice(0, 7); // "YYYY-MM"
+}
+
+function getPreviousMonthKey(monthKey) {
+  const [y, m] = monthKey.split('-').map(Number);
+  const d = new Date(y, m - 2, 1); // m-1 is current month index, -1 more for previous
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function getLastDayOfMonth(monthKey) {
+  const [y, m] = monthKey.split('-').map(Number);
+  return new Date(y, m, 0).getDate();
+}
+
+// Returns { advances, deductions } arrays for an employee within a specific
+// day-range [fromDay, toDay] of the given month.
+function getEmployeeAdjustmentsInRange(employeeId, monthKey, fromDay, toDay) {
+  const [y, m] = monthKey.split('-').map(Number);
+  const records = data.salaryHistory.filter(r => {
+    if (r.employeeId !== employeeId) return false;
+    if (r.type !== 'سلفة' && r.type !== 'خصم') return false;
+    if (getMonthKey(r.date) !== monthKey) return false;
+    const day = parseInt(r.date.slice(8, 10), 10);
+    return day >= fromDay && day <= toDay;
+  });
+  const advances = records.filter(r => r.type === 'سلفة').reduce((s, r) => s + parseFloat(r.amount), 0);
+  const deductions = records.filter(r => r.type === 'خصم').reduce((s, r) => s + parseFloat(r.amount), 0);
+  return { advances, deductions };
+}
+
+// Unconsumed advances/deductions: those dated AFTER the actual period-30
+// payout date of the previous month, up to the end of that previous month.
+// These roll over and get subtracted from the current month's period 15.
+function getUnconsumedCarryover(employeeId, currentMonthKey) {
+  const prevMonthKey = getPreviousMonthKey(currentMonthKey);
+  const prevPeriod30Payment = data.salaryHistory.find(r =>
+    r.employeeId === employeeId && r.type === 'راتب' && r.period === '30' && r.month === prevMonthKey
+  );
+  if (!prevPeriod30Payment) return { advances: 0, deductions: 0 }; // nothing to reconcile if period 30 wasn't even paid
+
+  const payoutDay = parseInt(prevPeriod30Payment.date.slice(8, 10), 10);
+  const lastDay = getLastDayOfMonth(prevMonthKey);
+  if (payoutDay >= lastDay) return { advances: 0, deductions: 0 }; // paid on the last day, nothing left over
+
+  return getEmployeeAdjustmentsInRange(employeeId, prevMonthKey, payoutDay + 1, lastDay);
+}
+
+function hasBeenPaidThisMonth(employeeId, period, monthKey) {
+  return data.salaryHistory.some(r =>
+    r.employeeId === employeeId && r.type === 'راتب' && r.period === period && r.month === monthKey
+  );
+}
+
+// Core calculation: returns a full breakdown for one employee/period/month.
+function calculateSalaryForPeriod(employee, period, dateStr) {
+  const monthKey = getMonthKey(dateStr);
+  const halfSalary = employee.salary / 2;
+  const alreadyPaid = hasBeenPaidThisMonth(employee.id, period, monthKey);
+
+  if (period === '15') {
+    const { advances, deductions } = getEmployeeAdjustmentsInRange(employee.id, monthKey, 1, 15);
+    const carryover = getUnconsumedCarryover(employee.id, monthKey);
+    const totalDeduct = advances + deductions + carryover.advances + carryover.deductions;
+    const net = Math.max(0, halfSalary - totalDeduct);
+    return {
+      base: halfSalary, advances, deductions,
+      carryoverAdvances: carryover.advances, carryoverDeductions: carryover.deductions,
+      net, alreadyPaid, wasNegative: (halfSalary - totalDeduct) < 0
+    };
+  } else {
+    // Period 30: base = full salary minus whatever was ACTUALLY paid out in period 15
+    const period15Payment = data.salaryHistory.find(r =>
+      r.employeeId === employee.id && r.type === 'راتب' && r.period === '15' && r.month === monthKey
+    );
+    const period15Net = period15Payment ? parseFloat(period15Payment.amount) : (employee.salary / 2);
+    const remainingBase = employee.salary - period15Net;
+    const { advances, deductions } = getEmployeeAdjustmentsInRange(employee.id, monthKey, 16, getLastDayOfMonth(monthKey));
+    const totalDeduct = advances + deductions;
+    const net = Math.max(0, remainingBase - totalDeduct);
+    return {
+      base: remainingBase, advances, deductions,
+      carryoverAdvances: 0, carryoverDeductions: 0,
+      net, alreadyPaid, wasNegative: (remainingBase - totalDeduct) < 0
+    };
+  }
+}
+
 function renderSalPayTable() {
+  const dateInput = document.getElementById('sal-pay-date');
+  const periodSelect = document.getElementById('sal-period');
+  const dateStr = dateInput.value || today();
+  const period = periodSelect.value;
+  const monthKey = getMonthKey(dateStr);
+
   const isFull = salPayViewMode === 'full';
   const tableEl = document.getElementById('sal-pay-table');
   if (tableEl) tableEl.classList.toggle('table-wide', isFull);
 
   const thead = document.getElementById('sal-pay-thead');
   thead.innerHTML = isFull
-    ? '<tr><th>الموظف</th><th>التخصص</th><th>الراتب</th><th>صرف؟</th><th>المبلغ المصروف</th><th>إشعار</th></tr>'
-    : '<tr><th>الموظف</th><th>صرف؟</th><th>المبلغ المصروف</th></tr>';
+    ? '<tr><th>الموظف</th><th>التخصص</th><th>الراتب</th><th>سلف/خصم الدورة</th><th>صرف؟</th><th>المبلغ الصافي</th><th>مكافأة</th><th>إشعار</th></tr>'
+    : '<tr><th>الموظف</th><th>صرف؟</th><th>الصافي</th><th>مكافأة</th></tr>';
 
-  const colCount = isFull ? 6 : 3;
+  const colCount = isFull ? 8 : 4;
   const tbody = document.getElementById('sal-pay-tbody');
 
   tbody.innerHTML = data.employees.map(e => {
-    // Checkbox and amount input are always rendered (needed by confirmPaySalaries),
-    // notification buttons are only shown in full view.
+    const calc = calculateSalaryForPeriod(e, period, dateStr);
+    const deductSum = calc.advances + calc.deductions + calc.carryoverAdvances + calc.carryoverDeductions;
+    const alreadyPaidBadge = calc.alreadyPaid
+      ? `<div style="margin-top:4px;"><span class="badge badge-danger">تم الصرف بالفعل لهذه الدورة</span></div>` : '';
+    const negativeNote = calc.wasNegative
+      ? `<div style="margin-top:4px;font-size:11px;color:var(--danger);">⚠️ السلف/الخصومات تجاوزت المستحق، تم تصفير الصافي والفرق سيُخصم لاحقاً</div>` : '';
+    const carryoverNote = (calc.carryoverAdvances + calc.carryoverDeductions) > 0
+      ? `<div style="margin-top:4px;font-size:11px;color:var(--accent);">↩️ يشمل مبلغ مؤجل من الشهر الماضي: ${fmt(calc.carryoverAdvances + calc.carryoverDeductions)} دينار</div>` : '';
+
+    const disabledAttr = calc.alreadyPaid ? 'disabled' : '';
+
     if (isFull) {
       return `
-      <tr>
+      <tr data-emp-id="${e.id}">
         <td style="font-weight:600">${e.name}</td>
         <td style="color:var(--text-muted)">${e.role}</td>
         <td style="font-weight:700;color:var(--primary)">${fmt(e.salary)} دينار</td>
-        <td><input type="checkbox" id="sal-chk-${e.id}" checked style="width:18px;height:18px;cursor:pointer;"></td>
+        <td style="color:var(--danger);font-size:12.5px;">${deductSum > 0 ? '-' + fmt(deductSum) + ' دينار' : '-'}</td>
+        <td><input type="checkbox" id="sal-chk-${e.id}" ${calc.alreadyPaid ? '' : 'checked'} ${disabledAttr} style="width:18px;height:18px;cursor:pointer;"></td>
         <td>
-          <input type="number" id="sal-amt-${e.id}" value="${e.salary}" step="0.01" style="width:120px;">
+          <input type="number" id="sal-amt-${e.id}" value="${calc.net.toFixed(2)}" step="0.01" readonly style="width:120px;background:#f8f8f8;">
+          ${alreadyPaidBadge}${negativeNote}${carryoverNote}
         </td>
+        <td><input type="number" id="sal-bonus-${e.id}" value="0" step="0.01" placeholder="0.00" style="width:100px;"></td>
         <td>
           <button class="btn btn-sm" style="background:#25D366;color:#fff;" onclick="notifySalaryPaid(${e.id},'whatsapp')">📲</button>
           <button class="btn btn-sm" style="background:#566573;color:#fff;" onclick="notifySalaryPaid(${e.id},'sms')">✉️</button>
@@ -3297,12 +3435,14 @@ function renderSalPayTable() {
       </tr>`;
     }
     return `
-    <tr>
+    <tr data-emp-id="${e.id}">
       <td style="font-weight:600">${e.name}</td>
-      <td><input type="checkbox" id="sal-chk-${e.id}" checked style="width:18px;height:18px;cursor:pointer;"></td>
+      <td><input type="checkbox" id="sal-chk-${e.id}" ${calc.alreadyPaid ? '' : 'checked'} ${disabledAttr} style="width:18px;height:18px;cursor:pointer;"></td>
       <td>
-        <input type="number" id="sal-amt-${e.id}" value="${e.salary}" step="0.01" style="width:100px;">
+        <input type="number" id="sal-amt-${e.id}" value="${calc.net.toFixed(2)}" step="0.01" readonly style="width:95px;background:#f8f8f8;">
+        ${alreadyPaidBadge}${negativeNote}${carryoverNote}
       </td>
+      <td><input type="number" id="sal-bonus-${e.id}" value="0" step="0.01" placeholder="0.00" style="width:80px;"></td>
     </tr>`;
   }).join('') || `<tr><td colspan="${colCount}" style="text-align:center;color:var(--text-muted);">لا يوجد موظفون</td></tr>`;
 }
@@ -3311,22 +3451,44 @@ function confirmPaySalaries() {
   const date = document.getElementById('sal-pay-date').value;
   const period = document.getElementById('sal-period').value;
   if (!date) { showToast('يرجى تحديد تاريخ الصرف', 'error'); return; }
+  const monthKey = getMonthKey(date);
   let count = 0;
+
   data.employees.forEach(e => {
     const chk = document.getElementById('sal-chk-' + e.id);
-    const amt = parseFloat(document.getElementById('sal-amt-' + e.id).value);
-    if (chk && chk.checked && amt > 0) {
+    if (!chk || chk.checked === false || chk.disabled) return;
+
+    if (hasBeenPaidThisMonth(e.id, period, monthKey)) return; // safety net, checkbox is disabled anyway
+
+    const calc = calculateSalaryForPeriod(e, period, date);
+    const bonusInput = document.getElementById('sal-bonus-' + e.id);
+    const bonus = bonusInput ? (parseFloat(bonusInput.value) || 0) : 0;
+
+    if (calc.net > 0) {
       data.salaryHistory.push({
         id: Date.now() + Math.random(),
         date, employeeId: e.id, employeeName: e.name,
-        type: 'راتب', amount: amt,
+        type: 'راتب', amount: calc.net,
+        period, month: monthKey,
         note: `راتب دورة ${period === '15' ? '15' : 'نهاية'} الشهر`
       });
       count++;
     }
+
+    if (bonus > 0) {
+      data.salaryHistory.push({
+        id: Date.now() + Math.random() + 0.5,
+        date, employeeId: e.id, employeeName: e.name,
+        type: 'مكافأة', amount: bonus,
+        period, month: monthKey,
+        note: `مكافأة دورة ${period === '15' ? '15' : 'نهاية'} الشهر`
+      });
+      count++;
+    }
   });
+
   saveData();
-  showToast(`تم صرف رواتب ${count} موظف بنجاح`, 'success');
+  showToast(`تم صرف رواتب ${count} سجل بنجاح`, 'success');
   renderSalHistory();
   showSalaryTab('history');
 }
@@ -3433,7 +3595,12 @@ function renderSalHistory() {
   const colCount = isFull ? 7 : 5;
   const tbody = document.getElementById('sal-history-tbody');
 
-  const typeBadge = (type) => type === 'راتب' ? '<span class="badge badge-success">راتب</span>' : type === 'سلفة' ? '<span class="badge badge-warning">سلفة</span>' : '<span class="badge badge-danger">خصم</span>';
+  const typeBadge = (type) => {
+    if (type === 'راتب') return '<span class="badge badge-success">راتب</span>';
+    if (type === 'سلفة') return '<span class="badge badge-warning">سلفة</span>';
+    if (type === 'مكافأة') return '<span class="badge badge-info">مكافأة</span>';
+    return '<span class="badge badge-danger">خصم</span>';
+  };
 
   tbody.innerHTML = rows.map((r, i) => {
     if (isFull) {
@@ -3659,12 +3826,16 @@ function generateSupplierStatement() {
 
 // ============ REPORTS ============
 function showReportTab(tab) {
-  ['pl', 'income-rep', 'purchase-rep', 'salary-rep'].forEach(t => {
+  ['pl', 'income-rep', 'purchase-rep', 'salary-rep', 'payroll-statement'].forEach(t => {
     document.getElementById('rep-tab-' + t).classList.toggle('hidden', t !== tab);
   });
   document.querySelectorAll('#page-reports .tab').forEach((el, i) => {
-    el.classList.toggle('active', ['pl', 'income-rep', 'purchase-rep', 'salary-rep'][i] === tab);
+    el.classList.toggle('active', ['pl', 'income-rep', 'purchase-rep', 'salary-rep', 'payroll-statement'][i] === tab);
   });
+  if (tab === 'payroll-statement') {
+    const monthInput = document.getElementById('payroll-stmt-month');
+    if (monthInput && !monthInput.value) monthInput.value = today().slice(0, 7);
+  }
 }
 
 function generatePL() {
@@ -3678,7 +3849,8 @@ function generatePL() {
   const salaries = data.salaryHistory.filter(r => r.date >= from && r.date <= to && r.type === 'راتب').reduce((s, r) => s + parseFloat(r.amount), 0);
   const advances = data.salaryHistory.filter(r => r.date >= from && r.date <= to && r.type === 'سلفة').reduce((s, r) => s + parseFloat(r.amount), 0);
   const deductions = data.salaryHistory.filter(r => r.date >= from && r.date <= to && r.type === 'خصم').reduce((s, r) => s + parseFloat(r.amount), 0);
-  const totalExp = expenses + purchases + salaries + advances - deductions;
+  const bonuses = data.salaryHistory.filter(r => r.date >= from && r.date <= to && r.type === 'مكافأة').reduce((s, r) => s + parseFloat(r.amount), 0);
+  const totalExp = expenses + purchases + salaries + advances + bonuses - deductions;
   const net = income - totalExp;
 
   document.getElementById('pl-income').textContent = fmt(income) + ' دينار';
@@ -3756,11 +3928,61 @@ function generateSalaryReport() {
     <tr>
       <td>${fmtDate(r.date)}</td>
       <td style="font-weight:600">${r.employeeName}</td>
-      <td>${r.type === 'راتب' ? '<span class="badge badge-success">راتب</span>' : r.type === 'سلفة' ? '<span class="badge badge-warning">سلفة</span>' : '<span class="badge badge-danger">خصم</span>'}</td>
+      <td>${r.type === 'راتب' ? '<span class="badge badge-success">راتب</span>' : r.type === 'سلفة' ? '<span class="badge badge-warning">سلفة</span>' : r.type === 'مكافأة' ? '<span class="badge badge-info">مكافأة</span>' : '<span class="badge badge-danger">خصم</span>'}</td>
       <td style="font-weight:700;color:var(--primary)">${fmt(r.amount)} دينار</td>
     </tr>
   `).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);">لا توجد بيانات</td></tr>';
   document.getElementById('srep-total').textContent = rows.length ? `الإجمالي: ${fmt(total)} دينار` : '';
+}
+
+function generatePayrollStatement() {
+  const monthInput = document.getElementById('payroll-stmt-month');
+  const monthKey = monthInput.value;
+  if (!monthKey) { showToast('يرجى تحديد الشهر', 'error'); return; }
+
+  const records = data.salaryHistory.filter(r => r.month === monthKey);
+  const tbody = document.getElementById('payroll-stmt-tbody');
+
+  let grand = { period15: 0, period30: 0, advances: 0, deductions: 0, bonuses: 0, total: 0 };
+
+  const rows = data.employees.map((e, i) => {
+    const empRecords = records.filter(r => r.employeeId === e.id);
+    const period15Amt = empRecords.filter(r => r.type === 'راتب' && r.period === '15').reduce((s, r) => s + parseFloat(r.amount), 0);
+    const period30Amt = empRecords.filter(r => r.type === 'راتب' && r.period === '30').reduce((s, r) => s + parseFloat(r.amount), 0);
+    // Advances/deductions shown here are those dated within the month, regardless of period bucket
+    const advances = data.salaryHistory.filter(r => r.employeeId === e.id && r.type === 'سلفة' && getMonthKey(r.date) === monthKey).reduce((s, r) => s + parseFloat(r.amount), 0);
+    const deductions = data.salaryHistory.filter(r => r.employeeId === e.id && r.type === 'خصم' && getMonthKey(r.date) === monthKey).reduce((s, r) => s + parseFloat(r.amount), 0);
+    const bonuses = empRecords.filter(r => r.type === 'مكافأة').reduce((s, r) => s + parseFloat(r.amount), 0);
+    const totalPaidOut = period15Amt + period30Amt + bonuses;
+
+    grand.period15 += period15Amt;
+    grand.period30 += period30Amt;
+    grand.advances += advances;
+    grand.deductions += deductions;
+    grand.bonuses += bonuses;
+    grand.total += totalPaidOut;
+
+    return `
+    <tr>
+      <td>${i + 1}</td>
+      <td style="font-weight:600">${e.name}</td>
+      <td style="color:var(--text-muted)">${fmt(e.salary)} دينار</td>
+      <td>${period15Amt > 0 ? fmt(period15Amt) + ' دينار' : '-'}</td>
+      <td>${period30Amt > 0 ? fmt(period30Amt) + ' دينار' : '-'}</td>
+      <td style="color:var(--accent)">${advances > 0 ? fmt(advances) + ' دينار' : '-'}</td>
+      <td style="color:var(--danger)">${deductions > 0 ? fmt(deductions) + ' دينار' : '-'}</td>
+      <td style="color:var(--primary-light)">${bonuses > 0 ? fmt(bonuses) + ' دينار' : '-'}</td>
+      <td style="font-weight:700;color:var(--success)">${fmt(totalPaidOut)} دينار</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:20px;">لا يوجد موظفون</td></tr>';
+
+  tbody.innerHTML = rows;
+
+  document.getElementById('payroll-stmt-totals').innerHTML = `
+    الإجماليات — دورة 15: ${fmt(grand.period15)} | دورة 30: ${fmt(grand.period30)} |
+    سلف: ${fmt(grand.advances)} | خصومات: ${fmt(grand.deductions)} | مكافآت: ${fmt(grand.bonuses)} |
+    <span style="color:var(--success)">الإجمالي المصروف: ${fmt(grand.total)} دينار</span>
+  `;
 }
 
 function buildIncomeSummaryMessage() {
@@ -4387,7 +4609,7 @@ function renderMySalaryPage() {
   document.getElementById('my-history-tbody').innerHTML = sorted.map(r => `
     <tr>
       <td>${fmtDate(r.date)}</td>
-      <td>${r.type === 'راتب' ? '<span class="badge badge-success">راتب</span>' : r.type === 'سلفة' ? '<span class="badge badge-warning">سلفة</span>' : '<span class="badge badge-danger">خصم</span>'}</td>
+      <td>${r.type === 'راتب' ? '<span class="badge badge-success">راتب</span>' : r.type === 'سلفة' ? '<span class="badge badge-warning">سلفة</span>' : r.type === 'مكافأة' ? '<span class="badge badge-info">مكافأة</span>' : '<span class="badge badge-danger">خصم</span>'}</td>
       <td style="font-weight:700;color:var(--primary)">${fmt(r.amount)} دينار</td>
       <td style="color:var(--text-muted)">${r.note || '-'}</td>
     </tr>
