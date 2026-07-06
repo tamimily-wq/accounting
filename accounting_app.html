@@ -382,6 +382,12 @@
 
   table.table-wide { min-width: 640px; }
 
+  /* Used when a table needs to show more columns without growing wider than
+     its container (e.g. payroll statement "full details" view) — shrinks
+     font and padding instead of forcing horizontal scroll. */
+  table.table-compact-font th { font-size: 9.5px; padding: 6px 4px; }
+  table.table-compact-font td { font-size: 11px; padding: 6px 4px; white-space: normal; }
+
   /* Compact (non-wide) tables use a touch smaller font to fit more comfortably
      on narrow phone screens without needing horizontal scroll. */
   table:not(.table-wide) th { font-size: 10px; padding: 8px 8px; }
@@ -4210,7 +4216,7 @@ function generatePayrollStatement() {
 
   const isFull = payrollStmtViewMode === 'full';
   const tableEl = document.getElementById('payroll-stmt-table');
-  if (tableEl) tableEl.classList.toggle('table-wide', isFull);
+  if (tableEl) tableEl.classList.toggle('table-compact-font', isFull);
 
   const thead = document.getElementById('payroll-stmt-thead');
   thead.innerHTML = isFull
