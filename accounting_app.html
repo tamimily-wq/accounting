@@ -385,8 +385,13 @@
   /* Used when a table needs to show more columns without growing wider than
      its container (e.g. payroll statement "full details" view) — shrinks
      font and padding instead of forcing horizontal scroll. */
-  table.table-compact-font th { font-size: 9.5px; padding: 6px 4px; }
-  table.table-compact-font td { font-size: 11px; padding: 6px 4px; white-space: normal; }
+  table.table-compact-font {
+    table-layout: fixed;
+    width: 100%;
+    max-width: 100%;
+  }
+  table.table-compact-font th { font-size: 9.5px; padding: 6px 3px; word-break: break-word; white-space: normal; }
+  table.table-compact-font td { font-size: 10.5px; padding: 6px 3px; word-break: break-word; white-space: normal; overflow-wrap: break-word; }
 
   /* Compact (non-wide) tables use a touch smaller font to fit more comfortably
      on narrow phone screens without needing horizontal scroll. */
