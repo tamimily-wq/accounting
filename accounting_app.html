@@ -2184,8 +2184,8 @@ function exportPayrollStatementExcel() {
 
   const isFull = payrollStmtViewMode === 'full';
   const headers = isFull
-    ? ['#', 'الموظف', 'الراتب الأساسي', 'دورة 15', 'دورة 30', 'دفعة كاملة', 'سلف', 'خصومات', 'مكافآت', 'إجمالي المصروف']
-    : ['#', 'الموظف', 'إجمالي المصروف'];
+    ? ['#', 'الموظف', 'الراتب الأساسي', 'دورة 15', 'دورة 30', 'دفعة كاملة', 'سلف', 'خصومات', 'مكافآت', 'صافي المرتب']
+    : ['#', 'الموظف', 'صافي المرتب'];
 
   exportTableExcel('payroll-stmt-tbody', headers, 'كشف_حساب_الرواتب');
 }
@@ -4225,8 +4225,8 @@ function generatePayrollStatement() {
 
   const thead = document.getElementById('payroll-stmt-thead');
   thead.innerHTML = isFull
-    ? '<tr><th>#</th><th>الموظف</th><th>الراتب الأساسي</th><th>دورة 15</th><th>دورة 30</th><th>دفعة كاملة</th><th>سلف</th><th>خصومات</th><th>مكافآت</th><th>إجمالي المصروف</th></tr>'
-    : '<tr><th>#</th><th>الموظف</th><th>إجمالي المصروف</th></tr>';
+    ? '<tr><th>#</th><th>الموظف</th><th>الراتب الأساسي</th><th>دورة 15</th><th>دورة 30</th><th>دفعة كاملة</th><th>سلف</th><th>خصومات</th><th>مكافآت</th><th>صافي المرتب</th></tr>'
+    : '<tr><th>#</th><th>الموظف</th><th>صافي المرتب</th></tr>';
 
   const colCount = isFull ? 10 : 3;
   const tbody = document.getElementById('payroll-stmt-tbody');
@@ -4280,7 +4280,7 @@ function generatePayrollStatement() {
   document.getElementById('payroll-stmt-totals').innerHTML = `
     الإجماليات — دورة 15: ${fmt(grand.period15)} | دورة 30: ${fmt(grand.period30)} | دفعة كاملة: ${fmt(grand.full)} |
     سلف: ${fmt(grand.advances)} | خصومات: ${fmt(grand.deductions)} | مكافآت: ${fmt(grand.bonuses)} |
-    <span style="color:var(--success)">الإجمالي المصروف: ${fmt(grand.total)} دينار</span>
+    <span style="color:var(--success)">إجمالي صافي المرتبات: ${fmt(grand.total)} دينار</span>
   `;
 }
 
