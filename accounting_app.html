@@ -3567,21 +3567,21 @@ function calculateSalaryForPeriod(employee, period, dateStr) {
     const carryover = getUnconsumedCarryover(employee.id, monthKey);
     const { advances, deductions } = getEmployeeAdjustmentsInRange(employee.id, monthKey, 1, getLastDayOfMonth(monthKey));
     const totalDeduct = advances + deductions + carryover.advances + carryover.deductions;
-    const net = Math.max(0, employee.salary - totalDeduct);
+    const net = employee.salary - totalDeduct;
     return {
       base: employee.salary, advances, deductions,
       carryoverAdvances: carryover.advances, carryoverDeductions: carryover.deductions,
-      net, alreadyPaid, wasNegative: (employee.salary - totalDeduct) < 0
+      net, alreadyPaid, wasNegative: net < 0
     };
   } else if (period === '15') {
     const { advances, deductions } = getEmployeeAdjustmentsInRange(employee.id, monthKey, 1, 15);
     const carryover = getUnconsumedCarryover(employee.id, monthKey);
     const totalDeduct = advances + deductions + carryover.advances + carryover.deductions;
-    const net = Math.max(0, halfSalary - totalDeduct);
+    const net = halfSalary - totalDeduct;
     return {
       base: halfSalary, advances, deductions,
       carryoverAdvances: carryover.advances, carryoverDeductions: carryover.deductions,
-      net, alreadyPaid, wasNegative: (halfSalary - totalDeduct) < 0
+      net, alreadyPaid, wasNegative: net < 0
     };
   } else {
     // Period 30: base = full salary minus whatever was ACTUALLY paid out in period 15
@@ -3592,11 +3592,11 @@ function calculateSalaryForPeriod(employee, period, dateStr) {
     const remainingBase = employee.salary - period15Net;
     const { advances, deductions } = getEmployeeAdjustmentsInRange(employee.id, monthKey, 16, getLastDayOfMonth(monthKey));
     const totalDeduct = advances + deductions;
-    const net = Math.max(0, remainingBase - totalDeduct);
+    const net = remainingBase - totalDeduct;
     return {
       base: remainingBase, advances, deductions,
       carryoverAdvances: 0, carryoverDeductions: 0,
-      net, alreadyPaid, wasNegative: (remainingBase - totalDeduct) < 0
+      net, alreadyPaid, wasNegative: net < 0
     };
   }
 }
@@ -3626,7 +3626,7 @@ function renderSalPayTable() {
     const alreadyPaidBadge = calc.alreadyPaid
       ? `<div style="margin-top:4px;"><span class="badge badge-danger">تم الصرف بالفعل لهذه الدورة</span></div>` : '';
     const negativeNote = calc.wasNegative
-      ? `<div style="margin-top:4px;font-size:11px;color:var(--danger);">⚠️ السلف/الخصومات تجاوزت المستحق، تم تصفير الصافي والفرق سيُخصم لاحقاً</div>` : '';
+      ? `<div style="margin-top:4px;font-size:11px;color:var(--danger);">⚠️ السلف/الخصومات تجاوزت المستحق — المبلغ سالب (دين على الموظف)</div>` : '';
     const carryoverNote = (calc.carryoverAdvances + calc.carryoverDeductions) > 0
       ? `<div style="margin-top:4px;font-size:11px;color:var(--accent);">↩️ يشمل مبلغ مؤجل من الشهر الماضي: ${fmt(calc.carryoverAdvances + calc.carryoverDeductions)} دينار</div>` : '';
 
@@ -3641,7 +3641,7 @@ function renderSalPayTable() {
         <td style="color:var(--danger);font-size:12.5px;">${deductSum > 0 ? '-' + fmt(deductSum) + ' دينار' : '-'}</td>
         <td><input type="checkbox" id="sal-chk-${e.id}" ${calc.alreadyPaid ? '' : 'checked'} ${disabledAttr} style="width:18px;height:18px;cursor:pointer;"></td>
         <td>
-          <input type="number" id="sal-amt-${e.id}" value="${calc.net.toFixed(2)}" step="0.01" readonly style="width:120px;background:#f8f8f8;">
+          <input type="number" id="sal-amt-${e.id}" value="${calc.net.toFixed(2)}" step="0.01" readonly style="width:120px;background:#f8f8f8;${calc.wasNegative ? 'color:var(--danger);font-weight:700;' : ''}">
           ${alreadyPaidBadge}${negativeNote}${carryoverNote}
         </td>
         <td><input type="number" id="sal-bonus-${e.id}" value="0" step="0.01" placeholder="0.00" style="width:100px;"></td>
@@ -3656,7 +3656,7 @@ function renderSalPayTable() {
       <td style="font-weight:600">${e.name}</td>
       <td><input type="checkbox" id="sal-chk-${e.id}" ${calc.alreadyPaid ? '' : 'checked'} ${disabledAttr} style="width:18px;height:18px;cursor:pointer;"></td>
       <td>
-        <input type="number" id="sal-amt-${e.id}" value="${calc.net.toFixed(2)}" step="0.01" readonly style="width:95px;background:#f8f8f8;">
+        <input type="number" id="sal-amt-${e.id}" value="${calc.net.toFixed(2)}" step="0.01" readonly style="width:95px;background:#f8f8f8;${calc.wasNegative ? 'color:var(--danger);font-weight:700;' : ''}">
         ${alreadyPaidBadge}${negativeNote}${carryoverNote}
       </td>
       <td><input type="number" id="sal-bonus-${e.id}" value="0" step="0.01" placeholder="0.00" style="width:80px;"></td>
@@ -3682,7 +3682,7 @@ function confirmPaySalaries() {
     const bonusInput = document.getElementById('sal-bonus-' + e.id);
     const bonus = bonusInput ? (parseFloat(bonusInput.value) || 0) : 0;
 
-    if (calc.net > 0) {
+    if (calc.net !== 0) {
       data.salaryHistory.push({
         id: Date.now() + Math.random(),
         date, employeeId: e.id, employeeName: e.name,
@@ -3704,7 +3704,7 @@ function confirmPaySalaries() {
       count++;
     }
 
-    if (calc.net > 0 || bonus > 0) {
+    if (calc.net !== 0 || bonus > 0) {
       paidSummary.push({ name: e.name, net: calc.net, bonus });
     }
   });
