@@ -3558,45 +3558,52 @@ function hasBeenPaidThisMonth(employeeId, period, monthKey) {
 }
 
 // Core calculation: returns a full breakdown for one employee/period/month.
-function calculateSalaryForPeriod(employee, period, dateStr) {
+function calculateSalaryForPeriod(employee, period, dateStr, manualPayment) {
   const monthKey = getMonthKey(dateStr);
-  const halfSalary = employee.salary / 2;
   const alreadyPaid = hasBeenPaidThisMonth(employee.id, period, monthKey);
 
   if (period === 'full') {
-    const carryover = getUnconsumedCarryover(employee.id, monthKey);
+    // المتبقي = الراتب الأساسي كاملاً
     const { advances, deductions } = getEmployeeAdjustmentsInRange(employee.id, monthKey, 1, getLastDayOfMonth(monthKey));
+    const carryover = getUnconsumedCarryover(employee.id, monthKey);
     const totalDeduct = advances + deductions + carryover.advances + carryover.deductions;
-    const net = employee.salary - totalDeduct;
+    const remaining = employee.salary - totalDeduct;
     return {
       base: employee.salary, advances, deductions,
       carryoverAdvances: carryover.advances, carryoverDeductions: carryover.deductions,
-      net, alreadyPaid, wasNegative: net < 0
+      net: remaining, alreadyPaid, wasNegative: remaining < 0
     };
   } else if (period === '15') {
+    // المتبقي يبدأ من الراتب الأساسي، ثم الدفعة المُدخلة يدوياً تُخصم منه أيضاً
+    // (كما في المثال: المتبقي=1500 ثم المتبقي=1500-750=750 يُحمل لدورة 30)
+    // لكن "صافي المرتب" لدورة 15 نفسها = الدفعة المُدخلة - سلف/خصم الفترة (1-15) + مكافأة
+    const payment = (manualPayment !== undefined && manualPayment !== null && manualPayment !== '')
+      ? parseFloat(manualPayment) : (employee.salary / 2);
     const { advances, deductions } = getEmployeeAdjustmentsInRange(employee.id, monthKey, 1, 15);
     const carryover = getUnconsumedCarryover(employee.id, monthKey);
     const totalDeduct = advances + deductions + carryover.advances + carryover.deductions;
-    const net = halfSalary - totalDeduct;
+    const remaining = payment - totalDeduct;
     return {
-      base: halfSalary, advances, deductions,
+      base: payment, advances, deductions,
       carryoverAdvances: carryover.advances, carryoverDeductions: carryover.deductions,
-      net, alreadyPaid, wasNegative: net < 0
+      net: remaining, alreadyPaid, wasNegative: remaining < 0,
+      manualPaymentUsed: payment
     };
   } else {
-    // Period 30: base = full salary minus whatever was ACTUALLY paid out in period 15
+    // Period 30: المتبقي = الراتب الأساسي - الدفعة المُدخلة يدوياً في دورة 15 (وليس الصافي بعد الخصومات)
     const period15Payment = data.salaryHistory.find(r =>
       r.employeeId === employee.id && r.type === 'راتب' && r.period === '15' && r.month === monthKey
     );
-    const period15Net = period15Payment ? parseFloat(period15Payment.amount) : (employee.salary / 2);
-    const remainingBase = employee.salary - period15Net;
+    const period15GrossPayment = period15Payment && period15Payment.grossPayment !== undefined
+      ? parseFloat(period15Payment.grossPayment) : (employee.salary / 2);
+    const remainingBase = employee.salary - period15GrossPayment;
     const { advances, deductions } = getEmployeeAdjustmentsInRange(employee.id, monthKey, 16, getLastDayOfMonth(monthKey));
     const totalDeduct = advances + deductions;
-    const net = remainingBase - totalDeduct;
+    const remaining = remainingBase - totalDeduct;
     return {
       base: remainingBase, advances, deductions,
       carryoverAdvances: 0, carryoverDeductions: 0,
-      net, alreadyPaid, wasNegative: net < 0
+      net: remaining, alreadyPaid, wasNegative: remaining < 0
     };
   }
 }
@@ -3607,21 +3614,31 @@ function renderSalPayTable() {
   const dateStr = dateInput.value || today();
   const period = periodSelect.value;
   const monthKey = getMonthKey(dateStr);
+  const showPaymentField = period === '15';
 
   const isFull = salPayViewMode === 'full';
   const tableEl = document.getElementById('sal-pay-table');
   if (tableEl) tableEl.classList.toggle('table-wide', isFull);
 
   const thead = document.getElementById('sal-pay-thead');
-  thead.innerHTML = isFull
-    ? '<tr><th>الموظف</th><th>التخصص</th><th>الراتب</th><th>سلف/خصم الدورة</th><th>صرف؟</th><th>المتبقي</th><th>مكافأة</th><th>صافي الراتب</th><th>إشعار</th></tr>'
-    : '<tr><th>الموظف</th><th>صرف؟</th><th>المتبقي</th><th>مكافأة</th><th>صافي الراتب</th></tr>';
+  if (isFull) {
+    thead.innerHTML = showPaymentField
+      ? '<tr><th>الموظف</th><th>التخصص</th><th>الراتب</th><th>قيمة الدفعة</th><th>سلف/خصم الدورة</th><th>صرف؟</th><th>المتبقي</th><th>مكافأة</th><th>صافي الراتب</th><th>إشعار</th></tr>'
+      : '<tr><th>الموظف</th><th>التخصص</th><th>الراتب</th><th>سلف/خصم الدورة</th><th>صرف؟</th><th>المتبقي</th><th>مكافأة</th><th>صافي الراتب</th><th>إشعار</th></tr>';
+  } else {
+    thead.innerHTML = showPaymentField
+      ? '<tr><th>الموظف</th><th>قيمة الدفعة</th><th>صرف؟</th><th>المتبقي</th><th>مكافأة</th><th>صافي الراتب</th></tr>'
+      : '<tr><th>الموظف</th><th>صرف؟</th><th>المتبقي</th><th>مكافأة</th><th>صافي الراتب</th></tr>';
+  }
 
-  const colCount = isFull ? 9 : 5;
+  const colCount = isFull ? (showPaymentField ? 10 : 9) : (showPaymentField ? 6 : 5);
   const tbody = document.getElementById('sal-pay-tbody');
 
   tbody.innerHTML = data.employees.map(e => {
-    const calc = calculateSalaryForPeriod(e, period, dateStr);
+    const defaultPayment = (e.salary / 2).toFixed(2);
+    const existingPaymentInput = document.getElementById('sal-payment-' + e.id);
+    const paymentValue = existingPaymentInput ? existingPaymentInput.value : defaultPayment;
+    const calc = calculateSalaryForPeriod(e, period, dateStr, showPaymentField ? paymentValue : undefined);
     const deductSum = calc.advances + calc.deductions + calc.carryoverAdvances + calc.carryoverDeductions;
     const alreadyPaidBadge = calc.alreadyPaid
       ? `<div style="margin-top:4px;"><span class="badge badge-danger">تم الصرف بالفعل لهذه الدورة</span></div>` : '';
@@ -3633,12 +3650,18 @@ function renderSalPayTable() {
     const disabledAttr = calc.alreadyPaid ? 'disabled' : '';
     const remainingColor = calc.wasNegative ? 'color:var(--danger);font-weight:700;' : '';
 
+    const paymentFieldFull = showPaymentField
+      ? `<td><input type="number" id="sal-payment-${e.id}" value="${paymentValue}" step="0.01" style="width:100px;" oninput="recalcSalaryRow(${e.id})"></td>` : '';
+    const paymentFieldCompact = showPaymentField
+      ? `<td><input type="number" id="sal-payment-${e.id}" value="${paymentValue}" step="0.01" style="width:85px;" oninput="recalcSalaryRow(${e.id})"></td>` : '';
+
     if (isFull) {
       return `
       <tr data-emp-id="${e.id}">
         <td style="font-weight:600">${e.name}</td>
         <td style="color:var(--text-muted)">${e.role}</td>
         <td style="font-weight:700;color:var(--primary)">${fmt(e.salary)} دينار</td>
+        ${paymentFieldFull}
         <td style="color:var(--danger);font-size:12.5px;">${deductSum > 0 ? '-' + fmt(deductSum) + ' دينار' : '-'}</td>
         <td><input type="checkbox" id="sal-chk-${e.id}" ${calc.alreadyPaid ? '' : 'checked'} ${disabledAttr} style="width:18px;height:18px;cursor:pointer;"></td>
         <td>
@@ -3656,6 +3679,7 @@ function renderSalPayTable() {
     return `
     <tr data-emp-id="${e.id}">
       <td style="font-weight:600">${e.name}</td>
+      ${paymentFieldCompact}
       <td><input type="checkbox" id="sal-chk-${e.id}" ${calc.alreadyPaid ? '' : 'checked'} ${disabledAttr} style="width:18px;height:18px;cursor:pointer;"></td>
       <td>
         <input type="number" id="sal-remaining-${e.id}" value="${calc.net.toFixed(2)}" step="0.01" readonly style="width:90px;background:#f8f8f8;${remainingColor}">
@@ -3677,6 +3701,25 @@ function updateNetSalaryPreview(employeeId) {
   netInput.value = (remaining + bonus).toFixed(2);
 }
 
+function recalcSalaryRow(employeeId) {
+  const employee = data.employees.find(x => x.id === employeeId);
+  if (!employee) return;
+  const dateStr = document.getElementById('sal-pay-date').value || today();
+  const period = document.getElementById('sal-period').value;
+  const paymentInput = document.getElementById('sal-payment-' + employeeId);
+  const paymentValue = paymentInput ? paymentInput.value : undefined;
+
+  const calc = calculateSalaryForPeriod(employee, period, dateStr, paymentValue);
+
+  const remainingInput = document.getElementById('sal-remaining-' + employeeId);
+  if (remainingInput) {
+    remainingInput.value = calc.net.toFixed(2);
+    remainingInput.style.color = calc.wasNegative ? 'var(--danger)' : '';
+    remainingInput.style.fontWeight = calc.wasNegative ? '700' : '';
+  }
+  updateNetSalaryPreview(employeeId);
+}
+
 function confirmPaySalaries() {
   const date = document.getElementById('sal-pay-date').value;
   const period = document.getElementById('sal-period').value;
@@ -3691,18 +3734,26 @@ function confirmPaySalaries() {
 
     if (hasBeenPaidThisMonth(e.id, period, monthKey)) return; // safety net, checkbox is disabled anyway
 
-    const calc = calculateSalaryForPeriod(e, period, date);
+    const paymentInput = document.getElementById('sal-payment-' + e.id);
+    const paymentValue = paymentInput ? paymentInput.value : undefined;
+    const calc = calculateSalaryForPeriod(e, period, date, paymentValue);
     const bonusInput = document.getElementById('sal-bonus-' + e.id);
     const bonus = bonusInput ? (parseFloat(bonusInput.value) || 0) : 0;
 
     if (calc.net !== 0) {
-      data.salaryHistory.push({
+      const record = {
         id: Date.now() + Math.random(),
         date, employeeId: e.id, employeeName: e.name,
         type: 'راتب', amount: calc.net,
         period, month: monthKey,
         note: `راتب ${period === '15' ? 'دورة 15' : period === '30' ? 'دورة نهاية الشهر' : 'دفعة كاملة'}`
-      });
+      };
+      // Store the manually-entered gross payment (before deductions) for
+      // period 15, so period 30's calculation can subtract it correctly.
+      if (period === '15' && calc.manualPaymentUsed !== undefined) {
+        record.grossPayment = calc.manualPaymentUsed;
+      }
+      data.salaryHistory.push(record);
       count++;
     }
 
