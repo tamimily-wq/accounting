@@ -3614,10 +3614,10 @@ function renderSalPayTable() {
 
   const thead = document.getElementById('sal-pay-thead');
   thead.innerHTML = isFull
-    ? '<tr><th>الموظف</th><th>التخصص</th><th>الراتب</th><th>سلف/خصم الدورة</th><th>صرف؟</th><th>المبلغ الصافي</th><th>مكافأة</th><th>إشعار</th></tr>'
-    : '<tr><th>الموظف</th><th>صرف؟</th><th>الصافي</th><th>مكافأة</th></tr>';
+    ? '<tr><th>الموظف</th><th>التخصص</th><th>الراتب</th><th>سلف/خصم الدورة</th><th>صرف؟</th><th>المتبقي</th><th>مكافأة</th><th>صافي الراتب</th><th>إشعار</th></tr>'
+    : '<tr><th>الموظف</th><th>صرف؟</th><th>المتبقي</th><th>مكافأة</th><th>صافي الراتب</th></tr>';
 
-  const colCount = isFull ? 8 : 4;
+  const colCount = isFull ? 9 : 5;
   const tbody = document.getElementById('sal-pay-tbody');
 
   tbody.innerHTML = data.employees.map(e => {
@@ -3631,6 +3631,7 @@ function renderSalPayTable() {
       ? `<div style="margin-top:4px;font-size:11px;color:var(--accent);">↩️ يشمل مبلغ مؤجل من الشهر الماضي: ${fmt(calc.carryoverAdvances + calc.carryoverDeductions)} دينار</div>` : '';
 
     const disabledAttr = calc.alreadyPaid ? 'disabled' : '';
+    const remainingColor = calc.wasNegative ? 'color:var(--danger);font-weight:700;' : '';
 
     if (isFull) {
       return `
@@ -3641,10 +3642,11 @@ function renderSalPayTable() {
         <td style="color:var(--danger);font-size:12.5px;">${deductSum > 0 ? '-' + fmt(deductSum) + ' دينار' : '-'}</td>
         <td><input type="checkbox" id="sal-chk-${e.id}" ${calc.alreadyPaid ? '' : 'checked'} ${disabledAttr} style="width:18px;height:18px;cursor:pointer;"></td>
         <td>
-          <input type="number" id="sal-amt-${e.id}" value="${calc.net.toFixed(2)}" step="0.01" readonly style="width:120px;background:#f8f8f8;${calc.wasNegative ? 'color:var(--danger);font-weight:700;' : ''}">
+          <input type="number" id="sal-remaining-${e.id}" value="${calc.net.toFixed(2)}" step="0.01" readonly style="width:110px;background:#f8f8f8;${remainingColor}">
           ${alreadyPaidBadge}${negativeNote}${carryoverNote}
         </td>
-        <td><input type="number" id="sal-bonus-${e.id}" value="0" step="0.01" placeholder="0.00" style="width:100px;"></td>
+        <td><input type="number" id="sal-bonus-${e.id}" value="0" step="0.01" placeholder="0.00" style="width:100px;" oninput="updateNetSalaryPreview(${e.id})"></td>
+        <td><input type="number" id="sal-amt-${e.id}" value="${calc.net.toFixed(2)}" step="0.01" readonly style="width:110px;background:#f8f8f8;font-weight:700;color:var(--success);"></td>
         <td>
           <button class="btn btn-sm" style="background:#25D366;color:#fff;" onclick="notifySalaryPaid(${e.id},'whatsapp')">📲</button>
           <button class="btn btn-sm" style="background:#566573;color:#fff;" onclick="notifySalaryPaid(${e.id},'sms')">✉️</button>
@@ -3656,12 +3658,23 @@ function renderSalPayTable() {
       <td style="font-weight:600">${e.name}</td>
       <td><input type="checkbox" id="sal-chk-${e.id}" ${calc.alreadyPaid ? '' : 'checked'} ${disabledAttr} style="width:18px;height:18px;cursor:pointer;"></td>
       <td>
-        <input type="number" id="sal-amt-${e.id}" value="${calc.net.toFixed(2)}" step="0.01" readonly style="width:95px;background:#f8f8f8;${calc.wasNegative ? 'color:var(--danger);font-weight:700;' : ''}">
+        <input type="number" id="sal-remaining-${e.id}" value="${calc.net.toFixed(2)}" step="0.01" readonly style="width:90px;background:#f8f8f8;${remainingColor}">
         ${alreadyPaidBadge}${negativeNote}${carryoverNote}
       </td>
-      <td><input type="number" id="sal-bonus-${e.id}" value="0" step="0.01" placeholder="0.00" style="width:80px;"></td>
+      <td><input type="number" id="sal-bonus-${e.id}" value="0" step="0.01" placeholder="0.00" style="width:80px;" oninput="updateNetSalaryPreview(${e.id})"></td>
+      <td><input type="number" id="sal-amt-${e.id}" value="${calc.net.toFixed(2)}" step="0.01" readonly style="width:90px;background:#f8f8f8;font-weight:700;color:var(--success);"></td>
     </tr>`;
   }).join('') || `<tr><td colspan="${colCount}" style="text-align:center;color:var(--text-muted);">لا يوجد موظفون</td></tr>`;
+}
+
+function updateNetSalaryPreview(employeeId) {
+  const remainingInput = document.getElementById('sal-remaining-' + employeeId);
+  const bonusInput = document.getElementById('sal-bonus-' + employeeId);
+  const netInput = document.getElementById('sal-amt-' + employeeId);
+  if (!remainingInput || !bonusInput || !netInput) return;
+  const remaining = parseFloat(remainingInput.value) || 0;
+  const bonus = parseFloat(bonusInput.value) || 0;
+  netInput.value = (remaining + bonus).toFixed(2);
 }
 
 function confirmPaySalaries() {
