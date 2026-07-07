@@ -1077,6 +1077,15 @@
         <button class="btn btn-sm" style="background:var(--bg);color:var(--text-muted)" onclick="clearPurFilter()">مسح</button>
         <div class="form-group"><label>الشهر المحاسبي</label><input type="month" id="pur-filter-month"></div>
         <button class="btn btn-accent btn-sm" onclick="searchPurchaseByMonth()">📅 بحث بالشهر</button>
+        <div class="form-group">
+          <label>الحالة</label>
+          <select id="pur-filter-status" onchange="renderPurchaseTable()">
+            <option value="">-- عرض الكل --</option>
+            <option value="paid">مسدد</option>
+            <option value="overdue">متأخر</option>
+            <option value="pending">معلق</option>
+          </select>
+        </div>
       </div>
       <div class="print-export-btns">
         <button class="btn" onclick="exportReportPrint('purchase-export-area','سجل المشتريات')">🖨️ طباعة / PDF</button>
@@ -3264,9 +3273,20 @@ function togglePurchaseView() {
 function renderPurchaseTable() {
   const from = document.getElementById('pur-filter-from').value;
   const to = document.getElementById('pur-filter-to').value;
+  const statusFilter = document.getElementById('pur-filter-status').value;
   let rows = [...data.purchases].sort((a, b) => b.date.localeCompare(a.date));
   if (from) rows = rows.filter(r => r.date >= from);
   if (to) rows = rows.filter(r => r.date <= to);
+
+  // Precompute each row's status once, then filter by it if requested
+  rows = rows.map(r => {
+    const isOverdue = r.payType === 'credit' && r.dueDate < today() && r.remaining > 0;
+    const isPaid = r.payType === 'cash' || r.remaining <= 0;
+    const status = isPaid ? 'paid' : isOverdue ? 'overdue' : 'pending';
+    return { ...r, _status: status };
+  });
+  if (statusFilter) rows = rows.filter(r => r._status === statusFilter);
+
   const total = rows.reduce((s, r) => s + parseFloat(r.amount), 0);
 
   const isFull = purchaseViewMode === 'full';
@@ -3282,8 +3302,8 @@ function renderPurchaseTable() {
   const colCount = isFull ? 9 : 4;
 
   tbody.innerHTML = rows.map((r, i) => {
-    const isOverdue = r.payType === 'credit' && r.dueDate < today() && r.remaining > 0;
-    const isPaid = r.payType === 'cash' || r.remaining <= 0;
+    const isOverdue = r._status === 'overdue';
+    const isPaid = r._status === 'paid';
     const statusBadge = isPaid ? '<span class="badge badge-success">مسدد</span>' : isOverdue ? '<span class="badge badge-danger">متأخر</span>' : '<span class="badge badge-info">معلق</span>';
 
     if (isFull) {
@@ -3856,7 +3876,7 @@ function renderSalPayTable() {
     const calc = calculateSalaryForPeriod(e, period, dateStr, showPaymentField ? paymentValue : undefined);
     const deductSum = calc.advances + calc.deductions + calc.carryoverAdvances + calc.carryoverDeductions;
     const alreadyPaidBadge = calc.alreadyPaid
-      ? `<div style="margin-top:4px;"><span class="badge badge-danger">تم الصرف بالفعل لهذه الدورة</span></div>` : '';
+      ? `<div style="margin-top:4px;"><span class="badge badge-danger">تم الصرف</span></div>` : '';
     const negativeNote = calc.wasNegative
       ? `<div style="margin-top:4px;font-size:11px;color:var(--danger);">⚠️ السلف/الخصومات تجاوزت المستحق — المبلغ سالب (دين على الموظف)</div>` : '';
     const carryoverNote = (calc.carryoverAdvances + calc.carryoverDeductions) > 0
