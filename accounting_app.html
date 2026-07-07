@@ -933,7 +933,18 @@
         </div>
         <button class="btn btn-primary btn-sm" onclick="renderIncomeTable()">🔍 بحث</button>
         <button class="btn btn-sm" style="background:var(--bg);color:var(--text-muted)" onclick="clearIncomeFilter()">اليوم</button>
+        <div class="form-group">
+          <label>الشهر المحاسبي</label>
+          <input type="month" id="income-filter-month">
+        </div>
+        <button class="btn btn-accent btn-sm" onclick="searchIncomeByMonth()">📅 بحث بالشهر</button>
       </div>
+      <div class="print-export-btns">
+        <button class="btn" onclick="exportReportPrint('income-export-area','سجل الإيرادات')">🖨️ طباعة / PDF</button>
+        <button class="btn" onclick="exportReportImage('income-export-area','سجل_الإيرادات')">🖼️ صورة</button>
+        <button class="btn" onclick="exportIncomeExcel()">📊 Excel</button>
+      </div>
+      <div id="income-export-area">
       <div class="table-wrap">
         <table id="income-table">
           <thead id="income-thead"></thead>
@@ -941,6 +952,7 @@
         </table>
       </div>
       <div id="income-total" style="text-align:left;padding-top:12px;font-weight:700;color:var(--success);font-size:15px;"></div>
+      </div>
     </div>
   </div>
 
@@ -976,7 +988,15 @@
         <div class="form-group"><label>إلى</label><input type="date" id="exp-filter-to"></div>
         <button class="btn btn-primary btn-sm" onclick="renderExpenseTable()">🔍 بحث</button>
         <button class="btn btn-sm" style="background:var(--bg);color:var(--text-muted)" onclick="clearExpFilter()">مسح</button>
+        <div class="form-group"><label>الشهر المحاسبي</label><input type="month" id="exp-filter-month"></div>
+        <button class="btn btn-accent btn-sm" onclick="searchExpenseByMonth()">📅 بحث بالشهر</button>
       </div>
+      <div class="print-export-btns">
+        <button class="btn" onclick="exportReportPrint('expense-export-area','سجل المصروفات')">🖨️ طباعة / PDF</button>
+        <button class="btn" onclick="exportReportImage('expense-export-area','سجل_المصروفات')">🖼️ صورة</button>
+        <button class="btn" onclick="exportTableExcel('expense-tbody', ['#','التاريخ','البند','المبلغ'], 'سجل_المصروفات')">📊 Excel</button>
+      </div>
+      <div id="expense-export-area">
       <div class="table-wrap">
         <table>
           <thead><tr><th>#</th><th>التاريخ</th><th>البند</th><th>المبلغ</th><th></th></tr></thead>
@@ -984,6 +1004,7 @@
         </table>
       </div>
       <div id="expense-total" style="text-align:left;padding-top:12px;font-weight:700;color:var(--danger);font-size:15px;"></div>
+      </div>
     </div>
   </div>
 
@@ -1054,7 +1075,15 @@
         <div class="form-group"><label>إلى</label><input type="date" id="pur-filter-to"></div>
         <button class="btn btn-primary btn-sm" onclick="renderPurchaseTable()">🔍 بحث</button>
         <button class="btn btn-sm" style="background:var(--bg);color:var(--text-muted)" onclick="clearPurFilter()">مسح</button>
+        <div class="form-group"><label>الشهر المحاسبي</label><input type="month" id="pur-filter-month"></div>
+        <button class="btn btn-accent btn-sm" onclick="searchPurchaseByMonth()">📅 بحث بالشهر</button>
       </div>
+      <div class="print-export-btns">
+        <button class="btn" onclick="exportReportPrint('purchase-export-area','سجل المشتريات')">🖨️ طباعة / PDF</button>
+        <button class="btn" onclick="exportReportImage('purchase-export-area','سجل_المشتريات')">🖼️ صورة</button>
+        <button class="btn" onclick="exportPurchaseTableExcel()">📊 Excel</button>
+      </div>
+      <div id="purchase-export-area">
       <div class="table-wrap">
         <table id="purchase-table">
           <thead id="purchase-thead"></thead>
@@ -1062,6 +1091,7 @@
         </table>
       </div>
       <div id="purchase-total" style="text-align:left;padding-top:12px;font-weight:700;color:var(--accent);font-size:15px;"></div>
+      </div>
     </div>
   </div>
 
@@ -1095,6 +1125,12 @@
         <span>📋 الأصناف الناقصة الحالية</span>
         <button class="btn btn-sm" id="shoppinglist-view-toggle-btn" style="background:var(--bg);color:var(--primary);border:1px solid var(--border);" onclick="toggleShoppingListView()">📄 عرض كل التفاصيل</button>
       </div>
+      <div class="print-export-btns">
+        <button class="btn" onclick="exportReportPrint('shoppinglist-export-area','قائمة النواقص')">🖨️ طباعة / PDF</button>
+        <button class="btn" onclick="exportReportImage('shoppinglist-export-area','قائمة_النواقص')">🖼️ صورة</button>
+        <button class="btn" onclick="exportShoppingListExcel()">📊 Excel</button>
+      </div>
+      <div id="shoppinglist-export-area">
       <div class="table-wrap">
         <table id="shoppinglist-table">
           <thead id="shoppinglist-thead"></thead>
@@ -1102,6 +1138,7 @@
         </table>
       </div>
       <div id="shoppinglist-empty-note" style="text-align:center;color:var(--text-muted);padding:16px;font-size:13px;"></div>
+      </div>
     </div>
 
     <div class="card" id="shoppinglist-send-card">
@@ -1126,11 +1163,18 @@
         <span>✅ الأصناف المُشتراة سابقاً</span>
         <button class="btn btn-sm" id="shoppingdone-view-toggle-btn" style="background:var(--bg);color:var(--primary);border:1px solid var(--border);" onclick="toggleShoppingDoneView()">📄 عرض كل التفاصيل</button>
       </div>
+      <div class="print-export-btns">
+        <button class="btn" onclick="exportReportPrint('shoppingdone-export-area','الأصناف المُشتراة سابقاً')">🖨️ طباعة / PDF</button>
+        <button class="btn" onclick="exportReportImage('shoppingdone-export-area','الأصناف_المشتراة')">🖼️ صورة</button>
+        <button class="btn" onclick="exportShoppingDoneExcel()">📊 Excel</button>
+      </div>
+      <div id="shoppingdone-export-area">
       <div class="table-wrap">
         <table id="shoppingdone-table">
           <thead id="shoppingdone-thead"></thead>
           <tbody id="shoppinglist-done-tbody"></tbody>
         </table>
+      </div>
       </div>
     </div>
   </div>
@@ -1173,11 +1217,18 @@
         <span>📋 قائمة الموظفين</span>
         <button class="btn btn-sm" id="emp-view-toggle-btn" style="background:var(--bg);color:var(--primary);border:1px solid var(--border);" onclick="toggleEmployeesView()">📄 عرض كل التفاصيل</button>
       </div>
+      <div class="print-export-btns">
+        <button class="btn" onclick="exportReportPrint('employees-export-area','قائمة الموظفين')">🖨️ طباعة / PDF</button>
+        <button class="btn" onclick="exportReportImage('employees-export-area','قائمة_الموظفين')">🖼️ صورة</button>
+        <button class="btn" onclick="exportEmployeesExcel()">📊 Excel</button>
+      </div>
+      <div id="employees-export-area">
       <div class="table-wrap">
         <table id="employees-table">
           <thead id="employees-thead"></thead>
           <tbody id="employees-tbody"></tbody>
         </table>
+      </div>
       </div>
     </div>
 
@@ -1323,11 +1374,26 @@
           <span>📋 سجل الرواتب والسلف</span>
           <button class="btn btn-sm" id="salhist-view-toggle-btn" style="background:var(--bg);color:var(--primary);border:1px solid var(--border);" onclick="toggleSalHistoryView()">📄 عرض كل التفاصيل</button>
         </div>
+        <div class="filter-row">
+          <div class="form-group">
+            <label>عرض حسب الموظف</label>
+            <select id="salhist-emp-filter" onchange="renderSalHistory()">
+              <option value="">-- كل الموظفين --</option>
+            </select>
+          </div>
+        </div>
+        <div class="print-export-btns">
+          <button class="btn" onclick="exportReportPrint('salhist-export-area','سجل الرواتب والسلف')">🖨️ طباعة / PDF</button>
+          <button class="btn" onclick="exportReportImage('salhist-export-area','سجل_الرواتب_والسلف')">🖼️ صورة</button>
+          <button class="btn" onclick="exportSalHistoryExcel()">📊 Excel</button>
+        </div>
+        <div id="salhist-export-area">
         <div class="table-wrap">
           <table id="salhist-table">
             <thead id="salhist-thead"></thead>
             <tbody id="sal-history-tbody"></tbody>
           </table>
+        </div>
         </div>
       </div>
     </div>
@@ -1344,11 +1410,18 @@
         <span>📋 الديون المستحقة</span>
         <button class="btn btn-sm" id="suppliers-view-toggle-btn" style="background:var(--bg);color:var(--primary);border:1px solid var(--border);" onclick="toggleSuppliersView()">📄 عرض كل التفاصيل</button>
       </div>
+      <div class="print-export-btns">
+        <button class="btn" onclick="exportReportPrint('suppliers-export-area','ديون الموردين')">🖨️ طباعة / PDF</button>
+        <button class="btn" onclick="exportReportImage('suppliers-export-area','ديون_الموردين')">🖼️ صورة</button>
+        <button class="btn" onclick="exportSuppliersDebtExcel()">📊 Excel</button>
+      </div>
+      <div id="suppliers-export-area">
       <div class="table-wrap">
         <table id="suppliers-table">
           <thead id="suppliers-thead"></thead>
           <tbody id="suppliers-tbody"></tbody>
         </table>
+      </div>
       </div>
     </div>
 
@@ -1415,11 +1488,18 @@
           <span>📋 كل فواتير هذا المورد</span>
           <button class="btn btn-sm" id="stmt-view-toggle-btn" style="background:var(--bg);color:var(--primary);border:1px solid var(--border);" onclick="toggleSupplierStatementView()">📄 عرض كل التفاصيل</button>
         </div>
+        <div class="print-export-btns">
+          <button class="btn" onclick="exportReportPrint('stmt-export-area','كشف حساب المورد')">🖨️ طباعة / PDF</button>
+          <button class="btn" onclick="exportReportImage('stmt-export-area','كشف_حساب_المورد')">🖼️ صورة</button>
+          <button class="btn" onclick="exportSupplierStatementExcel()">📊 Excel</button>
+        </div>
+        <div id="stmt-export-area">
         <div class="table-wrap">
           <table id="stmt-table">
             <thead id="stmt-thead"></thead>
             <tbody id="stmt-tbody"></tbody>
           </table>
+        </div>
         </div>
       </div>
 
@@ -1452,6 +1532,8 @@
           <div class="form-group"><label>من</label><input type="date" id="pl-from"></div>
           <div class="form-group"><label>إلى</label><input type="date" id="pl-to"></div>
           <button class="btn btn-primary btn-sm" onclick="generatePL()">📊 إنشاء التقرير</button>
+          <div class="form-group"><label>الشهر المحاسبي</label><input type="month" id="pl-month"></div>
+          <button class="btn btn-accent btn-sm" onclick="generatePLByMonth()">📅 بحث بالشهر</button>
         </div>
         <div id="pl-result" class="hidden">
           <div class="print-export-btns">
@@ -1491,6 +1573,8 @@
           <div class="form-group"><label>من</label><input type="date" id="irep-from"></div>
           <div class="form-group"><label>إلى</label><input type="date" id="irep-to"></div>
           <button class="btn btn-primary btn-sm" onclick="generateIncomeReport()">📊 إنشاء</button>
+          <div class="form-group"><label>الشهر المحاسبي</label><input type="month" id="irep-month"></div>
+          <button class="btn btn-accent btn-sm" onclick="generateIncomeReportByMonth()">📅 بحث بالشهر</button>
         </div>
         <div id="irep-breakdown" class="report-grid" style="grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;"></div>
         <div class="print-export-btns">
@@ -1518,6 +1602,8 @@
           <div class="form-group"><label>من</label><input type="date" id="prep-from"></div>
           <div class="form-group"><label>إلى</label><input type="date" id="prep-to"></div>
           <button class="btn btn-primary btn-sm" onclick="generatePurchaseReport()">📊 إنشاء</button>
+          <div class="form-group"><label>الشهر المحاسبي</label><input type="month" id="prep-month"></div>
+          <button class="btn btn-accent btn-sm" onclick="generatePurchaseReportByMonth()">📅 بحث بالشهر</button>
         </div>
         <div class="print-export-btns">
           <button class="btn" onclick="exportReportPrint('prep-export-area','تقرير المشتريات')">🖨️ طباعة / PDF</button>
@@ -1544,6 +1630,8 @@
           <div class="form-group"><label>من</label><input type="date" id="srep-from"></div>
           <div class="form-group"><label>إلى</label><input type="date" id="srep-to"></div>
           <button class="btn btn-primary btn-sm" onclick="generateSalaryReport()">📊 إنشاء</button>
+          <div class="form-group"><label>الشهر المحاسبي</label><input type="month" id="srep-month"></div>
+          <button class="btn btn-accent btn-sm" onclick="generateSalaryReportByMonth()">📅 بحث بالشهر</button>
         </div>
         <div class="print-export-btns">
           <button class="btn" onclick="exportReportPrint('srep-export-area','تقرير الرواتب والسلف')">🖨️ طباعة / PDF</button>
@@ -2188,6 +2276,62 @@ function exportPayrollStatementExcel() {
     : ['#', 'الموظف', 'صافي المرتب'];
 
   exportTableExcel('payroll-stmt-tbody', headers, 'كشف_حساب_الرواتب');
+}
+
+function exportIncomeExcel() {
+  const isFull = incomeViewMode === 'full';
+  const headers = isFull
+    ? ['#', 'التاريخ', 'طريقة الدفع', 'المبلغ', 'ملاحظات']
+    : ['#', 'التاريخ', 'المبلغ'];
+  exportTableExcel('income-tbody', headers, 'سجل_الإيرادات');
+}
+
+function exportPurchaseTableExcel() {
+  const isFull = purchaseViewMode === 'full';
+  const headers = isFull
+    ? ['#', 'التاريخ', 'رقم الفاتورة', 'المبلغ', 'نوع الدفع', 'طريقة الدفع', 'المورد', 'الاستحقاق', 'الحالة']
+    : ['#', 'رقم الفاتورة', 'التاريخ', 'المبلغ'];
+  exportTableExcel('purchase-tbody', headers, 'سجل_المشتريات');
+}
+
+function exportEmployeesExcel() {
+  const isFull = employeesViewMode === 'full';
+  const headers = isFull
+    ? ['#', 'الاسم', 'التخصص', 'الراتب', 'الهاتف', 'تاريخ التعيين']
+    : ['#', 'الاسم', 'الراتب'];
+  exportTableExcel('employees-tbody', headers, 'قائمة_الموظفين');
+}
+
+function exportShoppingListExcel() {
+  const isFull = shoppingListViewMode === 'full';
+  const headers = isFull
+    ? ['#', 'الصنف', 'الكمية', 'ملاحظة', 'أضافه', 'التاريخ']
+    : ['#', 'الصنف', 'الكمية'];
+  exportTableExcel('shoppinglist-tbody', headers, 'قائمة_النواقص');
+}
+
+function exportShoppingDoneExcel() {
+  const isFull = shoppingDoneViewMode === 'full';
+  const headers = isFull
+    ? ['#', 'الصنف', 'الكمية', 'تاريخ الإضافة', 'تاريخ الشراء']
+    : ['#', 'الصنف', 'تاريخ الشراء'];
+  exportTableExcel('shoppinglist-done-tbody', headers, 'الأصناف_المشتراة');
+}
+
+function exportSuppliersDebtExcel() {
+  const isFull = suppliersViewMode === 'full';
+  const headers = isFull
+    ? ['#', 'المورد', 'تاريخ الشراء', 'المبلغ الأصلي', 'المدفوع', 'المتبقي', 'الاستحقاق', 'الحالة']
+    : ['#', 'المورد', 'المتبقي', 'الاستحقاق', 'الحالة'];
+  exportTableExcel('suppliers-tbody', headers, 'ديون_الموردين');
+}
+
+function exportSupplierStatementExcel() {
+  const isFull = supplierStatementViewMode === 'full';
+  const headers = isFull
+    ? ['#', 'التاريخ', 'رقم الفاتورة', 'المبلغ', 'المسدد', 'المتبقي', 'الاستحقاق', 'الحالة']
+    : ['#', 'التاريخ', 'المتبقي', 'الحالة'];
+  exportTableExcel('stmt-tbody', headers, 'كشف_حساب_المورد');
 }
 
 // ============ TOAST NOTIFICATIONS ============
@@ -3479,7 +3623,7 @@ function showSalaryTab(tab) {
   if (tab === 'pay') renderSalPayTable();
   if (tab === 'advance') renderAdvEmpSelect();
   if (tab === 'deduction') renderDedEmpSelect();
-  if (tab === 'history') renderSalHistory();
+  if (tab === 'history') { populateSalHistoryEmpFilter(); renderSalHistory(); }
 }
 
 let salPayViewMode = 'compact'; // 'compact' | 'full'
@@ -3513,6 +3657,77 @@ function getPreviousMonthKey(monthKey) {
 function getLastDayOfMonth(monthKey) {
   const [y, m] = monthKey.split('-').map(Number);
   return new Date(y, m, 0).getDate();
+}
+
+// ============ ACCOUNTING-MONTH SEARCH (بحث بالشهر المحاسبي MM/yyyy) ============
+// Converts a month input value (YYYY-MM) into {from, to} full-month date range.
+function monthToDateRange(monthKey) {
+  if (!monthKey) return null;
+  const lastDay = getLastDayOfMonth(monthKey);
+  return { from: `${monthKey}-01`, to: `${monthKey}-${String(lastDay).padStart(2, '0')}` };
+}
+
+function searchIncomeByMonth() {
+  const monthKey = document.getElementById('income-filter-month').value;
+  if (!monthKey) { showToast('يرجى اختيار الشهر المحاسبي', 'error'); return; }
+  const range = monthToDateRange(monthKey);
+  document.getElementById('income-filter-from').value = range.from;
+  document.getElementById('income-filter-to').value = range.to;
+  renderIncomeTable();
+}
+
+function searchExpenseByMonth() {
+  const monthKey = document.getElementById('exp-filter-month').value;
+  if (!monthKey) { showToast('يرجى اختيار الشهر المحاسبي', 'error'); return; }
+  const range = monthToDateRange(monthKey);
+  document.getElementById('exp-filter-from').value = range.from;
+  document.getElementById('exp-filter-to').value = range.to;
+  renderExpenseTable();
+}
+
+function searchPurchaseByMonth() {
+  const monthKey = document.getElementById('pur-filter-month').value;
+  if (!monthKey) { showToast('يرجى اختيار الشهر المحاسبي', 'error'); return; }
+  const range = monthToDateRange(monthKey);
+  document.getElementById('pur-filter-from').value = range.from;
+  document.getElementById('pur-filter-to').value = range.to;
+  renderPurchaseTable();
+}
+
+function generatePLByMonth() {
+  const monthKey = document.getElementById('pl-month').value;
+  if (!monthKey) { showToast('يرجى اختيار الشهر المحاسبي', 'error'); return; }
+  const range = monthToDateRange(monthKey);
+  document.getElementById('pl-from').value = range.from;
+  document.getElementById('pl-to').value = range.to;
+  generatePL();
+}
+
+function generateIncomeReportByMonth() {
+  const monthKey = document.getElementById('irep-month').value;
+  if (!monthKey) { showToast('يرجى اختيار الشهر المحاسبي', 'error'); return; }
+  const range = monthToDateRange(monthKey);
+  document.getElementById('irep-from').value = range.from;
+  document.getElementById('irep-to').value = range.to;
+  generateIncomeReport();
+}
+
+function generatePurchaseReportByMonth() {
+  const monthKey = document.getElementById('prep-month').value;
+  if (!monthKey) { showToast('يرجى اختيار الشهر المحاسبي', 'error'); return; }
+  const range = monthToDateRange(monthKey);
+  document.getElementById('prep-from').value = range.from;
+  document.getElementById('prep-to').value = range.to;
+  generatePurchaseReport();
+}
+
+function generateSalaryReportByMonth() {
+  const monthKey = document.getElementById('srep-month').value;
+  if (!monthKey) { showToast('يرجى اختيار الشهر المحاسبي', 'error'); return; }
+  const range = monthToDateRange(monthKey);
+  document.getElementById('srep-from').value = range.from;
+  document.getElementById('srep-to').value = range.to;
+  generateSalaryReport();
 }
 
 // Returns { advances, deductions } arrays for an employee within a specific
@@ -3955,8 +4170,20 @@ function toggleSalHistoryView() {
   renderSalHistory();
 }
 
+function populateSalHistoryEmpFilter() {
+  const sel = document.getElementById('salhist-emp-filter');
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="">-- كل الموظفين --</option>' +
+    data.employees.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+  if (data.employees.some(e => String(e.id) === current)) sel.value = current;
+}
+
 function renderSalHistory() {
-  const rows = [...data.salaryHistory].sort((a, b) => b.date.localeCompare(a.date));
+  const empFilter = document.getElementById('salhist-emp-filter');
+  const empFilterVal = empFilter ? empFilter.value : '';
+  let rows = [...data.salaryHistory].sort((a, b) => b.date.localeCompare(a.date));
+  if (empFilterVal) rows = rows.filter(r => String(r.employeeId) === empFilterVal);
 
   const isFull = salHistoryViewMode === 'full';
   const tableEl = document.getElementById('salhist-table');
@@ -3999,6 +4226,14 @@ function renderSalHistory() {
       <td><button class="btn btn-danger btn-sm" onclick="deleteSalHistory(${r.id})">حذف</button></td>
     </tr>`;
   }).join('') || `<tr><td colspan="${colCount}" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد بيانات</td></tr>`;
+}
+
+function exportSalHistoryExcel() {
+  const isFull = salHistoryViewMode === 'full';
+  const headers = isFull
+    ? ['#', 'التاريخ', 'الموظف', 'النوع', 'المبلغ', 'ملاحظات']
+    : ['#', 'الموظف', 'النوع', 'المبلغ'];
+  exportTableExcel('sal-history-tbody', headers, 'سجل_الرواتب_والسلف');
 }
 
 async function deleteSalHistory(id) {
