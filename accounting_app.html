@@ -1390,6 +1390,20 @@
               <option value="">-- كل الموظفين --</option>
             </select>
           </div>
+          <div class="form-group">
+            <label>النوع</label>
+            <select id="salhist-type-filter" onchange="renderSalHistory()">
+              <option value="">-- عرض الكل --</option>
+              <option value="راتب">راتب</option>
+              <option value="سلفة">سلفة</option>
+              <option value="خصم">خصم</option>
+              <option value="مكافأة">مكافأة</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>الشهر المحاسبي</label>
+            <input type="month" id="salhist-month-filter" onchange="renderSalHistory()">
+          </div>
         </div>
         <div class="print-export-btns">
           <button class="btn" onclick="exportReportPrint('salhist-export-area','سجل الرواتب والسلف')">🖨️ طباعة / PDF</button>
@@ -4202,8 +4216,15 @@ function populateSalHistoryEmpFilter() {
 function renderSalHistory() {
   const empFilter = document.getElementById('salhist-emp-filter');
   const empFilterVal = empFilter ? empFilter.value : '';
+  const typeFilter = document.getElementById('salhist-type-filter');
+  const typeFilterVal = typeFilter ? typeFilter.value : '';
+  const monthFilter = document.getElementById('salhist-month-filter');
+  const monthFilterVal = monthFilter ? monthFilter.value : '';
+
   let rows = [...data.salaryHistory].sort((a, b) => b.date.localeCompare(a.date));
   if (empFilterVal) rows = rows.filter(r => String(r.employeeId) === empFilterVal);
+  if (typeFilterVal) rows = rows.filter(r => r.type === typeFilterVal);
+  if (monthFilterVal) rows = rows.filter(r => r.date.slice(0, 7) === monthFilterVal);
 
   const isFull = salHistoryViewMode === 'full';
   const tableEl = document.getElementById('salhist-table');
