@@ -398,14 +398,16 @@
      the table keeps its natural width and the .table-wrap scrolls
      horizontally so every column stays clearly readable. */
   table.table-compact-font {
+    width: 900px;
     min-width: 900px;
+    max-width: none;
     white-space: nowrap;
   }
   table.table-compact-font th { padding: 8px 10px; }
   table.table-compact-font td { padding: 8px 10px; }
 
   /* صرف رواتب الموظفين — تصغير حجم الخط درجة واحدة */
-  #sal-pay-table { min-width: 900px; white-space: nowrap; }
+  #sal-pay-table { width: 900px; min-width: 900px; max-width: none; white-space: nowrap; }
   #sal-pay-table th, #sal-pay-table td { padding: 8px 10px; }
 
   /* Compact (non-wide) tables use a touch smaller font to fit more comfortably
