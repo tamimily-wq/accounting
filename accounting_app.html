@@ -200,11 +200,23 @@
   .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
 
   /* MAIN */
+  /* #app-shell is a direct flex child of body; flex items default to
+     min-width:auto and refuse to shrink below their content's natural
+     width — this is the actual cause of wide descendant tables (like
+     sal-pay-table) stretching the entire page instead of scrolling. */
+  #app-shell {
+    min-width: 0;
+    width: 100%;
+    overflow-x: hidden;
+  }
+
   #main {
     margin-right: var(--sidebar-w);
-    flex: 1;
+    flex: 1 1 0%;
     min-width: 0;
+    width: 100%;
     max-width: 100%;
+    overflow-x: hidden;
     padding: 24px;
     min-height: 100vh;
   }
@@ -373,9 +385,11 @@
 
   /* TABLE */
   .table-wrap {
+    display: block;
+    width: 100%;
+    max-width: 100%;
     overflow-x: auto;
     overflow-y: hidden;
-    max-width: 100%;
     -webkit-overflow-scrolling: touch;
     touch-action: pan-x;
     scrollbar-width: auto;
