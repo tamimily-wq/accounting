@@ -467,7 +467,22 @@
   .badge-info { background: #D1ECF1; color: #0C5460; }
 
   /* TABS */
-  .tabs { display: flex; gap: 4px; margin-bottom: 20px; background: var(--bg); border-radius: 10px; padding: 4px; width: fit-content; }
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    background: var(--bg);
+    border-radius: 10px;
+    padding: 4px;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+    scrollbar-width: thin;
+  }
+  .tabs::-webkit-scrollbar { height: 6px; }
+  .tabs::-webkit-scrollbar-track { background: transparent; }
+  .tabs::-webkit-scrollbar-thumb { background: var(--primary-light); border-radius: 10px; }
 
   .tab {
     padding: 8px 18px;
@@ -480,6 +495,8 @@
     border: none;
     background: transparent;
     font-family: 'Tajawal', sans-serif;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .tab.active { background: var(--card); color: var(--primary); box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
@@ -1369,6 +1386,10 @@
             <label>ملاحظات</label>
             <input type="text" id="adv-note" placeholder="اختياري">
           </div>
+          <div class="form-group">
+            <label>مبلغ مؤجل للشهر القادم (اختياري)</label>
+            <input type="number" id="adv-defer" placeholder="0.00" step="0.01" min="0">
+          </div>
         </div>
         <button class="btn btn-accent" onclick="addAdvance()">✔ صرف السلفة</button>
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
@@ -1398,6 +1419,10 @@
           <div class="form-group">
             <label>سبب الخصم</label>
             <input type="text" id="ded-note" placeholder="مثال: تأخير، غياب...">
+          </div>
+          <div class="form-group">
+            <label>مبلغ مؤجل للشهر القادم (اختياري)</label>
+            <input type="number" id="ded-defer" placeholder="0.00" step="0.01" min="0">
           </div>
         </div>
         <button class="btn btn-danger" style="font-size:14px;padding:9px 20px;" onclick="addDeduction()">✔ تسجيل الخصم</button>
@@ -2044,6 +2069,29 @@
     <div style="display:flex;gap:8px;">
       <button class="btn btn-primary" onclick="saveEditPurchaser()">حفظ</button>
       <button class="btn" style="background:var(--bg);" onclick="closeEditPurchaser()">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- Defer advance/deduction modal -->
+<div id="defer-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#fff;border-radius:12px;padding:24px;max-width:380px;width:100%;">
+    <div style="font-weight:700;font-size:16px;margin-bottom:6px;color:var(--primary);">⏭️ تأجيل إلى الشهر القادم</div>
+    <div id="defer-modal-info" style="font-size:13px;color:var(--text-muted);margin-bottom:16px;"></div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>المبلغ الحالي (دينار)</label>
+      <input type="number" id="defer-current-amount" readonly style="background:#f8f8f8;">
+    </div>
+    <div class="form-group" style="margin-bottom:16px;">
+      <label>المبلغ المراد تأجيله (دينار)</label>
+      <input type="number" id="defer-amount-input" step="0.01" placeholder="0.00">
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;line-height:1.7;">
+      سيُخصم هذا المبلغ من السجل الحالي، ويُضاف كسجل جديد بنفس النوع بتاريخ أول الشهر القادم.
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-accent" onclick="confirmDefer()">تأكيد التأجيل</button>
+      <button class="btn" style="background:var(--bg);" onclick="closeDeferModal()">إلغاء</button>
     </div>
   </div>
 </div>
@@ -4157,12 +4205,81 @@ function renderDedEmpSelect() {
 let lastAdvanceRecord = null;
 let lastDeductionRecord = null;
 
+// ============ DEFERRING PART/ALL OF AN ADVANCE OR DEDUCTION TO NEXT MONTH ============
+// Reduces the given record's amount by deferAmount, and creates a new record
+// of the same type dated the 1st of next month for the deferred portion.
+function deferPortionOfRecord(record, deferAmount, deferNote) {
+  const [y, m] = getMonthKey(record.date).split('-').map(Number);
+  const nextDate = new Date(y, m, 1); // m is already "next month" index (0-based next since m is 1-based current)
+  const nextMonthDateStr = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-01`;
+
+  record.amount = parseFloat((parseFloat(record.amount) - deferAmount).toFixed(2));
+
+  const deferredRecord = {
+    id: Date.now() + Math.random(),
+    date: nextMonthDateStr,
+    employeeId: record.employeeId,
+    employeeName: record.employeeName,
+    type: record.type,
+    amount: deferAmount,
+    note: deferNote || `مؤجل من ${fmtDate(record.date)}`
+  };
+  data.salaryHistory.push(deferredRecord);
+  return deferredRecord;
+}
+
+let deferringRecordId = null;
+
+function openDeferModal(recordId) {
+  const record = data.salaryHistory.find(r => r.id === recordId);
+  if (!record) return;
+  deferringRecordId = recordId;
+
+  document.getElementById('defer-modal-info').textContent =
+    `${record.employeeName} — ${record.type} بتاريخ ${fmtDate(record.date)}`;
+  document.getElementById('defer-current-amount').value = parseFloat(record.amount).toFixed(2);
+  document.getElementById('defer-amount-input').value = '';
+  document.getElementById('defer-amount-input').max = record.amount;
+
+  document.getElementById('defer-modal').classList.remove('hidden');
+  document.getElementById('defer-modal').style.display = 'flex';
+}
+
+function closeDeferModal() {
+  document.getElementById('defer-modal').style.display = 'none';
+  deferringRecordId = null;
+}
+
+async function confirmDefer() {
+  const record = data.salaryHistory.find(r => r.id === deferringRecordId);
+  if (!record) { closeDeferModal(); return; }
+
+  const deferAmount = parseFloat(document.getElementById('defer-amount-input').value);
+  if (!deferAmount || deferAmount <= 0) { showToast('يرجى إدخال مبلغ صحيح للتأجيل', 'error'); return; }
+  if (deferAmount > parseFloat(record.amount)) { showToast('المبلغ المؤجل لا يمكن أن يتجاوز المبلغ الحالي', 'error'); return; }
+
+  const ok = await showConfirm(
+    `سيتم تأجيل ${fmt(deferAmount)} دينار من هذا السجل إلى الشهر القادم. هل تريد المتابعة؟`,
+    { title: 'تأكيد التأجيل', icon: '⏭️', danger: false }
+  );
+  if (!ok) return;
+
+  deferPortionOfRecord(record, deferAmount);
+  saveData();
+  closeDeferModal();
+  renderSalHistory();
+  showToast(`تم تأجيل ${fmt(deferAmount)} دينار للشهر القادم بنجاح`, 'success');
+}
+
 function addDeduction() {
   const empId = parseInt(document.getElementById('ded-emp').value);
   const amount = parseFloat(document.getElementById('ded-amount').value);
   const date = document.getElementById('ded-date').value;
   const note = document.getElementById('ded-note').value;
+  const deferInput = document.getElementById('ded-defer');
+  const deferAmount = deferInput ? (parseFloat(deferInput.value) || 0) : 0;
   if (!empId || !amount || !date) { showToast('يرجى إدخال جميع الحقول', 'error'); return; }
+  if (deferAmount > amount) { showToast('المبلغ المؤجل لا يمكن أن يتجاوز مبلغ الخصم', 'error'); return; }
   const emp = data.employees.find(e => e.id === empId);
   const record = {
     id: Date.now(), date, employeeId: empId,
@@ -4170,10 +4287,18 @@ function addDeduction() {
   };
   data.salaryHistory.push(record);
   lastDeductionRecord = record;
+
+  if (deferAmount > 0) {
+    deferPortionOfRecord(record, deferAmount);
+    showToast(`تم تسجيل الخصم، وتأجيل ${fmt(deferAmount)} دينار للشهر القادم`, 'success');
+  } else {
+    showToast('تم تسجيل الخصم', 'success');
+  }
+
   saveData();
   document.getElementById('ded-amount').value = '';
   document.getElementById('ded-note').value = '';
-  showToast('تم تسجيل الخصم', 'success');
+  if (deferInput) deferInput.value = '';
   renderSalHistory();
 }
 
@@ -4212,7 +4337,10 @@ function addAdvance() {
   const amount = parseFloat(document.getElementById('adv-amount').value);
   const date = document.getElementById('adv-date').value;
   const note = document.getElementById('adv-note').value;
+  const deferInput = document.getElementById('adv-defer');
+  const deferAmount = deferInput ? (parseFloat(deferInput.value) || 0) : 0;
   if (!empId || !amount || !date) { showToast('يرجى إدخال جميع الحقول', 'error'); return; }
+  if (deferAmount > amount) { showToast('المبلغ المؤجل لا يمكن أن يتجاوز مبلغ السلفة', 'error'); return; }
   const emp = data.employees.find(e => e.id === empId);
   const record = {
     id: Date.now(), date, employeeId: empId,
@@ -4220,10 +4348,18 @@ function addAdvance() {
   };
   data.salaryHistory.push(record);
   lastAdvanceRecord = record;
+
+  if (deferAmount > 0) {
+    deferPortionOfRecord(record, deferAmount);
+    showToast(`تم تسجيل السلفة، وتأجيل ${fmt(deferAmount)} دينار للشهر القادم`, 'success');
+  } else {
+    showToast('تم تسجيل السلفة', 'success');
+  }
+
   saveData();
   document.getElementById('adv-amount').value = '';
   document.getElementById('adv-note').value = '';
-  showToast('تم تسجيل السلفة', 'success');
+  if (deferInput) deferInput.value = '';
   renderSalHistory();
 }
 
@@ -4278,6 +4414,10 @@ function renderSalHistory() {
   };
 
   tbody.innerHTML = rows.map((r, i) => {
+    const canDefer = (r.type === 'سلفة' || r.type === 'خصم');
+    const deferBtn = canDefer
+      ? `<button class="btn btn-sm" style="background:var(--accent);color:#fff;" onclick="openDeferModal(${r.id})">تأجيل</button>` : '';
+
     if (isFull) {
       return `
       <tr>
@@ -4287,7 +4427,7 @@ function renderSalHistory() {
         <td>${typeBadge(r.type)}</td>
         <td style="font-weight:700;color:var(--primary)">${fmt(r.amount)} دينار</td>
         <td style="color:var(--text-muted)">${r.note || '-'}</td>
-        <td><button class="btn btn-danger btn-sm" onclick="deleteSalHistory(${r.id})">حذف</button></td>
+        <td>${deferBtn} <button class="btn btn-danger btn-sm" onclick="deleteSalHistory(${r.id})">حذف</button></td>
       </tr>`;
     }
     return `
@@ -4296,7 +4436,7 @@ function renderSalHistory() {
       <td style="font-weight:600">${r.employeeName}</td>
       <td>${typeBadge(r.type)}</td>
       <td style="font-weight:700;color:var(--primary)">${fmt(r.amount)} دينار</td>
-      <td><button class="btn btn-danger btn-sm" onclick="deleteSalHistory(${r.id})">حذف</button></td>
+      <td>${deferBtn} <button class="btn btn-danger btn-sm" onclick="deleteSalHistory(${r.id})">حذف</button></td>
     </tr>`;
   }).join('') || `<tr><td colspan="${colCount}" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد بيانات</td></tr>`;
 }
@@ -5553,8 +5693,8 @@ function wireAllFormNavigation() {
     addEmployee
   );
 
-  enableEnterNavigation(['adv-emp', 'adv-amount', 'adv-date', 'adv-note'], addAdvance);
-  enableEnterNavigation(['ded-emp', 'ded-amount', 'ded-date', 'ded-note'], addDeduction);
+  enableEnterNavigation(['adv-emp', 'adv-amount', 'adv-date', 'adv-note', 'adv-defer'], addAdvance);
+  enableEnterNavigation(['ded-emp', 'ded-amount', 'ded-date', 'ded-note', 'ded-defer'], addDeduction);
 
   enableEnterNavigation(['change-pw-current', 'change-pw-new', 'change-pw-confirm'], changeMyPassword);
   enableEnterNavigation(
