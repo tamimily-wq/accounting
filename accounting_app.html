@@ -2560,7 +2560,16 @@ function renderStorageModeUI() {
   if (lastBackupEl) {
     try {
       const last = localStorage.getItem('accounting_last_backup');
-      lastBackupEl.textContent = last ? last : 'لا يوجد سجل';
+      if (last) {
+        const daysSince = (Date.now() - new Date(last).getTime()) / (1000 * 60 * 60 * 24);
+        lastBackupEl.textContent = last;
+        lastBackupEl.style.color = daysSince >= 7 ? 'var(--danger)' : daysSince >= 4 ? 'var(--accent)' : 'var(--success)';
+        lastBackupEl.style.fontWeight = daysSince >= 7 ? '700' : '600';
+      } else {
+        lastBackupEl.textContent = 'لا يوجد سجل';
+        lastBackupEl.style.color = 'var(--danger)';
+        lastBackupEl.style.fontWeight = '700';
+      }
     } catch(e) {}
   }
 }
@@ -2680,6 +2689,8 @@ async function handleExcelImport(event, type) {
       renderExpenseTable && renderExpenseTable();
       renderPurchaseTable && renderPurchaseTable();
       renderIncomeTodaySummary && renderIncomeTodaySummary();
+      populateSupplierSelect && populateSupplierSelect();
+      populateExpenseCategorySelect && populateExpenseCategorySelect();
       updateDashboard();
     }
 
@@ -2764,6 +2775,11 @@ function importPurchaseRows(rows) {
       if (!supplier) { errors.push(`صف ${rowNum}: اسم المورد مطلوب للشراء الآجل`); return; }
       dueDate = excelSerialToDateString(dueDateRaw);
       if (!isValidDateString(dueDate)) { errors.push(`صف ${rowNum}: تاريخ الاستحقاق غير صحيح`); return; }
+      // Auto-register the supplier if it doesn't exist yet in the protected list,
+      // so imported data stays consistent with the rest of the app.
+      if (!data.suppliers.some(s => s.name === supplier)) {
+        data.suppliers.push({ id: Date.now() + Math.random(), name: supplier, phone: '', note: '' });
+      }
     }
 
     data.purchases.push({
@@ -5531,6 +5547,37 @@ function showApp() {
     showPage('income');
   } else {
     showPage('dashboard');
+  }
+
+  checkWeeklyBackupReminder();
+}
+
+// ============ WEEKLY BACKUP REMINDER ============
+function checkWeeklyBackupReminder() {
+  if (!currentUser || currentUser.role !== 'admin') return; // only admin sees/uses backup
+  try {
+    const lastBackupStr = localStorage.getItem('accounting_last_backup');
+    const daysSince = lastBackupStr
+      ? (Date.now() - new Date(lastBackupStr).getTime()) / (1000 * 60 * 60 * 24)
+      : Infinity;
+
+    if (daysSince >= 7) {
+      // Avoid nagging more than once per day even if the condition stays true
+      const lastNagStr = localStorage.getItem('accounting_backup_nag_date');
+      const today_ = today();
+      if (lastNagStr === today_) return;
+      try { localStorage.setItem('accounting_backup_nag_date', today_); } catch(e) {}
+
+      const message = lastBackupStr
+        ? `📦 مرّ أكثر من أسبوع منذ آخر نسخة احتياطية (${new Date(lastBackupStr).toLocaleDateString('en-GB')}). يُنصح بتنزيل نسخة جديدة من الإعدادات.`
+        : '📦 لم تُنشئ أي نسخة احتياطية بعد. يُنصح بتنزيل نسخة من ⚙️ الإعدادات لحماية بياناتك.';
+
+      setTimeout(() => {
+        showToast(message, 'info', 6000);
+      }, 1200); // slight delay so it doesn't collide with the login/sync toasts
+    }
+  } catch(e) {
+    console.warn('Backup reminder check failed:', e);
   }
 }
 
