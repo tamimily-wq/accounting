@@ -2021,6 +2021,12 @@
 
     <div class="card">
       <div class="card-title">📋 سجلي (رواتب، سلف، خصومات)</div>
+      <div class="filter-row">
+        <div class="form-group">
+          <label>الشهر المحاسبي</label>
+          <input type="month" id="my-history-month-filter" onchange="renderMyHistoryTable()">
+        </div>
+      </div>
       <div class="table-wrap">
         <table class="table-wide">
           <thead><tr><th>التاريخ</th><th>النوع</th><th>المبلغ</th><th>ملاحظات</th></tr></thead>
@@ -6753,6 +6759,20 @@ function renderMySalaryPage() {
   document.getElementById('my-total-advances').textContent = fmt(totalAdvances);
   document.getElementById('my-total-deductions').textContent = fmt(totalDeductions);
 
+  renderMyHistoryTable();
+}
+
+// فلتر الشهر المحاسبي الخاص بجدول "سجلي" فقط — البطاقات أعلاه (الراتب
+// الأساسي/إجمالي السلف/إجمالي الخصومات) تبقى دائماً إجمالي كل الفترة ولا
+// تتأثر بهذا الفلتر؛ هو يُصفّي فقط صفوف الجدول المعروضة حسب الشهر المختار.
+function renderMyHistoryTable() {
+  if (!currentUser || !currentUser.employeeId) return;
+  const monthFilterEl = document.getElementById('my-history-month-filter');
+  const monthFilterVal = monthFilterEl ? monthFilterEl.value : '';
+
+  let myRecords = data.salaryHistory.filter(r => r.employeeId === currentUser.employeeId);
+  if (monthFilterVal) myRecords = myRecords.filter(r => r.date.slice(0, 7) === monthFilterVal);
+
   const sorted = [...myRecords].sort((a, b) => b.date.localeCompare(a.date));
   document.getElementById('my-history-tbody').innerHTML = sorted.map(r => `
     <tr>
@@ -6877,7 +6897,8 @@ function applyRoleVisibility() {
   });
 
   // "العمليات اليومية" section: shown if the user can see ANY item inside it
-  // (income/expenses for admin+cashier, or shopping list for anyone granted permission)
+  // (income for admin+cashier, expenses/purchases for admin only, القائمة
+  // السريعة for admin+cashier, or shopping list for anyone granted permission)
   const dailySection = document.getElementById('nav-section-daily');
   const canSeeIncomeExpenses = (role === 'admin' || role === 'cashier');
   const canSeeShoppingListItem = role === 'admin' || !!currentUser.canAddShoppingItems;
@@ -6885,14 +6906,18 @@ function applyRoleVisibility() {
 
   const incomeNav = document.querySelector('.nav-item[data-page="income"]');
   if (incomeNav) incomeNav.style.display = canSeeIncomeExpenses ? '' : 'none';
-  const expensesNav = document.querySelector('.nav-item[data-page="expenses"]');
-  if (expensesNav) expensesNav.style.display = canSeeIncomeExpenses ? '' : 'none';
 
-  // القائمة السريعة (مصروف/سلفة من الدرج): نفس صلاحية الإيرادات/المصروفات — كاشير + مدير
+  // المصروفات (الصفحة الكاملة): لم تعد من صلاحية الكاشير — الكاشير يسجّل
+  // مصروفاته وسلفه حصراً من ⚡ القائمة السريعة، وليس من هذه الصفحة.
+  const expensesNav = document.querySelector('.nav-item[data-page="expenses"]');
+  if (expensesNav) expensesNav.style.display = (role === 'admin') ? '' : 'none';
+
+  // القائمة السريعة (مصروف/سلفة من الدرج): نفس صلاحية الإيرادات — كاشير + مدير.
+  // هذه الآن الطريقة الوحيدة المتاحة للكاشير لتسجيل مصروف أو سلفة.
   const quicklistNav = document.getElementById('nav-quicklist');
   if (quicklistNav) quicklistNav.style.display = canSeeIncomeExpenses ? '' : 'none';
 
-  // Cashier: hide purchases nav item (cashier only handles income+expenses)
+  // Cashier: hide purchases nav item (cashier only handles income + القائمة السريعة)
   const purchasesNav = document.getElementById('nav-purchases');
   if (purchasesNav) purchasesNav.style.display = (role === 'admin') ? '' : 'none';
 
