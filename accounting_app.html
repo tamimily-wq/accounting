@@ -420,7 +420,8 @@
   table.table-compact-font td { padding: 8px 10px; }
 
   /* صرف رواتب الموظفين — تصغير حجم الخط درجة واحدة */
-  #sal-pay-table { width: 900px; min-width: 900px; max-width: none; white-space: nowrap; }
+  /* تم توسيعه من 900px ليتسع لعمودي "الخصم"/"السلف" المنفصلين ولعمود "القيد" التفصيلي الجديد */
+  #sal-pay-table { width: 1300px; min-width: 1300px; max-width: none; white-space: nowrap; }
   #sal-pay-table th, #sal-pay-table td { padding: 8px 10px; }
 
   /* Compact (non-wide) tables use a touch smaller font to fit more comfortably
@@ -702,6 +703,10 @@
     .stats-grid { grid-template-columns: 1fr 1fr; }
     .report-grid { grid-template-columns: 1fr; }
 
+    /* راتبي وسلفي: البطاقات هنا تبقى 3 أعمدة (نمط inline)، فتصغير خط القيمة
+       المالية هو الحل المناسب حتى لا يُقتطع جزء من الرقم داخل العمود الضيق. */
+    #mysalary-stats-grid .stat-value { font-size: 14px; }
+
     /* Force every field onto its own line on mobile, regardless of how many
        fields are grouped in a .form-row (date pickers, selects, text inputs). */
     .form-row { grid-template-columns: 1fr; }
@@ -833,6 +838,9 @@
     </div>
     <div class="nav-item" data-page="expenses">
       <span class="icon">📤</span> المصروفات
+    </div>
+    <div class="nav-item" data-page="quicklist" id="nav-quicklist">
+      <span class="icon">⚡</span> القائمة السريعة
     </div>
     <div class="nav-item" data-page="purchases" id="nav-purchases">
       <span class="icon">🛒</span> المشتريات
@@ -1052,6 +1060,114 @@
         </table>
       </div>
       <div id="expense-total" style="text-align:left;padding-top:12px;font-weight:700;color:var(--danger);font-size:15px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== QUICK LIST (القائمة السريعة) — صلاحية كاشير: مصروفات وسلف تُسحب من الدرج مباشرة ===== -->
+  <div id="page-quicklist" class="page">
+    <div class="page-header">
+      <div class="page-title">⚡ القائمة السريعة</div>
+    </div>
+
+    <div class="card" style="background:#FFF3CD;border:1px solid #F0D68A;">
+      <p style="font-size:12.5px;color:#856404;line-height:1.7;margin:0;">
+        ℹ️ لتسجيل أي مبلغ يُسحب من درج الكاش مباشرة — سواء مصروف فوري أو سلفة لموظف — بسرعة وبدون الحاجة للدخول لصفحات الموظفين أو المصروفات الكاملة.
+      </p>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="showQuickListTab('expense')">💵 مصروف من الدرج</button>
+      <button class="tab" onclick="showQuickListTab('advance')">💸 سلفة من الدرج</button>
+      <button class="tab" onclick="showQuickListTab('log')">📋 السجل</button>
+    </div>
+
+    <!-- EXPENSE FROM DRAWER -->
+    <div id="ql-tab-expense">
+      <div class="card">
+        <div class="card-title">💵 تسجيل مصروف من الدرج</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>التاريخ</label>
+            <input type="date" id="ql-exp-date">
+          </div>
+          <div class="form-group">
+            <label>البند</label>
+            <select id="ql-exp-desc"></select>
+          </div>
+          <div class="form-group">
+            <label>المبلغ (دينار)</label>
+            <input type="number" id="ql-exp-amount" placeholder="0.00" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>ملاحظة</label>
+            <input type="text" id="ql-exp-note" placeholder="اختياري">
+          </div>
+        </div>
+        <button class="btn btn-danger" style="font-size:14px;padding:9px 20px;" onclick="addQuickListExpense()">✔ تسجيل المصروف من الدرج</button>
+      </div>
+    </div>
+
+    <!-- ADVANCE FROM DRAWER -->
+    <div id="ql-tab-advance" class="hidden">
+      <div class="card">
+        <div class="card-title">💸 صرف سلفة من الدرج</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>الموظف</label>
+            <select id="ql-adv-emp"></select>
+          </div>
+          <div class="form-group">
+            <label>المبلغ (دينار)</label>
+            <input type="number" id="ql-adv-amount" placeholder="0.00" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>التاريخ</label>
+            <input type="date" id="ql-adv-date">
+          </div>
+          <div class="form-group">
+            <label>ملاحظة</label>
+            <input type="text" id="ql-adv-note" placeholder="اختياري">
+          </div>
+        </div>
+        <button class="btn btn-accent" onclick="addQuickListAdvance()">✔ صرف السلفة من الدرج</button>
+      </div>
+    </div>
+
+    <!-- LOG -->
+    <div id="ql-tab-log" class="hidden">
+      <div class="card">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+          <span>📋 سجل القائمة السريعة</span>
+          <button class="btn btn-sm" id="ql-log-view-toggle-btn" style="background:var(--bg);color:var(--primary);border:1px solid var(--border);" onclick="toggleQuickListView()">📄 عرض كل التفاصيل</button>
+        </div>
+        <div class="filter-row">
+          <div class="form-group">
+            <label>النوع</label>
+            <select id="ql-log-type-filter" onchange="renderQuickListLog()">
+              <option value="">-- الكل --</option>
+              <option value="expense">مصروفات</option>
+              <option value="advance">سلف</option>
+            </select>
+          </div>
+          <div class="form-group"><label>من</label><input type="date" id="ql-log-filter-from" onchange="renderQuickListLog()"></div>
+          <div class="form-group"><label>إلى</label><input type="date" id="ql-log-filter-to" onchange="renderQuickListLog()"></div>
+          <button class="btn btn-sm" style="background:var(--bg);color:var(--text-muted)" onclick="clearQuickListFilter()">مسح</button>
+        </div>
+        <div class="print-export-btns">
+          <button class="btn" onclick="exportReportPrint('ql-log-export-area','سجل القائمة السريعة')">🖨️ طباعة / PDF</button>
+          <button class="btn" onclick="exportReportImage('ql-log-export-area','سجل_القائمة_السريعة')">🖼️ صورة</button>
+          <button class="btn" onclick="exportQuickListExcel()">📊 Excel</button>
+        </div>
+        <div id="ql-log-export-area">
+        <div class="table-wrap">
+          <table id="ql-log-table">
+            <thead id="ql-log-thead"></thead>
+            <tbody id="ql-log-tbody"></tbody>
+          </table>
+        </div>
+        <div id="ql-log-total" style="text-align:left;padding-top:12px;font-weight:700;color:var(--danger);font-size:15px;"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -1300,6 +1416,37 @@
         <div style="display:flex;gap:8px;">
           <button class="btn btn-primary" onclick="saveEditSalary()">حفظ</button>
           <button class="btn" style="background:var(--bg);" onclick="closeEditSalary()">إلغاء</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit employee data modal (تعديل بيانات الموظف كاملة) -->
+    <div id="edit-employee-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto;">
+      <div style="background:#fff;border-radius:12px;padding:24px;max-width:420px;width:100%;max-height:92vh;overflow-y:auto;">
+        <div style="font-weight:700;font-size:16px;margin-bottom:16px;color:var(--primary);">✏️ تعديل بيانات الموظف</div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label>الاسم</label>
+          <input type="text" id="edit-emp-name-val" placeholder="اسم الموظف">
+        </div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label>التخصص / الوظيفة</label>
+          <input type="text" id="edit-emp-role-val" placeholder="مثال: محاسب، كاشير...">
+        </div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label>الراتب الأساسي (دينار)</label>
+          <input type="number" id="edit-emp-salary-val" step="0.01">
+        </div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label>تاريخ التعيين</label>
+          <input type="date" id="edit-emp-join-val">
+        </div>
+        <div class="form-group" style="margin-bottom:18px;">
+          <label>رقم الهاتف (مع رمز الدولة)</label>
+          <input type="tel" id="edit-emp-phone-val" placeholder="9665XXXXXXXX">
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-primary" onclick="saveEditEmployee()">حفظ</button>
+          <button class="btn" style="background:var(--bg);" onclick="closeEditEmployee()">إلغاء</button>
         </div>
       </div>
     </div>
@@ -1655,6 +1802,23 @@
         <div class="card-title">ℹ️ بيانات المورد</div>
         <div id="stmt-supplier-info" style="font-size:13.5px;color:var(--text-muted);line-height:2;"></div>
       </div>
+
+      <div class="card" id="stmt-send-card">
+        <div class="card-title">📤 إرسال ملخص كشف الحساب</div>
+        <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:16px;line-height:1.7;">
+          ملخص جاهز يتضمن قيمة وتاريخ آخر دفعة، إجمالي المسدد، والمتبقي — مع تحية وشكر.
+        </p>
+        <div style="font-size:12.5px;font-weight:700;color:var(--text-muted);margin-bottom:8px;">📮 لصاحب العمل</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+          <button class="btn" style="background:#25D366;color:#fff;" onclick="sendSupplierStatementOwnerWhatsApp()">📲 واتساب لصاحب العمل</button>
+          <button class="btn" style="background:#566573;color:#fff;" onclick="sendSupplierStatementOwnerSMS()">✉️ SMS لصاحب العمل</button>
+        </div>
+        <div style="font-size:12.5px;font-weight:700;color:var(--text-muted);margin-bottom:8px;">🏪 للمورد نفسه</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn" style="background:#25D366;color:#fff;" onclick="sendSupplierStatementSupplierWhatsApp()">📲 واتساب للمورد</button>
+          <button class="btn" style="background:#566573;color:#fff;" onclick="sendSupplierStatementSupplierSMS()">✉️ SMS للمورد</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1837,7 +2001,7 @@
       <div class="page-title">👤 راتبي وسلفي</div>
     </div>
 
-    <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);">
+    <div class="stats-grid" id="mysalary-stats-grid" style="grid-template-columns:repeat(3,1fr);">
       <div class="stat-card profit">
         <div class="stat-label">الراتب الأساسي</div>
         <div class="stat-value" id="my-base-salary">0.00</div>
@@ -1997,7 +2161,7 @@
           </select>
         </div>
         <div class="form-group" id="new-user-employee-link-wrap">
-          <label>ربط بموظف (للدور "موظف" فقط)</label>
+          <label>ربط بموظف (للدور "موظف" أو "كاشير")</label>
           <select id="new-user-employee-link"></select>
         </div>
         <div class="form-group">
@@ -2884,7 +3048,8 @@ function importPurchaseRows(rows) {
       dueDate: payType === 'credit' ? dueDate : '',
       note,
       paid: payType === 'cash' ? amount : 0,
-      remaining: payType === 'cash' ? 0 : amount
+      remaining: payType === 'cash' ? 0 : amount,
+      payments: []
     });
     imported++;
   });
@@ -3106,6 +3271,13 @@ function sanitizeData() {
   data.employees.forEach(e => {
     if (!e.status) e.status = 'active';
   });
+  // One-time migration: purchases created before the دفعة-log feature existed
+  // have no "payments" array yet — default to empty (their already-accumulated
+  // paid amount stays correct in p.paid, but we have no dated log to derive
+  // "آخر دفعة" from for those, so it's simply left empty/unknown, not guessed).
+  data.purchases.forEach(p => {
+    if (!p.payments) p.payments = [];
+  });
 }
 
 async function loadData() {
@@ -3148,6 +3320,7 @@ function showPage(name, el) {
   if (name === 'dashboard') updateDashboard();
   if (name === 'income') { setToday('income-date'); setToday('income-filter-from'); setToday('income-filter-to'); renderIncomeTable(); renderIncomeTodaySummary(); }
   if (name === 'expenses') { setToday('exp-date'); populateExpenseCategorySelect(); renderExpenseTable(); }
+  if (name === 'quicklist') { setToday('ql-exp-date'); setToday('ql-adv-date'); populateQuickListSelects(); renderQuickListLog(); }
   if (name === 'purchases') { setToday('pur-date'); populateSupplierSelect(); renderPurchaseTable(); }
   if (name === 'shoppinglist') {
     renderShoppingList();
@@ -3448,6 +3621,180 @@ function clearExpFilter() {
   renderExpenseTable();
 }
 
+// ============ QUICK LIST (القائمة السريعة) — صلاحية كاشير ============
+// مصروفات وسلف "من الدرج" تُسجَّل مباشرة في نفس مصادر البيانات الأساسية
+// (data.expenses / data.salaryHistory) — فتظهر تلقائياً وبدون أي كود إضافي
+// في لوحة التحكم، تقرير الأرباح والخسائر، سجل المصروفات، سجل الرواتب والسلف،
+// وصفحة "راتبي وسلفي" للموظف. الوسم viaQuickList يُستخدم فقط لبناء سجل
+// مخصص وفلترة حسب النوع هنا في هذه الصفحة، دون التأثير على أي حساب آخر.
+
+function showQuickListTab(tab) {
+  ['expense', 'advance', 'log'].forEach(t => {
+    document.getElementById('ql-tab-' + t).classList.toggle('hidden', t !== tab);
+  });
+  document.querySelectorAll('#page-quicklist .tab').forEach((el, i) => {
+    el.classList.toggle('active', ['expense', 'advance', 'log'][i] === tab);
+  });
+  if (tab === 'expense' || tab === 'advance') populateQuickListSelects();
+  if (tab === 'log') renderQuickListLog();
+}
+
+function populateQuickListSelects() {
+  const expSel = document.getElementById('ql-exp-desc');
+  if (expSel) {
+    const current = expSel.value;
+    expSel.innerHTML = data.expenseCategories.map(c => `<option value="${c}">${c}</option>`).join('');
+    if (data.expenseCategories.includes(current)) expSel.value = current;
+  }
+  const advSel = document.getElementById('ql-adv-emp');
+  if (advSel) {
+    const current = advSel.value;
+    advSel.innerHTML = data.employees.filter(e => e.status !== 'terminated').map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+    if (data.employees.some(e => String(e.id) === current)) advSel.value = current;
+  }
+}
+
+async function addQuickListExpense() {
+  const date = document.getElementById('ql-exp-date').value;
+  const desc = document.getElementById('ql-exp-desc').value;
+  const amount = parseFloat(document.getElementById('ql-exp-amount').value);
+  const note = document.getElementById('ql-exp-note').value.trim();
+  if (!date || !desc || !amount || amount <= 0) { showToast('يرجى إدخال جميع الحقول', 'error'); return; }
+  if (!(await confirmOperation('تسجيل المصروف من الدرج', '💵'))) return;
+  data.expenses.push({ id: Date.now(), date, desc, amount, note, viaQuickList: true });
+  saveData();
+  document.getElementById('ql-exp-amount').value = '';
+  document.getElementById('ql-exp-note').value = '';
+  showToast('تم تسجيل المصروف من الدرج بنجاح', 'success');
+  renderExpenseTable();
+  updateDashboard();
+}
+
+async function addQuickListAdvance() {
+  const empId = parseInt(document.getElementById('ql-adv-emp').value);
+  const amount = parseFloat(document.getElementById('ql-adv-amount').value);
+  const date = document.getElementById('ql-adv-date').value;
+  const note = document.getElementById('ql-adv-note').value.trim();
+  if (!empId || !amount || !date) { showToast('يرجى إدخال جميع الحقول', 'error'); return; }
+  const emp = data.employees.find(e => e.id === empId);
+  if (isDateBeforeEmployeeStart(emp, date)) { showToast(EMPLOYEE_START_DATE_ERROR, 'error'); return; }
+  if (!(await confirmOperation('صرف السلفة من الدرج', '💸'))) return;
+  const record = {
+    id: Date.now(), date, employeeId: empId,
+    employeeName: emp.name, type: 'سلفة', amount, note, viaQuickList: true
+  };
+  data.salaryHistory.push(record);
+  lastAdvanceRecord = record;
+  saveData();
+  document.getElementById('ql-adv-amount').value = '';
+  document.getElementById('ql-adv-note').value = '';
+  showToast('تم صرف السلفة من الدرج بنجاح', 'success');
+  renderSalHistory();
+  updateDashboard();
+}
+
+let quickListViewMode = 'compact'; // 'compact' | 'full'
+
+function toggleQuickListView() {
+  quickListViewMode = quickListViewMode === 'compact' ? 'full' : 'compact';
+  const btn = document.getElementById('ql-log-view-toggle-btn');
+  if (btn) btn.textContent = quickListViewMode === 'compact' ? '📄 عرض كل التفاصيل' : '📋 عرض مختصر';
+  renderQuickListLog();
+}
+
+function clearQuickListFilter() {
+  document.getElementById('ql-log-filter-from').value = '';
+  document.getElementById('ql-log-filter-to').value = '';
+  document.getElementById('ql-log-type-filter').value = '';
+  renderQuickListLog();
+}
+
+function renderQuickListLog() {
+  const typeFilterEl = document.getElementById('ql-log-type-filter');
+  const fromEl = document.getElementById('ql-log-filter-from');
+  const toEl = document.getElementById('ql-log-filter-to');
+  const typeFilter = typeFilterEl ? typeFilterEl.value : '';
+  const from = fromEl ? fromEl.value : '';
+  const to = toEl ? toEl.value : '';
+
+  const expenseRows = data.expenses
+    .filter(r => r.viaQuickList)
+    .map(r => ({ kind: 'expense', id: r.id, date: r.date, label: r.desc, amount: r.amount, note: r.note || '' }));
+  const advanceRows = data.salaryHistory
+    .filter(r => r.viaQuickList && r.type === 'سلفة')
+    .map(r => ({ kind: 'advance', id: r.id, date: r.date, label: r.employeeName, amount: r.amount, note: r.note || '' }));
+
+  let rows = [...expenseRows, ...advanceRows].sort((a, b) => b.date.localeCompare(a.date));
+  if (typeFilter) rows = rows.filter(r => r.kind === typeFilter);
+  if (from) rows = rows.filter(r => r.date >= from);
+  if (to) rows = rows.filter(r => r.date <= to);
+
+  const total = rows.reduce((s, r) => s + parseFloat(r.amount), 0);
+
+  const isFull = quickListViewMode === 'full';
+  const tableEl = document.getElementById('ql-log-table');
+  if (tableEl) tableEl.classList.toggle('table-compact-font', isFull);
+
+  const thead = document.getElementById('ql-log-thead');
+  thead.innerHTML = isFull
+    ? '<tr><th>#</th><th>التاريخ</th><th>النوع</th><th>البيان</th><th>المبلغ</th><th>ملاحظة</th><th></th></tr>'
+    : '<tr><th>#</th><th>التاريخ</th><th>النوع</th><th>المبلغ</th><th></th></tr>';
+
+  const colCount = isFull ? 7 : 5;
+  const tbody = document.getElementById('ql-log-tbody');
+
+  tbody.innerHTML = rows.map((r, i) => {
+    const typeBadge = r.kind === 'expense'
+      ? '<span class="badge badge-warning">مصروف</span>'
+      : '<span class="badge badge-info">سلفة</span>';
+    const deleteBtn = `<button class="btn-icon-delete" onclick="deleteQuickListEntry('${r.kind}', ${r.id})" title="حذف">🗑️</button>`;
+
+    if (isFull) {
+      return `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${fmtDate(r.date)}</td>
+        <td>${typeBadge}</td>
+        <td style="font-weight:600">${r.label}</td>
+        <td style="font-weight:700;color:var(--danger)">${fmt(r.amount)} دينار</td>
+        <td style="color:var(--text-muted)">${r.note || '-'}</td>
+        <td>${deleteBtn}</td>
+      </tr>`;
+    }
+    return `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${fmtDate(r.date)}</td>
+      <td>${typeBadge}</td>
+      <td style="font-weight:700;color:var(--danger)">${fmt(r.amount)} دينار</td>
+      <td>${deleteBtn}</td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="${colCount}" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد سجلات في القائمة السريعة بعد</td></tr>`;
+
+  document.getElementById('ql-log-total').textContent = rows.length ? `الإجمالي: ${fmt(total)} دينار` : '';
+}
+
+function exportQuickListExcel() {
+  const isFull = quickListViewMode === 'full';
+  const headers = isFull
+    ? ['#', 'التاريخ', 'النوع', 'البيان', 'المبلغ', 'ملاحظة']
+    : ['#', 'التاريخ', 'النوع', 'المبلغ'];
+  exportTableExcel('ql-log-tbody', headers, 'سجل_القائمة_السريعة');
+}
+
+async function deleteQuickListEntry(kind, id) {
+  const ok = await showConfirm('هل تريد حذف هذا السجل؟', { title: 'حذف من القائمة السريعة', icon: '🗑️' });
+  if (!ok) return;
+  if (kind === 'expense') {
+    data.expenses = data.expenses.filter(r => r.id !== id);
+  } else {
+    data.salaryHistory = data.salaryHistory.filter(r => r.id !== id);
+  }
+  saveData();
+  renderQuickListLog();
+  showToast('تم حذف السجل بنجاح', 'success');
+}
+
 // ============ PURCHASES ============
 let currentPayType = 'cash';
 
@@ -3477,7 +3824,8 @@ async function addPurchase() {
     id: Date.now(), date, invoice, amount, payType: currentPayType, method,
     supplier, dueDate, note,
     paid: currentPayType === 'cash' ? amount : 0,
-    remaining: currentPayType === 'cash' ? 0 : amount
+    remaining: currentPayType === 'cash' ? 0 : amount,
+    payments: []
   });
   saveData();
   document.getElementById('pur-invoice').value = '';
@@ -3815,9 +4163,11 @@ function renderEmployeesTable() {
     const rowStyle = isTerminated ? 'opacity:0.65;' : '';
 
     const actions = isTerminated
-      ? `<button class="btn btn-danger btn-sm" onclick="deleteEmployee(${e.id})">حذف</button>`
+      ? `<button class="btn btn-primary btn-sm" onclick="openEditEmployee(${e.id})">✏️ تعديل البيانات</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteEmployee(${e.id})" style="margin-right:4px;">حذف</button>`
       : `
-        <button class="btn btn-primary btn-sm" onclick="openEditSalary(${e.id})">تعديل الراتب</button>
+        <button class="btn btn-primary btn-sm" onclick="openEditEmployee(${e.id})">✏️ تعديل البيانات</button>
+        <button class="btn btn-primary btn-sm" onclick="openEditSalary(${e.id})" style="margin-right:4px;">تعديل الراتب</button>
         <button class="btn" style="background:var(--danger);color:#fff;font-size:12px;padding:5px 12px;margin-right:4px;" onclick="openTerminationModal(${e.id})">🔴 إنهاء الخدمة</button>
         <button class="btn btn-danger btn-sm" onclick="deleteEmployee(${e.id})" style="margin-right:4px;">حذف</button>`;
 
@@ -3866,6 +4216,62 @@ async function saveEditSalary() {
 
 function closeEditSalary() {
   document.getElementById('edit-salary-modal').style.display = 'none';
+}
+
+// ============ EDIT FULL EMPLOYEE DATA (تعديل بيانات الموظف) ============
+let editingEmployeeDataId = null;
+
+function openEditEmployee(id) {
+  const emp = data.employees.find(e => e.id === id);
+  if (!emp) return;
+  editingEmployeeDataId = id;
+  document.getElementById('edit-emp-name-val').value = emp.name || '';
+  document.getElementById('edit-emp-role-val').value = emp.role || '';
+  document.getElementById('edit-emp-salary-val').value = emp.salary;
+  document.getElementById('edit-emp-join-val').value = emp.join || '';
+  document.getElementById('edit-emp-phone-val').value = emp.phone || '';
+  document.getElementById('edit-employee-modal').classList.remove('hidden');
+  document.getElementById('edit-employee-modal').style.display = 'flex';
+}
+
+async function saveEditEmployee() {
+  const name = document.getElementById('edit-emp-name-val').value.trim();
+  const role = document.getElementById('edit-emp-role-val').value.trim();
+  const salary = parseFloat(document.getElementById('edit-emp-salary-val').value);
+  const join = document.getElementById('edit-emp-join-val').value;
+  const phone = document.getElementById('edit-emp-phone-val').value.trim();
+
+  if (!name || !role || !salary || salary <= 0) { showToast('يرجى إدخال الاسم والتخصص وراتب صحيح', 'error'); return; }
+
+  const emp = data.employees.find(e => e.id === editingEmployeeDataId);
+  if (!emp) { showToast('تعذّر العثور على الموظف', 'error'); closeEditEmployee(); renderEmployeesTable(); return; }
+
+  if (!(await confirmOperation('تعديل بيانات الموظف', '✏️'))) return;
+
+  const oldName = emp.name;
+  emp.name = name;
+  emp.role = role;
+  emp.salary = salary;
+  emp.join = join;
+  emp.phone = phone;
+
+  // Keep past salary/advance/deduction records showing the correct (possibly
+  // renamed) employee name — same cascading approach already used for
+  // supplier renames, so history never shows a stale name.
+  if (oldName !== name) {
+    data.salaryHistory.forEach(r => { if (r.employeeId === emp.id) r.employeeName = name; });
+  }
+
+  await saveData();
+  renderEmployeesTable();
+  if (document.getElementById('page-salaries')?.classList.contains('active')) { renderSalPayTable(); renderSalHistory(); }
+  updateDashboard();
+  closeEditEmployee();
+  showToast('تم تحديث بيانات الموظف بنجاح', 'success');
+}
+
+function closeEditEmployee() {
+  document.getElementById('edit-employee-modal').style.display = 'none';
 }
 
 // ============ TERMINATION SETTLEMENT (تسوية وإنهاء عمل) ============
@@ -4417,6 +4823,89 @@ function calculateSalaryForPeriod(employee, period, dateStr, manualPayment) {
   }
 }
 
+// ============ عمود "القيد" — تفصيل عملية الصرف كاملة، خطوة بخطوة، بالألوان ============
+// يبني شرحاً مرئياً (وليس مجرد رقم) لكل ما دخل في حساب هذه الدورة لهذا الموظف:
+// الأساس، ثم كل خصم/سلفة (حالي أو مرحّل من الشهر الماضي) بالأحمر/البرتقالي،
+// ثم أي مبلغ مُرحّل من دورة سابقة أو مكافأة بالأخضر المزرق/الأزرق، وصولاً لصافي
+// قبل الترحيل، ثم أي سلفة فترة ثانية (لا تُخصم — توضيحية فقط) وأي مبلغ يُرحَّل
+// الآن للأمام، وانتهاءً بالمصروف الفعلي. يُستخدم عند الرسم الأول للجدول وأيضاً
+// يُعاد بناؤه حياً عبر updateLedgerCell() كلما تغيّر مكافأة/ترحيل/تعديل يدوي.
+function buildLedgerHtml(employee, calc, netRemaining, bonus, deferAmount, deferToLabel) {
+  const lines = [];
+
+  lines.push(`<div>💰 <b style="color:var(--primary);">${fmt(calc.base)}</b> <span style="color:var(--text-muted);">الأساس (قبل الخصومات)</span></div>`);
+
+  if (calc.newHireProRated) {
+    lines.push(`<div style="opacity:0.8;">🆕 <span style="color:var(--primary-light);">باليومية: ${calc.newHireWorkDays}/${calc.newHireMonthDays} يوم (التحق هذا الشهر)</span></div>`);
+  }
+  if (calc.deductions > 0) {
+    lines.push(`<div>➖ <b style="color:var(--danger);">${fmt(calc.deductions)}</b> <span style="color:var(--text-muted);">خصم الدورة</span></div>`);
+  }
+  if (calc.advances > 0) {
+    lines.push(`<div>➖ <b style="color:var(--accent);">${fmt(calc.advances)}</b> <span style="color:var(--text-muted);">سلفة الدورة</span></div>`);
+  }
+  if (calc.carryoverDeductions > 0) {
+    lines.push(`<div>↩️ <b style="color:var(--danger);">${fmt(calc.carryoverDeductions)}</b> <span style="color:var(--text-muted);">خصم مرحّل من الشهر الماضي</span></div>`);
+  }
+  if (calc.carryoverAdvances > 0) {
+    lines.push(`<div>↩️ <b style="color:var(--accent);">${fmt(calc.carryoverAdvances)}</b> <span style="color:var(--text-muted);">سلفة مرحّلة من الشهر الماضي</span></div>`);
+  }
+  if ((calc.deferredIn || 0) > 0) {
+    lines.push(`<div>➕ <b style="color:#6C3483;">${fmt(calc.deferredIn)}</b> <span style="color:var(--text-muted);">مُرحّل من دورة سابقة</span></div>`);
+  }
+  if (bonus > 0) {
+    lines.push(`<div>➕ <b style="color:var(--primary-light);">${fmt(bonus)}</b> <span style="color:var(--text-muted);">مكافأة</span></div>`);
+  }
+
+  const subtotal = netRemaining + bonus;
+  lines.push(`<div style="margin-top:3px;padding-top:3px;border-top:1px dashed var(--border);font-weight:700;">= <span style="color:${subtotal < 0 ? 'var(--danger)' : 'var(--text)'}">${fmt(subtotal)}</span> <span style="color:var(--text-muted);font-weight:500;">صافي قبل أي ترحيل</span></div>`);
+
+  if ((calc.rolledAdvances || 0) > 0) {
+    lines.push(`<div style="opacity:0.75;">↪️ <span style="color:var(--accent);">${fmt(calc.rolledAdvances)} دينار سلفة الفترة الثانية — ترحل تلقائياً، لا تُخصم الآن</span></div>`);
+  }
+  if (deferAmount > 0) {
+    lines.push(`<div>⏭️ <b style="color:#6C3483;">${fmt(deferAmount)}</b> <span style="color:var(--text-muted);">يُرحّل الآن إلى ${deferToLabel}</span></div>`);
+  }
+
+  const finalNet = subtotal - deferAmount;
+  lines.push(`<div style="margin-top:3px;padding-top:3px;border-top:2px solid var(--border);font-weight:800;">= <span style="color:${finalNet < 0 ? 'var(--danger)' : 'var(--success)'}">${fmt(finalNet)} دينار</span> <span style="color:var(--text-muted);font-weight:500;">المصروف فعلياً</span></div>`);
+
+  return lines.join('');
+}
+
+// Rebuilds the "القيد" cell for one row live — called whenever bonus, دفعة
+// دورة 15، الترحيل، أو التعديل اليدوي للمتبقي يتغيّر، حتى يبقى القيد مطابقاً
+// دائماً لما سيُسجَّل فعلياً عند الضغط على "تأكيد صرف الرواتب".
+function updateLedgerCell(employeeId) {
+  const employee = data.employees.find(x => x.id === employeeId);
+  const ledgerEl = document.getElementById('sal-ledger-' + employeeId);
+  if (!employee || !ledgerEl) return;
+
+  const dateStr = document.getElementById('sal-pay-date').value || today();
+  const period = document.getElementById('sal-period').value;
+  const paymentInput = document.getElementById('sal-payment-' + employeeId);
+  const paymentValue = paymentInput ? paymentInput.value : undefined;
+  const calc = calculateSalaryForPeriod(employee, period, dateStr, paymentValue);
+
+  // يحترم أي تعديل يدوي على "المتبقي" — القيد يجب أن يعكس ما سيُسجَّل فعلياً
+  const manualChk = document.getElementById('sal-remaining-manual-' + employeeId);
+  const remainingInput = document.getElementById('sal-remaining-' + employeeId);
+  let netRemaining = calc.net;
+  if (manualChk && manualChk.checked && remainingInput) {
+    const manualVal = parseFloat(remainingInput.value);
+    if (!isNaN(manualVal)) netRemaining = manualVal;
+  }
+
+  const bonusInput = document.getElementById('sal-bonus-' + employeeId);
+  const bonus = bonusInput ? (parseFloat(bonusInput.value) || 0) : 0;
+  const deferInput = document.getElementById('sal-defer-amount-' + employeeId);
+  const deferAmount = deferInput ? (parseFloat(deferInput.value) || 0) : 0;
+  const deferToSelect = document.getElementById('sal-defer-to-' + employeeId);
+  const deferToLabel = (deferToSelect && deferToSelect.value === '30') ? 'دورة 30' : 'الشهر القادم';
+
+  ledgerEl.innerHTML = buildLedgerHtml(employee, calc, netRemaining, bonus, deferAmount, deferToLabel);
+}
+
 // When the payroll period changes, auto-snap the date to the one valid day
 // for that period (day 15, or the month's last day for period 30) so the
 // admin doesn't need to manually hunt for the correct date. Manual edits to
@@ -4472,15 +4961,15 @@ function renderSalPayTable() {
   const thead = document.getElementById('sal-pay-thead');
   if (isFull) {
     thead.innerHTML = showPaymentField
-      ? '<tr><th>الموظف</th><th>التخصص</th><th>الراتب</th><th>قيمة الدفعة</th><th>سلف/خصم الدورة</th><th>صرف؟</th><th>المتبقي</th><th>مكافأة</th><th>صافي الراتب</th><th>قيمة مرحلة</th><th>إلى</th><th>إشعار</th></tr>'
-      : '<tr><th>الموظف</th><th>التخصص</th><th>الراتب</th><th>سلف/خصم الدورة</th><th>صرف؟</th><th>المتبقي</th><th>مكافأة</th><th>صافي الراتب</th><th>قيمة مرحلة</th><th>إلى</th><th>إشعار</th></tr>';
+      ? '<tr><th>الموظف</th><th>التخصص</th><th>الراتب</th><th>قيمة الدفعة</th><th>الخصم</th><th>السلف</th><th>صرف؟</th><th>المتبقي</th><th>مكافأة</th><th>صافي الراتب</th><th>القيد</th><th>قيمة مرحلة</th><th>إلى</th><th>إشعار</th></tr>'
+      : '<tr><th>الموظف</th><th>التخصص</th><th>الراتب</th><th>الخصم</th><th>السلف</th><th>صرف؟</th><th>المتبقي</th><th>مكافأة</th><th>صافي الراتب</th><th>القيد</th><th>قيمة مرحلة</th><th>إلى</th><th>إشعار</th></tr>';
   } else {
     thead.innerHTML = showPaymentField
       ? '<tr><th>الموظف</th><th>قيمة الدفعة</th><th>صرف؟</th><th>المتبقي</th><th>مكافأة</th><th>صافي الراتب</th><th>مرحّل</th><th>إلى</th></tr>'
       : '<tr><th>الموظف</th><th>صرف؟</th><th>المتبقي</th><th>مكافأة</th><th>صافي الراتب</th><th>مرحّل</th><th>إلى</th></tr>';
   }
 
-  const colCount = isFull ? (showPaymentField ? 12 : 11) : (showPaymentField ? 8 : 7);
+  const colCount = isFull ? (showPaymentField ? 14 : 13) : (showPaymentField ? 8 : 7);
   const tbody = document.getElementById('sal-pay-tbody');
 
   tbody.innerHTML = data.employees.filter(e => e.status !== 'terminated').map(e => {
@@ -4488,7 +4977,8 @@ function renderSalPayTable() {
     const existingPaymentInput = document.getElementById('sal-payment-' + e.id);
     const paymentValue = existingPaymentInput ? existingPaymentInput.value : defaultPayment;
     const calc = calculateSalaryForPeriod(e, period, dateStr, showPaymentField ? paymentValue : undefined);
-    const deductSum = calc.advances + calc.deductions + calc.carryoverAdvances + calc.carryoverDeductions;
+    const totalDeductions = calc.deductions + calc.carryoverDeductions;
+    const totalAdvances = calc.advances + calc.carryoverAdvances;
     const beforeStart = isDateBeforeEmployeeStart(e, dateStr);
     const missingPeriod15 = period === '30' && !isPeriod15PaidForMonth(e.id, monthKey);
     const alreadyPaidBadge = calc.alreadyPaid
@@ -4523,7 +5013,8 @@ function renderSalPayTable() {
         <td style="color:var(--text-muted)">${e.role}</td>
         <td style="font-weight:700;color:var(--primary)">${fmt(e.salary)} دينار</td>
         ${paymentFieldFull}
-        <td style="color:var(--danger);font-size:12.5px;">${deductSum > 0 ? '-' + fmt(deductSum) + ' دينار' : '-'}</td>
+        <td style="color:var(--danger);font-size:12.5px;">${totalDeductions > 0 ? '-' + fmt(totalDeductions) + ' دينار' : '-'}</td>
+        <td style="color:var(--accent);font-size:12.5px;">${totalAdvances > 0 ? '-' + fmt(totalAdvances) + ' دينار' : '-'}</td>
         <td><input type="checkbox" id="sal-chk-${e.id}" ${(calc.alreadyPaid || beforeStart || missingPeriod15 || !dateValid) ? '' : 'checked'} ${disabledAttr} style="width:18px;height:18px;cursor:pointer;"></td>
         <td>
           <div style="display:flex;align-items:center;gap:6px;">
@@ -4534,11 +5025,12 @@ function renderSalPayTable() {
         </td>
         <td><input type="number" id="sal-bonus-${e.id}" value="0" step="0.01" placeholder="0.00" style="width:100px;" oninput="updateNetSalaryPreview(${e.id})"></td>
         <td><input type="number" id="sal-amt-${e.id}" value="${calc.net.toFixed(2)}" step="0.01" readonly style="width:110px;background:#f8f8f8;font-weight:700;color:var(--success);"></td>
+        <td id="sal-ledger-${e.id}" style="font-size:10.5px;line-height:1.75;white-space:normal;min-width:190px;max-width:240px;">${buildLedgerHtml(e, calc, calc.net, 0, 0, 'الشهر القادم')}</td>
         <td>
           <input type="number" id="sal-defer-amount-${e.id}" value="0" step="0.01" min="0" ${disabledAttr} style="width:95px;" oninput="validateDeferAmount(${e.id})">
           <div id="sal-defer-note-${e.id}" style="font-size:10.5px;color:var(--text-muted);margin-top:3px;max-width:120px;"></div>
         </td>
-        <td><select id="sal-defer-to-${e.id}" ${disabledAttr} style="width:120px;">${deferToOptionsHtml}</select></td>
+        <td><select id="sal-defer-to-${e.id}" ${disabledAttr} style="width:120px;" onchange="updateLedgerCell(${e.id})">${deferToOptionsHtml}</select></td>
         <td>
           <button class="btn btn-sm" style="background:#25D366;color:#fff;" onclick="notifySalaryPaid(${e.id},'whatsapp')">📲</button>
           <button class="btn btn-sm" style="background:#566573;color:#fff;" onclick="notifySalaryPaid(${e.id},'sms')">✉️</button>
@@ -4563,7 +5055,7 @@ function renderSalPayTable() {
         <input type="number" id="sal-defer-amount-${e.id}" value="0" step="0.01" min="0" ${disabledAttr} style="width:75px;" oninput="validateDeferAmount(${e.id})">
         <div id="sal-defer-note-${e.id}" style="font-size:10px;color:var(--text-muted);margin-top:3px;max-width:95px;"></div>
       </td>
-      <td><select id="sal-defer-to-${e.id}" ${disabledAttr} style="width:100px;">${deferToOptionsHtml}</select></td>
+      <td><select id="sal-defer-to-${e.id}" ${disabledAttr} style="width:100px;" onchange="updateLedgerCell(${e.id})">${deferToOptionsHtml}</select></td>
     </tr>`;
   }).join('') || `<tr><td colspan="${colCount}" style="text-align:center;color:var(--text-muted);">لا يوجد موظفون</td></tr>`;
 }
@@ -4606,6 +5098,8 @@ function validateDeferAmount(employeeId) {
   if (noteEl) {
     noteEl.textContent = defer > 0 ? `المصروف الآن: ${fmt(net - defer)} دينار` : '';
   }
+
+  updateLedgerCell(employeeId);
 }
 
 function recalcSalaryRow(employeeId) {
@@ -5182,6 +5676,8 @@ async function confirmPayDebt() {
   if (!(await confirmOperation('تسجيل دفعة المورد', '💳'))) return;
   p.paid = parseFloat(p.paid) + amount;
   p.remaining = parseFloat(p.remaining) - amount;
+  if (!p.payments) p.payments = [];
+  p.payments.push({ id: Date.now() + Math.random(), date: today(), amount });
   saveData(); closePayDebt(); renderSuppliersTable();
   if (document.getElementById('page-supplierstatement')?.classList.contains('active')) generateSupplierStatement();
   showToast('تم تسجيل الدفعة بنجاح', 'success');
@@ -5288,14 +5784,93 @@ function generateSupplierStatement() {
   const supplier = data.suppliers.find(s => s.name === name);
   const infoBox = document.getElementById('stmt-supplier-info');
   if (supplier) {
+    const lastPaymentForInfo = getSupplierLastPayment(name);
+    const lastPaymentLineForInfo = lastPaymentForInfo
+      ? `${fmt(lastPaymentForInfo.amount)} دينار بتاريخ ${fmtDate(lastPaymentForInfo.date)}`
+      : 'لا توجد دفعات مسجّلة بتاريخ بعد';
     infoBox.innerHTML = `
       <div>📞 الهاتف: ${supplier.phone || 'غير مسجل'}</div>
       <div>📝 ملاحظة: ${supplier.note || '-'}</div>
       <div>🧾 عدد الفواتير الآجلة: ${invoices.length}</div>
+      <div>💳 آخر دفعة: ${lastPaymentLineForInfo}</div>
     `;
   } else {
     infoBox.innerHTML = '';
   }
+}
+
+// ============ SUPPLIER STATEMENT: آخر دفعة + ملخص واتساب/SMS جاهز ============
+// Aggregates every logged دفعة (across ALL of this supplier's credit invoices
+// combined) to find the single most recent one — used both in the on-page
+// "بيانات المورد" card above and in the WhatsApp/SMS summary messages below.
+// Only payments registered through confirmPayDebt() (after this feature was
+// added) carry a dated log entry; older already-accumulated paid amounts with
+// no logged entry simply won't have a "last payment" to show — never guessed.
+function getSupplierLastPayment(supplierName) {
+  let allPayments = [];
+  data.purchases
+    .filter(p => p.payType === 'credit' && p.supplier === supplierName)
+    .forEach(p => { (p.payments || []).forEach(pay => allPayments.push(pay)); });
+  if (!allPayments.length) return null;
+  allPayments.sort((a, b) => b.date.localeCompare(a.date) || (b.id > a.id ? 1 : -1));
+  return allPayments[0];
+}
+
+function getSupplierStatementSummary(supplierName) {
+  const invoices = data.purchases.filter(p => p.payType === 'credit' && p.supplier === supplierName);
+  const totalInvoices = invoices.reduce((s, p) => s + parseFloat(p.amount), 0);
+  const totalPaid = invoices.reduce((s, p) => s + parseFloat(p.paid), 0);
+  const totalRemaining = invoices.reduce((s, p) => s + parseFloat(p.remaining), 0);
+  return { totalInvoices, totalPaid, totalRemaining, lastPayment: getSupplierLastPayment(supplierName) };
+}
+
+function buildSupplierStatementMessageForOwner(supplierName, summary) {
+  const lastLine = summary.lastPayment
+    ? `💳 آخر دفعة: ${fmt(summary.lastPayment.amount)} دينار بتاريخ ${fmtDate(summary.lastPayment.date)}`
+    : `💳 آخر دفعة: لا توجد دفعات مسجّلة بتاريخ بعد`;
+  return `📑 كشف حساب المورد: ${supplierName}\nبتاريخ ${fmtDate(today())}\n\n${lastLine}\n\n🧾 إجمالي الفواتير: ${fmt(summary.totalInvoices)} دينار\n✅ إجمالي المسدد: ${fmt(summary.totalPaid)} دينار\n⚠️ إجمالي المتبقي: ${fmt(summary.totalRemaining)} دينار\n\nمع تحياتنا 🌟`;
+}
+
+function buildSupplierStatementMessageForSupplier(supplierName, summary) {
+  const lastLine = summary.lastPayment
+    ? `💳 آخر دفعة استلمناها منكم: ${fmt(summary.lastPayment.amount)} دينار بتاريخ ${fmtDate(summary.lastPayment.date)}`
+    : `💳 لم تُسجَّل أي دفعة موثّقة بتاريخ بعد`;
+  return `مرحباً ${supplierName} 🌹\n\nنود إطلاعكم على كشف حسابكم لدينا بتاريخ ${fmtDate(today())}:\n\n${lastLine}\n\n🧾 إجمالي الفواتير: ${fmt(summary.totalInvoices)} دينار\n✅ إجمالي المسدد: ${fmt(summary.totalPaid)} دينار\n⚠️ إجمالي المتبقي (الرصيد الحالي): ${fmt(summary.totalRemaining)} دينار\n\nشاكرين لكم حسن تعاملكم معنا 🙏\nمع خالص الشكر والتقدير 🌟`;
+}
+
+function getSelectedStatementSupplierName() {
+  const sel = document.getElementById('stmt-supplier-select');
+  return sel ? sel.value : '';
+}
+
+function sendSupplierStatementOwnerWhatsApp() {
+  const name = getSelectedStatementSupplierName();
+  if (!name) { showToast('يرجى اختيار مورد أولاً', 'error'); return; }
+  if (!data.ownerPhone) { showToast('يرجى إضافة رقم هاتف صاحب العمل من الإعدادات أولاً', 'error'); return; }
+  sendWhatsApp(data.ownerPhone, buildSupplierStatementMessageForOwner(name, getSupplierStatementSummary(name)));
+}
+
+function sendSupplierStatementOwnerSMS() {
+  const name = getSelectedStatementSupplierName();
+  if (!name) { showToast('يرجى اختيار مورد أولاً', 'error'); return; }
+  if (!data.ownerPhone) { showToast('يرجى إضافة رقم هاتف صاحب العمل من الإعدادات أولاً', 'error'); return; }
+  sendSMS(data.ownerPhone, buildSupplierStatementMessageForOwner(name, getSupplierStatementSummary(name)));
+}
+
+function sendSupplierStatementSupplierWhatsApp() {
+  const name = getSelectedStatementSupplierName();
+  if (!name) { showToast('يرجى اختيار مورد أولاً', 'error'); return; }
+  const supplier = data.suppliers.find(s => s.name === name);
+  if (!supplier || !supplier.phone) { showToast('لا يوجد رقم هاتف مسجل لهذا المورد، أضفه من ⚙️ الإعدادات ← قائمة الموردين', 'error'); return; }
+  sendWhatsApp(supplier.phone, buildSupplierStatementMessageForSupplier(name, getSupplierStatementSummary(name)));
+}
+
+function sendSupplierStatementSupplierSMS() {
+  const name = getSelectedStatementSupplierName();
+  if (!name) { showToast('يرجى اختيار مورد أولاً', 'error'); return; }
+  const supplier = data.suppliers.find(s => s.name === name);
+  if (!supplier || !supplier.phone) { showToast('لا يوجد رقم هاتف مسجل لهذا المورد، أضفه من ⚙️ الإعدادات ← قائمة الموردين', 'error'); return; }
+  sendSMS(supplier.phone, buildSupplierStatementMessageForSupplier(name, getSupplierStatementSummary(name)));
 }
 
 // ============ REPORTS ============
@@ -6067,16 +6642,18 @@ async function addUser() {
   const role = document.getElementById('new-user-role').value;
   const employeeLink = document.getElementById('new-user-employee-link').value;
   const canAddShoppingItems = document.getElementById('new-user-can-shopping').checked;
+  // "موظف" و"كاشير" كلاهما يمكن ربطهما بسجل موظف (نفس شرط الإلزامية والحفظ)
+  const needsEmployeeLink = (role === 'employee' || role === 'cashier');
 
   if (!username || !password) { showToast('يرجى إدخال اسم المستخدم وكلمة المرور', 'error'); return; }
   if (data.users.some(u => u.username === username)) { showToast('اسم المستخدم موجود بالفعل', 'error'); return; }
-  if (role === 'employee' && !employeeLink) { showToast('يرجى ربط هذا المستخدم بموظف من القائمة', 'error'); return; }
+  if (needsEmployeeLink && !employeeLink) { showToast('يرجى ربط هذا المستخدم بموظف من القائمة', 'error'); return; }
   if (!(await confirmOperation('إضافة المستخدم', '👤'))) return;
 
   data.users.push({
     id: Date.now(),
     username, password, role,
-    employeeId: role === 'employee' ? parseInt(employeeLink) : null,
+    employeeId: needsEmployeeLink ? parseInt(employeeLink) : null,
     canAddShoppingItems: role === 'admin' ? true : canAddShoppingItems
   });
   saveData();
@@ -6161,9 +6738,9 @@ async function deleteUser(id) {
   showToast('تم حذف المستخدم بنجاح', 'success');
 }
 
-// ============ MY SALARY PAGE (employee role) ============
+// ============ MY SALARY PAGE (employee + cashier roles) ============
 function renderMySalaryPage() {
-  if (!currentUser || currentUser.role !== 'employee' || !currentUser.employeeId) return;
+  if (!currentUser || (currentUser.role !== 'employee' && currentUser.role !== 'cashier') || !currentUser.employeeId) return;
   const emp = data.employees.find(e => e.id === currentUser.employeeId);
   if (!emp) return;
 
@@ -6290,7 +6867,7 @@ function applyRoleVisibility() {
     'nav-section-dashboard': ['admin', 'owner', 'cashier'],
     'nav-section-employees': ['admin'],
     'nav-section-reports': ['admin', 'owner'],
-    'nav-section-myinfo': ['employee'],
+    'nav-section-myinfo': ['employee', 'cashier'],
     'nav-section-settings': ['admin', 'owner', 'cashier', 'employee']
   };
 
@@ -6310,6 +6887,10 @@ function applyRoleVisibility() {
   if (incomeNav) incomeNav.style.display = canSeeIncomeExpenses ? '' : 'none';
   const expensesNav = document.querySelector('.nav-item[data-page="expenses"]');
   if (expensesNav) expensesNav.style.display = canSeeIncomeExpenses ? '' : 'none';
+
+  // القائمة السريعة (مصروف/سلفة من الدرج): نفس صلاحية الإيرادات/المصروفات — كاشير + مدير
+  const quicklistNav = document.getElementById('nav-quicklist');
+  if (quicklistNav) quicklistNav.style.display = canSeeIncomeExpenses ? '' : 'none';
 
   // Cashier: hide purchases nav item (cashier only handles income+expenses)
   const purchasesNav = document.getElementById('nav-purchases');
@@ -6405,6 +6986,7 @@ async function initApp() {
           dashboard: updateDashboard,
           income: () => { renderIncomeTable(); renderIncomeTodaySummary(); },
           expenses: () => { populateExpenseCategorySelect(); renderExpenseTable(); },
+          quicklist: () => { populateQuickListSelects(); renderQuickListLog(); },
           purchases: () => { populateSupplierSelect(); renderPurchaseTable(); },
           shoppinglist: () => { renderShoppingList(); populatePurchaserSelect(); },
           employees: renderEmployeesTable,
@@ -6430,6 +7012,9 @@ function wireAllFormNavigation() {
   enableEnterNavigation(['income-date', 'income-method', 'income-amount', 'income-note'], addIncome);
 
   enableEnterNavigation(['exp-date', 'exp-desc', 'exp-amount'], addExpense);
+
+  enableEnterNavigation(['ql-exp-date', 'ql-exp-desc', 'ql-exp-amount', 'ql-exp-note'], addQuickListExpense);
+  enableEnterNavigation(['ql-adv-emp', 'ql-adv-amount', 'ql-adv-date', 'ql-adv-note'], addQuickListAdvance);
 
   enableEnterNavigation(
     ['pur-date', 'pur-invoice', 'pur-amount', 'pay-type-select', 'pur-method', 'pur-supplier', 'pur-due', 'pur-note'],
