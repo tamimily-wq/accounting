@@ -918,7 +918,7 @@
       </div>
     </div>
 
-    <div class="stats-grid">
+    <div class="stats-grid" id="dash-stats-standard">
       <div class="stat-card income">
         <div class="stat-label">إيراد اليوم</div>
         <div class="stat-value" id="dash-today-income">0.00</div>
@@ -941,7 +941,23 @@
       </div>
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+    <!-- الكاشير: كروت خاصة بالقائمة السريعة (سلف/مصروفات الدرج) فقط —
+         بدون بيانات أسبوعية/شهرية أو أي مؤشرات عن أعمال لا يملك صلاحية
+         الوصول لصفحاتها أصلاً (المشتريات، الموردين، الرواتب). -->
+    <div class="stats-grid hidden" id="dash-stats-cashier" style="grid-template-columns:repeat(2,1fr);">
+      <div class="stat-card expense">
+        <div class="stat-label">مصروف اليوم (من الدرج)</div>
+        <div class="stat-value" id="dash-ql-expense-today">0.00</div>
+        <div class="stat-sub">دينار</div>
+      </div>
+      <div class="stat-card purchase">
+        <div class="stat-label">سلفة اليوم (من الدرج)</div>
+        <div class="stat-value" id="dash-ql-advance-today">0.00</div>
+        <div class="stat-sub">دينار</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;" id="dash-admin-widgets-row">
       <div class="card">
         <div class="card-title">⚠️ ديون موردين قريبة الاستحقاق</div>
         <div id="dash-debts-list"><p style="color:var(--text-muted);font-size:13px;">لا توجد ديون مستحقة قريباً</p></div>
@@ -3405,6 +3421,16 @@ function updateDashboard() {
   // Today expenses
   const todayExp = data.expenses.filter(e => e.date === t).reduce((s, e) => s + parseFloat(e.amount), 0);
   document.getElementById('dash-today-expense').textContent = fmt(todayExp);
+
+  // Quick List (القائمة السريعة) drawer totals for today — used by the
+  // cashier-only dashboard cards (dash-stats-cashier), kept separate from
+  // the standard admin/owner cards above.
+  const qlExpenseToday = data.expenses.filter(e => e.viaQuickList && e.date === t).reduce((s, e) => s + parseFloat(e.amount), 0);
+  const qlAdvanceToday = data.salaryHistory.filter(r => r.viaQuickList && r.type === 'سلفة' && r.date === t).reduce((s, r) => s + parseFloat(r.amount), 0);
+  const qlExpenseEl = document.getElementById('dash-ql-expense-today');
+  if (qlExpenseEl) qlExpenseEl.textContent = fmt(qlExpenseToday);
+  const qlAdvanceEl = document.getElementById('dash-ql-advance-today');
+  if (qlAdvanceEl) qlAdvanceEl.textContent = fmt(qlAdvanceToday);
 
   // Week purchases
   const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
@@ -6994,6 +7020,16 @@ function applyRoleVisibility() {
     const el = document.getElementById(id);
     if (el) el.style.display = sectionMap[id].includes(role) ? '' : 'none';
   });
+
+  // لوحة التحكم: الكاشير يشوف كروت القائمة السريعة فقط (سلف/مصروفات الدرج
+  // لليوم) بدل الكروت العامة (مشتريات الأسبوع/صافي الشهر)، وبدون تنبيهات
+  // ديون الموردين أو الرواتب — أصلاً ما عنده صلاحية الوصول لصفحاتها.
+  const dashStatsStandard = document.getElementById('dash-stats-standard');
+  const dashStatsCashier = document.getElementById('dash-stats-cashier');
+  const dashAdminWidgetsRow = document.getElementById('dash-admin-widgets-row');
+  if (dashStatsStandard) dashStatsStandard.classList.toggle('hidden', role === 'cashier');
+  if (dashStatsCashier) dashStatsCashier.classList.toggle('hidden', role !== 'cashier');
+  if (dashAdminWidgetsRow) dashAdminWidgetsRow.classList.toggle('hidden', role === 'cashier');
 
   // "العمليات اليومية" section: shown if the user can see ANY item inside it
   // (income for admin+cashier, expenses/purchases for admin only, القائمة
