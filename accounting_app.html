@@ -54,6 +54,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBVV53mUyYJlVnlJOTMu8hJ62TIyCWFWyM",
@@ -67,6 +68,7 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    const auth = getAuth(app);
     const DATA_DOC = doc(db, "accounting", "main");
 
     // Expose to global scope for use in main script
@@ -97,11 +99,27 @@
       return null;
     };
 
-    window._firebaseReady = true;
-    document.dispatchEvent(new Event('firebaseReady'));
+    // ============ ANONYMOUS AUTH GATE (لتفعيل Firestore Rules الجديدة) ============
+    // التطبيق ما يستخدم Firebase Authentication لدخول المستخدمين (له نظام
+    // دخول خاص به بالاسم وكلمة المرور)، فسجّلناه هنا "مجهول الهوية" بصمت في
+    // الخلفية فقط حتى تتحقق قاعدة Firestore's request.auth != null، بدون أي
+    // تغيير على شاشة الدخول أو حسابات المستخدمين. هذا يمنع القراءة/الكتابة
+    // المباشرة غير المصادَق عليها من أي أداة خارج التطبيق، لكنه ليس بديلاً
+    // كاملاً عن مصادقة حقيقية لكل مستخدم — راجع ملاحظة الأمان المرفقة.
+    signInAnonymously(auth).catch((e) => {
+      console.error("Anonymous sign-in failed:", e);
+    });
+
+    onAuthStateChanged(auth, (user) => {
+      if (user && !window._firebaseReady) {
+        window._firebaseReady = true;
+        document.dispatchEvent(new Event('firebaseReady'));
+      }
+    });
   </script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap');
+
 
   :root {
     --primary: #1B4F72;
@@ -6593,14 +6611,16 @@ async function changeMyPassword() {
   const confirm_ = document.getElementById('change-pw-confirm').value;
 
   if (!current || !newPw || !confirm_) { showToast('يرجى تعبئة جميع الحقول', 'error'); return; }
-  if (currentUser.password !== current) { showToast('كلمة المرور الحالية غير صحيحة', 'error'); return; }
+  if (!(await verifyUserPassword(currentUser, current))) { showToast('كلمة المرور الحالية غير صحيحة', 'error'); return; }
   if (newPw !== confirm_) { showToast('كلمة المرور الجديدة غير متطابقة مع التأكيد', 'error'); return; }
   if (newPw.length < 4) { showToast('يرجى استخدام كلمة مرور من 4 أحرف/أرقام على الأقل', 'error'); return; }
   if (!(await confirmOperation('تغيير كلمة المرور', '🔒'))) return;
 
   const user = data.users.find(u => u.id === currentUser.id);
-  user.password = newPw;
-  currentUser.password = newPw;
+  await setUserPassword(user, newPw);
+  currentUser.passwordHash = user.passwordHash;
+  currentUser.salt = user.salt;
+  delete currentUser.password;
   saveData();
 
   document.getElementById('change-pw-current').value = '';
@@ -6624,10 +6644,11 @@ async function confirmResetPassword() {
   if (!newPw || newPw.length < 4) { showToast('يرجى إدخال كلمة مرور من 4 أحرف/أرقام على الأقل', 'error'); return; }
   if (!(await confirmOperation('إعادة تعيين كلمة المرور', '🔑'))) return;
   const user = data.users.find(u => u.id === resettingUserId);
-  user.password = newPw;
+  await setUserPassword(user, newPw);
+  lastKnownPlaintextPassword = { userId: user.id, password: newPw };
   saveData();
   closeResetPassword();
-  showToast('تم تغيير كلمة المرور بنجاح', 'success');
+  showToast('تم تغيير كلمة المرور بنجاح — يمكنك إرسالها الآن للموظف من زر 📲/✉️', 'success');
 }
 
 function closeResetPassword() {
@@ -6656,12 +6677,15 @@ async function addUser() {
   if (needsEmployeeLink && !employeeLink) { showToast('يرجى ربط هذا المستخدم بموظف من القائمة', 'error'); return; }
   if (!(await confirmOperation('إضافة المستخدم', '👤'))) return;
 
-  data.users.push({
+  const newUser = {
     id: Date.now(),
-    username, password, role,
+    username, role,
     employeeId: needsEmployeeLink ? parseInt(employeeLink) : null,
     canAddShoppingItems: role === 'admin' ? true : canAddShoppingItems
-  });
+  };
+  await setUserPassword(newUser, password);
+  data.users.push(newUser);
+  lastKnownPlaintextPassword = { userId: newUser.id, password };
   saveData();
   document.getElementById('new-user-username').value = '';
   document.getElementById('new-user-password').value = '';
@@ -6671,16 +6695,22 @@ async function addUser() {
 }
 
 // ============ SEND LOGIN CREDENTIALS TO EMPLOYEE ============
-function buildUserCredentialsMessage(user, employeeName) {
-  return `🔐 بيانات الدخول لتطبيق المحاسبة\n\nمرحباً ${employeeName || user.username}،\n\nاسم المستخدم: ${user.username}\nكلمة المرور: ${user.password}\n\nرابط التطبيق:\n${getAppLink()}\n\nيرجى الاحتفاظ بهذه البيانات في مكان آمن وعدم مشاركتها مع أحد.`;
+function buildUserCredentialsMessage(user, employeeName, plaintextPassword) {
+  return `🔐 بيانات الدخول لتطبيق المحاسبة\n\nمرحباً ${employeeName || user.username}،\n\nاسم المستخدم: ${user.username}\nكلمة المرور: ${plaintextPassword}\n\nرابط التطبيق:\n${getAppLink()}\n\nيرجى الاحتفاظ بهذه البيانات في مكان آمن وعدم مشاركتها مع أحد.`;
 }
 
+// ملاحظة أمان: كلمة المرور مُخزّنة مُجزّأة (SHA-256+ملح) ولا يمكن استرجاعها
+// بعد أول تسجيل دخول ناجح للمستخدم. لذلك الإرسال متاح فقط: (أ) لحساب لم
+// يسجّل دخوله بعد التحديث بعد (لسا نص صريح قديم)، أو (ب) فوراً بعد إنشاء
+// الحساب أو إعادة تعيين كلمة مروره بنفس الجلسة الحالية.
 function sendUserCredentialsWhatsApp(userId) {
   const user = data.users.find(u => u.id === userId);
   if (!user || !user.employeeId) return;
   const emp = data.employees.find(e => e.id === user.employeeId);
   if (!emp) { showToast('تعذّر العثور على بيانات الموظف المرتبط بهذا المستخدم', 'error'); return; }
-  sendWhatsApp(emp.phone, buildUserCredentialsMessage(user, emp.name));
+  const plaintext = getSendablePassword(user);
+  if (!plaintext) { showToast('كلمة المرور الحالية مشفّرة ولا يمكن استرجاعها — اضغط "إعادة تعيين كلمة المرور" أولاً ثم أرسلها فوراً', 'error'); return; }
+  sendWhatsApp(emp.phone, buildUserCredentialsMessage(user, emp.name, plaintext));
 }
 
 function sendUserCredentialsSMS(userId) {
@@ -6688,7 +6718,9 @@ function sendUserCredentialsSMS(userId) {
   if (!user || !user.employeeId) return;
   const emp = data.employees.find(e => e.id === user.employeeId);
   if (!emp) { showToast('تعذّر العثور على بيانات الموظف المرتبط بهذا المستخدم', 'error'); return; }
-  sendSMS(emp.phone, buildUserCredentialsMessage(user, emp.name));
+  const plaintext = getSendablePassword(user);
+  if (!plaintext) { showToast('كلمة المرور الحالية مشفّرة ولا يمكن استرجاعها — اضغط "إعادة تعيين كلمة المرور" أولاً ثم أرسلها فوراً', 'error'); return; }
+  sendSMS(emp.phone, buildUserCredentialsMessage(user, emp.name, plaintext));
 }
 
 function renderUsersTable() {
@@ -6792,7 +6824,67 @@ const ROLE_LABELS = {
   employee: '👤 موظف'
 };
 
-function handleLogin() {
+// ============ PASSWORD HASHING (SHA-256 + ملح عشوائي عبر Web Crypto API) ============
+// هذا تطبيق بدون سيرفر خلفي، فما نقدر نستخدم تجزئة بطيئة مثل bcrypt، لكن
+// SHA-256 + ملح لكل مستخدم أفضل بكثير من حفظ كلمة المرور نص صريح داخل نفس
+// مستند Firestore المشترك. الحسابات القديمة (كلمة مرور نص صريح) تُرقّى
+// تلقائياً لهذا التنسيق أول مرة يسجّل فيها صاحبها الدخول — بدون أي تدخل يدوي.
+// إذا كان المتصفح على سياق غير آمن (HTTP عادي وليس HTTPS/localhost/file)
+// فـ Web Crypto غير متاح؛ في هذه الحالة فقط نتراجع لسلوك النص الصريح القديم
+// حتى لا ينكسر تسجيل الدخول كلياً.
+function isCryptoAvailable() {
+  return !!(window.crypto && window.crypto.subtle);
+}
+
+function generateSalt() {
+  const arr = new Uint8Array(16);
+  crypto.getRandomValues(arr);
+  return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function hashPassword(password, salt) {
+  const enc = new TextEncoder();
+  const bytes = enc.encode(salt + ':' + password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// يحفظ كلمة مرور جديدة كمُجزّأة على كائن المستخدم، ويحذف أي نص صريح قديم.
+async function setUserPassword(user, plainPassword) {
+  if (!isCryptoAvailable()) {
+    user.password = plainPassword;
+    delete user.passwordHash;
+    delete user.salt;
+    return;
+  }
+  const salt = generateSalt();
+  user.salt = salt;
+  user.passwordHash = await hashPassword(plainPassword, salt);
+  delete user.password;
+}
+
+// يتحقق من كلمة مرور مُدخلة مقابل كائن مستخدم — يدعم التنسيق الجديد
+// (مُجزّأ) والقديم (نص صريح) بنفس الوقت لضمان استمرار عمل كل الحسابات.
+async function verifyUserPassword(user, plainPasswordAttempt) {
+  if (user.passwordHash && user.salt && isCryptoAvailable()) {
+    const attemptHash = await hashPassword(plainPasswordAttempt, user.salt);
+    return attemptHash === user.passwordHash;
+  }
+  return user.password === plainPasswordAttempt;
+}
+
+// كلمة المرور الصريحة تبقى متاحة للإرسال (واتساب/SMS) فقط للحسابات القديمة
+// غير المُرقّاة بعد، أو فوراً بعد إنشاء/إعادة تعيين كلمة مرور بنفس الجلسة —
+// لأنها بعد التجزئة لم تعد قابلة للاسترجاع لاحقاً (وهذا هو المقصود أمنياً).
+let lastKnownPlaintextPassword = null;
+
+function getSendablePassword(user) {
+  if (user.password) return user.password;
+  if (lastKnownPlaintextPassword && lastKnownPlaintextPassword.userId === user.id) return lastKnownPlaintextPassword.password;
+  return null;
+}
+
+async function handleLogin() {
   const username = document.getElementById('login-username').value.trim();
   const password = document.getElementById('login-password').value;
   const errBox = document.getElementById('login-error');
@@ -6808,11 +6900,18 @@ function handleLogin() {
     sanitizeData();
   }
 
-  const user = data.users.find(u => u.username === username && u.password === password);
-  if (!user) {
+  const user = data.users.find(u => u.username === username);
+  const passwordOk = user ? await verifyUserPassword(user, password) : false;
+  if (!user || !passwordOk) {
     errBox.textContent = 'اسم المستخدم أو كلمة المرور غير صحيحة';
     errBox.classList.remove('hidden');
     return;
+  }
+
+  // ترقية صامتة لكلمة المرور من نص صريح إلى مُجزّأة أول دخول ناجح بعد التحديث
+  if (!user.passwordHash) {
+    await setUserPassword(user, password);
+    saveData();
   }
 
   currentUser = user;
