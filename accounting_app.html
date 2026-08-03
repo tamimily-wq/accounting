@@ -988,7 +988,7 @@
         </div>
         <div class="form-group">
           <label>المبلغ (دينار)</label>
-          <input type="number" id="income-amount" placeholder="0.00" step="0.01">
+          <input type="number" id="income-amount" placeholder="0.00" step="0.001">
         </div>
         <div class="form-group">
           <label>ملاحظات</label>
@@ -1065,7 +1065,7 @@
         </div>
         <div class="form-group">
           <label>المبلغ (دينار)</label>
-          <input type="number" id="exp-amount" placeholder="0.00" step="0.01">
+          <input type="number" id="exp-amount" placeholder="0.00" step="0.001">
         </div>
       </div>
       <button class="btn btn-danger" style="font-size:14px;padding:9px 20px;" onclick="addExpense()">✔ تسجيل المصروف</button>
@@ -1131,7 +1131,7 @@
           </div>
           <div class="form-group">
             <label>المبلغ (دينار)</label>
-            <input type="number" id="ql-exp-amount" placeholder="0.00" step="0.01">
+            <input type="number" id="ql-exp-amount" placeholder="0.00" step="0.001">
           </div>
           <div class="form-group">
             <label>ملاحظة</label>
@@ -1153,7 +1153,7 @@
           </div>
           <div class="form-group">
             <label>المبلغ (دينار)</label>
-            <input type="number" id="ql-adv-amount" placeholder="0.00" step="0.01">
+            <input type="number" id="ql-adv-amount" placeholder="0.00" step="0.001">
           </div>
           <div class="form-group">
             <label>التاريخ</label>
@@ -1225,7 +1225,7 @@
         </div>
         <div class="form-group">
           <label>المبلغ (دينار)</label>
-          <input type="number" id="pur-amount" placeholder="0.00" step="0.01">
+          <input type="number" id="pur-amount" placeholder="0.00" step="0.001">
         </div>
       </div>
 
@@ -1405,7 +1405,7 @@
         </div>
         <div class="form-group">
           <label>الراتب الأساسي (دينار)</label>
-          <input type="number" id="emp-salary" placeholder="0.00" step="0.01">
+          <input type="number" id="emp-salary" placeholder="0.00" step="0.001">
         </div>
         <div class="form-group">
           <label>تاريخ التعيين</label>
@@ -1445,7 +1445,7 @@
         <div style="font-weight:700;font-size:16px;margin-bottom:16px;color:var(--primary);">✏️ تعديل الراتب</div>
         <div class="form-group" style="margin-bottom:12px;">
           <label>الراتب الجديد</label>
-          <input type="number" id="edit-salary-val" step="0.01">
+          <input type="number" id="edit-salary-val" step="0.001">
         </div>
         <div style="display:flex;gap:8px;">
           <button class="btn btn-primary" onclick="saveEditSalary()">حفظ</button>
@@ -1468,7 +1468,7 @@
         </div>
         <div class="form-group" style="margin-bottom:12px;">
           <label>الراتب الأساسي (دينار)</label>
-          <input type="number" id="edit-emp-salary-val" step="0.01">
+          <input type="number" id="edit-emp-salary-val" step="0.001">
         </div>
         <div class="form-group" style="margin-bottom:12px;">
           <label>تاريخ التعيين</label>
@@ -1513,12 +1513,12 @@
 
         <div class="form-group" style="margin-bottom:14px;">
           <label>💰 الراتب المستحق عن الشهر الأخير (قابل للتعديل اليدوي)</label>
-          <input type="number" id="term-prorated-salary" step="0.01" oninput="terminationSalaryDirty = true; updateTerminationNet();">
+          <input type="number" id="term-prorated-salary" step="0.001" oninput="terminationSalaryDirty = true; updateTerminationNet();">
         </div>
 
         <div class="form-group" style="margin-bottom:6px;">
           <label>➕ مستحقات إضافية (مكافآت، اختياري)</label>
-          <input type="number" id="term-extra-dues" step="0.01" value="0" oninput="updateTerminationNet()">
+          <input type="number" id="term-extra-dues" step="0.001" value="0" oninput="updateTerminationNet()">
         </div>
         <div id="term-pending-deferred-note" class="hidden" style="background:#E8DAEF;color:#6C3483;padding:8px 12px;border-radius:8px;font-size:12px;font-weight:600;margin-bottom:14px;"></div>
 
@@ -1529,7 +1529,7 @@
 
         <div class="form-group" style="margin-bottom:18px;">
           <label>➖ سلف / مستحقات غير مسددة (تُخصم من التسوية)</label>
-          <input type="number" id="term-recovery-amount" step="0.01" value="0" oninput="updateTerminationNet()">
+          <input type="number" id="term-recovery-amount" step="0.001" value="0" oninput="updateTerminationNet()">
         </div>
 
         <div class="form-group" style="margin-bottom:18px;">
@@ -1624,7 +1624,7 @@
           </div>
           <div class="form-group">
             <label>المبلغ (دينار)</label>
-            <input type="number" id="adv-amount" placeholder="0.00" step="0.01">
+            <input type="number" id="adv-amount" placeholder="0.00" step="0.001">
           </div>
           <div class="form-group">
             <label>التاريخ</label>
@@ -1636,7 +1636,7 @@
           </div>
           <div class="form-group">
             <label>مبلغ مؤجل للشهر القادم (اختياري)</label>
-            <input type="number" id="adv-defer" placeholder="0.00" step="0.01" min="0">
+            <input type="number" id="adv-defer" placeholder="0.00" step="0.001" min="0">
           </div>
         </div>
         <button class="btn btn-accent" onclick="addAdvance()">✔ صرف السلفة</button>
@@ -1658,7 +1658,7 @@
           </div>
           <div class="form-group">
             <label>المبلغ (دينار)</label>
-            <input type="number" id="ded-amount" placeholder="0.00" step="0.01">
+            <input type="number" id="ded-amount" placeholder="0.00" step="0.001">
           </div>
           <div class="form-group">
             <label>التاريخ</label>
@@ -1670,7 +1670,7 @@
           </div>
           <div class="form-group">
             <label>مبلغ مؤجل للشهر القادم (اختياري)</label>
-            <input type="number" id="ded-defer" placeholder="0.00" step="0.01" min="0">
+            <input type="number" id="ded-defer" placeholder="0.00" step="0.001" min="0">
           </div>
         </div>
         <button class="btn btn-danger" style="font-size:14px;padding:9px 20px;" onclick="addDeduction()">✔ تسجيل الخصم</button>
@@ -1765,7 +1765,7 @@
         </div>
         <div class="form-group" style="margin-bottom:16px;">
           <label>المبلغ المدفوع</label>
-          <input type="number" id="pay-debt-amount" step="0.01" placeholder="0.00">
+          <input type="number" id="pay-debt-amount" step="0.001" placeholder="0.00">
         </div>
         <div style="display:flex;gap:8px;">
           <button class="btn btn-success" onclick="confirmPayDebt()">تأكيد الدفع</button>
@@ -2370,7 +2370,7 @@
     </div>
     <div class="form-group" style="margin-bottom:16px;">
       <label>المبلغ المراد تأجيله (دينار)</label>
-      <input type="number" id="defer-amount-input" step="0.01" placeholder="0.00">
+      <input type="number" id="defer-amount-input" step="0.001" placeholder="0.00">
     </div>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;line-height:1.7;">
       سيُخصم هذا المبلغ من السجل الحالي، ويُضاف كسجل جديد بنفس النوع بتاريخ أول الشهر القادم.
@@ -2573,7 +2573,7 @@ function exportReportPrint(sourceElId, title) {
   if (!source) { showToast('لا يوجد تقرير لعرضه، أنشئ التقرير أولاً', 'error'); return; }
 
   const printArea = document.getElementById('print-render-area');
-  const now = new Date().toLocaleDateString('en-GB');
+  const now = fmtDate(today());
 
   printArea.innerHTML = `
     <div class="print-header">
@@ -3401,13 +3401,24 @@ function today() {
 }
 
 function fmt(n) {
-  return parseFloat(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return parseFloat(n || 0).toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 }
 
 function fmtDate(d) {
   if (!d) return '';
   const parts = d.split('-');
   return parts[2] + '/' + parts[1] + '/' + parts[0];
+}
+
+// نفس تنسيق fmtDate (يوم/شهر/سنة)، لكن لكائن Date جافاسكربت بدل نص
+// "yyyy-MM-dd" مخزّن — يُستخدم حيث التاريخ يجي من new Date() مباشرة
+// (مثل تاريخ آخر نسخة احتياطية)، بدل الاعتماد على toLocaleDateString
+// التي قد تختلف بين المتصفحات.
+function fmtDateObj(dateObj) {
+  const dd = String(dateObj.getDate()).padStart(2, '0');
+  const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const yyyy = dateObj.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
 }
 
 // ============ DASHBOARD ============
@@ -4346,7 +4357,7 @@ function openTerminationModal(employeeId) {
   const totalDeductions = data.salaryHistory.filter(r => r.employeeId === employeeId && r.type === 'خصم').reduce((s, r) => s + parseFloat(r.amount), 0);
   document.getElementById('term-total-advances').textContent = fmt(totalAdvances);
   document.getElementById('term-total-deductions').textContent = fmt(totalDeductions);
-  document.getElementById('term-recovery-amount').value = Math.max(0, totalAdvances - totalDeductions).toFixed(2);
+  document.getElementById('term-recovery-amount').value = Math.max(0, totalAdvances - totalDeductions).toFixed(3);
 
   // Safety net: any salary amount previously deferred ("قيمة مرحلة" from the
   // pay-salaries table) that is still pending for this employee would
@@ -4365,7 +4376,7 @@ function openTerminationModal(employeeId) {
       pendingNote.classList.add('hidden');
     }
   }
-  document.getElementById('term-extra-dues').value = pendingDeferred.toFixed(2);
+  document.getElementById('term-extra-dues').value = pendingDeferred.toFixed(3);
 
   recalcTerminationSalary();
 
@@ -4420,7 +4431,7 @@ function recalcTerminationSalary() {
 
   if (!terminationSalaryDirty) {
     const prorated = (parseFloat(emp.salary) / monthDays) * workDays - alreadyPaidThisMonth;
-    document.getElementById('term-prorated-salary').value = prorated.toFixed(2);
+    document.getElementById('term-prorated-salary').value = prorated.toFixed(3);
   }
   updateTerminationNet();
 }
@@ -5023,7 +5034,7 @@ function renderSalPayTable() {
   const tbody = document.getElementById('sal-pay-tbody');
 
   tbody.innerHTML = data.employees.filter(e => e.status !== 'terminated').map(e => {
-    const defaultPayment = getProRatedPayForRange(e, monthKey, 1, 15, e.salary / 2).amount.toFixed(2);
+    const defaultPayment = getProRatedPayForRange(e, monthKey, 1, 15, e.salary / 2).amount.toFixed(3);
     const existingPaymentInput = document.getElementById('sal-payment-' + e.id);
     const paymentValue = existingPaymentInput ? existingPaymentInput.value : defaultPayment;
     const calc = calculateSalaryForPeriod(e, period, dateStr, showPaymentField ? paymentValue : undefined);
@@ -5052,9 +5063,9 @@ function renderSalPayTable() {
     const remainingColor = calc.wasNegative ? 'color:var(--danger);font-weight:700;' : '';
 
     const paymentFieldFull = showPaymentField
-      ? `<td><input type="number" id="sal-payment-${e.id}" value="${paymentValue}" step="0.01" style="width:100px;" oninput="recalcSalaryRow(${e.id})"></td>` : '';
+      ? `<td><input type="number" id="sal-payment-${e.id}" value="${paymentValue}" step="0.001" style="width:100px;" oninput="recalcSalaryRow(${e.id})"></td>` : '';
     const paymentFieldCompact = showPaymentField
-      ? `<td><input type="number" id="sal-payment-${e.id}" value="${paymentValue}" step="0.01" style="width:85px;" oninput="recalcSalaryRow(${e.id})"></td>` : '';
+      ? `<td><input type="number" id="sal-payment-${e.id}" value="${paymentValue}" step="0.001" style="width:85px;" oninput="recalcSalaryRow(${e.id})"></td>` : '';
 
     if (isFull) {
       return `
@@ -5069,15 +5080,15 @@ function renderSalPayTable() {
         <td>
           <div style="display:flex;align-items:center;gap:6px;">
             <input type="checkbox" id="sal-remaining-manual-${e.id}" title="تعديل يدوي" onchange="toggleManualRemaining(${e.id})" style="width:16px;height:16px;cursor:pointer;">
-            <input type="number" id="sal-remaining-${e.id}" value="${calc.net.toFixed(2)}" step="0.01" readonly style="width:100px;background:#f8f8f8;${remainingColor}" oninput="updateNetSalaryPreview(${e.id})">
+            <input type="number" id="sal-remaining-${e.id}" value="${calc.net.toFixed(3)}" step="0.001" readonly style="width:100px;background:#f8f8f8;${remainingColor}" oninput="updateNetSalaryPreview(${e.id})">
           </div>
           ${alreadyPaidBadge}${beforeStartNote}${missingPeriod15Note}${negativeNote}${carryoverNote}${rolledAdvanceNote}${deferredInNote}${newHireNote}
         </td>
-        <td><input type="number" id="sal-bonus-${e.id}" value="0" step="0.01" placeholder="0.00" style="width:100px;" oninput="updateNetSalaryPreview(${e.id})"></td>
-        <td><input type="number" id="sal-amt-${e.id}" value="${calc.net.toFixed(2)}" step="0.01" readonly style="width:110px;background:#f8f8f8;font-weight:700;color:var(--success);"></td>
+        <td><input type="number" id="sal-bonus-${e.id}" value="0" step="0.001" placeholder="0.00" style="width:100px;" oninput="updateNetSalaryPreview(${e.id})"></td>
+        <td><input type="number" id="sal-amt-${e.id}" value="${calc.net.toFixed(3)}" step="0.001" readonly style="width:110px;background:#f8f8f8;font-weight:700;color:var(--success);"></td>
         <td id="sal-ledger-${e.id}" style="font-size:10.5px;line-height:1.75;white-space:normal;min-width:190px;max-width:240px;">${buildLedgerHtml(e, calc, calc.net, 0, 0, 'الشهر القادم')}</td>
         <td>
-          <input type="number" id="sal-defer-amount-${e.id}" value="0" step="0.01" min="0" ${disabledAttr} style="width:95px;" oninput="validateDeferAmount(${e.id})">
+          <input type="number" id="sal-defer-amount-${e.id}" value="0" step="0.001" min="0" ${disabledAttr} style="width:95px;" oninput="validateDeferAmount(${e.id})">
           <div id="sal-defer-note-${e.id}" style="font-size:10.5px;color:var(--text-muted);margin-top:3px;max-width:120px;"></div>
         </td>
         <td><select id="sal-defer-to-${e.id}" ${disabledAttr} style="width:120px;" onchange="updateLedgerCell(${e.id})">${deferToOptionsHtml}</select></td>
@@ -5095,14 +5106,14 @@ function renderSalPayTable() {
       <td>
         <div style="display:flex;align-items:center;gap:6px;">
           <input type="checkbox" id="sal-remaining-manual-${e.id}" title="تعديل يدوي" onchange="toggleManualRemaining(${e.id})" style="width:16px;height:16px;cursor:pointer;">
-          <input type="number" id="sal-remaining-${e.id}" value="${calc.net.toFixed(2)}" step="0.01" readonly style="width:78px;background:#f8f8f8;${remainingColor}" oninput="updateNetSalaryPreview(${e.id})">
+          <input type="number" id="sal-remaining-${e.id}" value="${calc.net.toFixed(3)}" step="0.001" readonly style="width:78px;background:#f8f8f8;${remainingColor}" oninput="updateNetSalaryPreview(${e.id})">
         </div>
         ${alreadyPaidBadge}${beforeStartNote}${missingPeriod15Note}${negativeNote}${carryoverNote}${rolledAdvanceNote}${deferredInNote}${newHireNote}
       </td>
-      <td><input type="number" id="sal-bonus-${e.id}" value="0" step="0.01" placeholder="0.00" style="width:80px;" oninput="updateNetSalaryPreview(${e.id})"></td>
-      <td><input type="number" id="sal-amt-${e.id}" value="${calc.net.toFixed(2)}" step="0.01" readonly style="width:90px;background:#f8f8f8;font-weight:700;color:var(--success);"></td>
+      <td><input type="number" id="sal-bonus-${e.id}" value="0" step="0.001" placeholder="0.00" style="width:80px;" oninput="updateNetSalaryPreview(${e.id})"></td>
+      <td><input type="number" id="sal-amt-${e.id}" value="${calc.net.toFixed(3)}" step="0.001" readonly style="width:90px;background:#f8f8f8;font-weight:700;color:var(--success);"></td>
       <td>
-        <input type="number" id="sal-defer-amount-${e.id}" value="0" step="0.01" min="0" ${disabledAttr} style="width:75px;" oninput="validateDeferAmount(${e.id})">
+        <input type="number" id="sal-defer-amount-${e.id}" value="0" step="0.001" min="0" ${disabledAttr} style="width:75px;" oninput="validateDeferAmount(${e.id})">
         <div id="sal-defer-note-${e.id}" style="font-size:10px;color:var(--text-muted);margin-top:3px;max-width:95px;"></div>
       </td>
       <td><select id="sal-defer-to-${e.id}" ${disabledAttr} style="width:100px;" onchange="updateLedgerCell(${e.id})">${deferToOptionsHtml}</select></td>
@@ -5117,7 +5128,7 @@ function updateNetSalaryPreview(employeeId) {
   if (!remainingInput || !bonusInput || !netInput) return;
   const remaining = parseFloat(remainingInput.value) || 0;
   const bonus = parseFloat(bonusInput.value) || 0;
-  netInput.value = (remaining + bonus).toFixed(2);
+  netInput.value = (remaining + bonus).toFixed(3);
   validateDeferAmount(employeeId); // re-check: the net this defer is based on may have just changed
 }
 
@@ -5143,7 +5154,7 @@ function validateDeferAmount(employeeId) {
     defer = net;
     showToast('لا يمكن ترحيل أكثر من صافي المرتب — تم ضبط القيمة للحد الأقصى المتاح', 'error');
   }
-  if (parseFloat(deferInput.value || 0) !== defer) deferInput.value = defer.toFixed(2);
+  if (parseFloat(deferInput.value || 0) !== defer) deferInput.value = defer.toFixed(3);
 
   if (noteEl) {
     noteEl.textContent = defer > 0 ? `المصروف الآن: ${fmt(net - defer)} دينار` : '';
@@ -5173,7 +5184,7 @@ function recalcSalaryRow(employeeId) {
 
   const remainingInput = document.getElementById('sal-remaining-' + employeeId);
   if (remainingInput) {
-    remainingInput.value = calc.net.toFixed(2);
+    remainingInput.value = calc.net.toFixed(3);
     remainingInput.style.color = calc.wasNegative ? 'var(--danger)' : '';
     remainingInput.style.fontWeight = calc.wasNegative ? '700' : '';
   }
@@ -5399,7 +5410,7 @@ function deferPortionOfRecord(record, deferAmount, deferNote) {
   const nextDate = new Date(y, m, 1); // m is already "next month" index (0-based next since m is 1-based current)
   const nextMonthDateStr = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-01`;
 
-  record.amount = parseFloat((parseFloat(record.amount) - deferAmount).toFixed(2));
+  record.amount = parseFloat((parseFloat(record.amount) - deferAmount).toFixed(3));
 
   const deferredRecord = {
     id: Date.now() + Math.random(),
@@ -5423,7 +5434,7 @@ function openDeferModal(recordId) {
 
   document.getElementById('defer-modal-info').textContent =
     `${record.employeeName} — ${record.type} بتاريخ ${fmtDate(record.date)}`;
-  document.getElementById('defer-current-amount').value = parseFloat(record.amount).toFixed(2);
+  document.getElementById('defer-current-amount').value = parseFloat(record.amount).toFixed(3);
   document.getElementById('defer-amount-input').value = '';
   document.getElementById('defer-amount-input').max = record.amount;
 
@@ -6993,7 +7004,7 @@ function checkWeeklyBackupReminder() {
       try { localStorage.setItem('accounting_backup_nag_date', today_); } catch(e) {}
 
       const message = lastBackupStr
-        ? `📦 مرّ أكثر من أسبوع منذ آخر نسخة احتياطية (${new Date(lastBackupStr).toLocaleDateString('en-GB')}). يُنصح بتنزيل نسخة جديدة من الإعدادات.`
+        ? `📦 مرّ أكثر من أسبوع منذ آخر نسخة احتياطية (${fmtDateObj(new Date(lastBackupStr))}). يُنصح بتنزيل نسخة جديدة من الإعدادات.`
         : '📦 لم تُنشئ أي نسخة احتياطية بعد. يُنصح بتنزيل نسخة من ⚙️ الإعدادات لحماية بياناتك.';
 
       setTimeout(() => {
@@ -7110,7 +7121,7 @@ function tryRestoreSession() {
 }
 
 // ============ INIT ============
-document.getElementById('today-date').textContent = new Date().toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+document.getElementById('today-date').textContent = fmtDate(today());
 
 async function initApp() {
   setSyncStatus(isOfflineMode() ? 'offline' : 'saving');
