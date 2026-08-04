@@ -1754,6 +1754,29 @@
       </div>
     </div>
 
+    <div class="card">
+      <div class="card-title">💰 تسديد دفعة إجمالية لمورد</div>
+      <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;line-height:1.7;">
+        اختر مورداً وأدخل مبلغاً إجمالياً — يُوزَّع تلقائياً على فواتيره الآجلة المتبقية، بادئاً بالأقرب استحقاقاً، حتى ينتهي المبلغ.
+      </p>
+      <div class="form-row">
+        <div class="form-group">
+          <label>المورد</label>
+          <select id="bulk-pay-supplier" onchange="updateBulkPayPreview()"></select>
+        </div>
+        <div class="form-group">
+          <label>إجمالي الدين الحالي</label>
+          <input type="text" id="bulk-pay-total-debt" readonly style="background:#f8f8f8;">
+        </div>
+        <div class="form-group">
+          <label>المبلغ الإجمالي المدفوع</label>
+          <input type="number" id="bulk-pay-amount" step="0.001" placeholder="0.00" oninput="updateBulkPayPreview()">
+        </div>
+      </div>
+      <div id="bulk-pay-preview"></div>
+      <button class="btn btn-success" style="margin-top:14px;" id="bulk-pay-confirm-btn" onclick="confirmBulkPay()" disabled>✔ تسديد الدفعة الإجمالية</button>
+    </div>
+
     <!-- Pay debt modal -->
     <div id="pay-debt-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200;display:flex;align-items:center;justify-content:center;">
       <div style="background:#fff;border-radius:12px;padding:24px;min-width:320px;">
@@ -3370,7 +3393,7 @@ function showPage(name, el) {
   }
   if (name === 'employees') renderEmployeesTable();
   if (name === 'salaries') { setDefaultSalPayDate(); setToday('adv-date'); setToday('ded-date'); renderSalPayTable(); renderAdvEmpSelect(); renderSalHistory(); }
-  if (name === 'suppliers') renderSuppliersTable();
+  if (name === 'suppliers') { renderSuppliersTable(); populateBulkPaySupplierSelect(); }
   if (name === 'supplierstatement') { populateSupplierStatementSelect(); generateSupplierStatement(); }
   if (name === 'settings') { renderMethodsTable(); loadOwnerPhoneField(); loadAppLinkField(); renderUsersTable(); populateEmployeeLinkSelect(); renderExpCatsTable(); renderPurchasersTable(); renderSuppliersManagementTable(); renderStorageModeUI(); updateInstallUI(); }
   if (name === 'mysalary') renderMySalaryPage();
@@ -5748,6 +5771,132 @@ function closePayDebt() {
   document.getElementById('pay-debt-modal').style.display = 'none';
 }
 
+// ============ BULK/AGGREGATE SUPPLIER PAYMENT (تسديد دفعة إجمالية) ============
+// يسمح بإدخال مبلغ إجمالي واحد لمورد، ويوزَّع تلقائياً على فواتيره الآجلة
+// المتبقية بالترتيب — الأقرب استحقاقاً أولاً (نفس ترتيب عرض جدول "الديون
+// المستحقة" أصلاً)، فيسدد كل فاتورة بالكامل قبل الانتقال للتالية، حتى ينتهي
+// المبلغ. يستخدم نفس آلية "payments" المستخدمة في الدفع الفردي، فتبقى بيانات
+// "آخر دفعة" في كشف حساب المورد صحيحة تلقائياً بدون أي تعديل إضافي.
+
+function populateBulkPaySupplierSelect() {
+  const sel = document.getElementById('bulk-pay-supplier');
+  if (!sel) return;
+  const current = sel.value;
+  const supplierNames = [...new Set(
+    data.purchases.filter(p => p.payType === 'credit' && parseFloat(p.remaining) > 0).map(p => p.supplier)
+  )];
+  sel.innerHTML = supplierNames.length
+    ? '<option value="">-- اختر مورداً --</option>' + supplierNames.map(n => `<option value="${n}">${n}</option>`).join('')
+    : '<option value="">-- لا يوجد موردون لهم ديون حالياً --</option>';
+  if (supplierNames.includes(current)) sel.value = current;
+  updateBulkPayPreview();
+}
+
+function getSupplierOutstandingInvoicesSorted(supplierName) {
+  return data.purchases
+    .filter(p => p.payType === 'credit' && p.supplier === supplierName && parseFloat(p.remaining) > 0)
+    .sort((a, b) => a.dueDate.localeCompare(b.dueDate) || a.date.localeCompare(b.date));
+}
+
+function updateBulkPayPreview() {
+  const supplierName = document.getElementById('bulk-pay-supplier').value;
+  const amount = parseFloat(document.getElementById('bulk-pay-amount').value) || 0;
+  const previewEl = document.getElementById('bulk-pay-preview');
+  const confirmBtn = document.getElementById('bulk-pay-confirm-btn');
+  const totalDebtEl = document.getElementById('bulk-pay-total-debt');
+
+  if (!supplierName) {
+    totalDebtEl.value = '';
+    previewEl.innerHTML = '';
+    confirmBtn.disabled = true;
+    return;
+  }
+
+  const invoices = getSupplierOutstandingInvoicesSorted(supplierName);
+  const totalDebt = invoices.reduce((s, p) => s + parseFloat(p.remaining), 0);
+  totalDebtEl.value = fmt(totalDebt) + ' دينار';
+
+  if (!amount || amount <= 0) {
+    previewEl.innerHTML = '';
+    confirmBtn.disabled = true;
+    return;
+  }
+
+  if (amount > totalDebt) {
+    previewEl.innerHTML = `<div style="color:var(--danger);font-size:13px;margin-top:10px;">⚠️ المبلغ أكبر من إجمالي الدين (${fmt(totalDebt)} دينار) — يرجى تعديله.</div>`;
+    confirmBtn.disabled = true;
+    return;
+  }
+
+  let remainingToApply = amount;
+  const rows = invoices.map(inv => {
+    const invRemaining = parseFloat(inv.remaining);
+    const applied = Math.min(invRemaining, Math.max(remainingToApply, 0));
+    remainingToApply -= applied;
+    const afterVal = invRemaining - applied;
+    const statusNote = applied <= 0
+      ? '<span style="color:var(--text-muted);">لا يتأثر</span>'
+      : afterVal <= 0
+        ? '<span style="color:var(--success);font-weight:700;">يُسدَّد بالكامل ✅</span>'
+        : '<span style="color:var(--accent);font-weight:700;">تسديد جزئي</span>';
+    return `
+      <tr>
+        <td>${inv.invoice || '-'}</td>
+        <td>${fmtDate(inv.dueDate)}</td>
+        <td>${fmt(invRemaining)} دينار</td>
+        <td style="font-weight:700;color:var(--success);">${applied > 0 ? fmt(applied) + ' دينار' : '-'}</td>
+        <td style="font-weight:700;">${fmt(afterVal)} دينار</td>
+        <td>${statusNote}</td>
+      </tr>`;
+  }).join('');
+
+  previewEl.innerHTML = `
+    <div style="margin-top:14px;font-size:12.5px;font-weight:700;color:var(--text-muted);">📋 معاينة التوزيع على الفواتير (الأقرب استحقاقاً أولاً):</div>
+    <div class="table-wrap" style="margin-top:6px;">
+      <table>
+        <thead><tr><th>الفاتورة</th><th>الاستحقاق</th><th>المتبقي حالياً</th><th>سيُسدَّد</th><th>المتبقي بعد</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+  confirmBtn.disabled = false;
+}
+
+async function confirmBulkPay() {
+  const supplierName = document.getElementById('bulk-pay-supplier').value;
+  const amount = parseFloat(document.getElementById('bulk-pay-amount').value);
+  if (!supplierName) { showToast('يرجى اختيار مورد', 'error'); return; }
+
+  const invoices = getSupplierOutstandingInvoicesSorted(supplierName);
+  const totalDebt = invoices.reduce((s, p) => s + parseFloat(p.remaining), 0);
+  if (!amount || amount <= 0 || amount > totalDebt) { showToast('مبلغ غير صحيح', 'error'); return; }
+
+  if (!(await confirmOperation('تسديد دفعة إجمالية للمورد', '💰'))) return;
+
+  let remainingToApply = amount;
+  const paymentDate = today();
+  invoices.forEach(inv => {
+    if (remainingToApply <= 0) return;
+    const invRemaining = parseFloat(inv.remaining);
+    const applied = Math.min(invRemaining, remainingToApply);
+    if (applied <= 0) return;
+    inv.paid = parseFloat(inv.paid) + applied;
+    inv.remaining = invRemaining - applied;
+    if (!inv.payments) inv.payments = [];
+    inv.payments.push({ id: Date.now() + Math.random(), date: paymentDate, amount: applied });
+    remainingToApply -= applied;
+  });
+
+  saveData();
+  document.getElementById('bulk-pay-amount').value = '';
+  document.getElementById('bulk-pay-preview').innerHTML = '';
+  document.getElementById('bulk-pay-confirm-btn').disabled = true;
+  renderSuppliersTable();
+  populateBulkPaySupplierSelect();
+  if (document.getElementById('page-supplierstatement')?.classList.contains('active')) generateSupplierStatement();
+  showToast('تم تسديد الدفعة الإجمالية بنجاح وتوزيعها على الفواتير', 'success');
+}
+
 // ============ SUPPLIER STATEMENT (كشف حساب الموردين) ============
 function populateSupplierStatementSelect() {
   const sel = document.getElementById('stmt-supplier-select');
@@ -7162,7 +7311,7 @@ async function initApp() {
           shoppinglist: () => { renderShoppingList(); populatePurchaserSelect(); },
           employees: renderEmployeesTable,
           salaries: () => { renderSalPayTable(); renderSalHistory(); },
-          suppliers: renderSuppliersTable,
+          suppliers: () => { renderSuppliersTable(); populateBulkPaySupplierSelect(); },
           supplierstatement: () => { populateSupplierStatementSelect(); generateSupplierStatement(); },
           settings: () => { renderMethodsTable(); loadOwnerPhoneField(); loadAppLinkField(); renderUsersTable(); populateEmployeeLinkSelect(); renderExpCatsTable(); renderPurchasersTable(); renderSuppliersManagementTable(); renderStorageModeUI(); },
           mysalary: renderMySalaryPage
@@ -7211,6 +7360,7 @@ function wireAllFormNavigation() {
   enableEnterNavigation(['new-expcat-name'], addExpenseCategory);
   enableEnterNavigation(['new-purchaser-name', 'new-purchaser-phone'], addPurchaser);
   enableEnterNavigation(['new-supplier-name', 'new-supplier-phone', 'new-supplier-note'], addSupplier);
+  enableEnterNavigation(['bulk-pay-supplier', 'bulk-pay-amount'], confirmBulkPay);
   enableEnterNavigation(['sl-item-name', 'sl-item-qty', 'sl-item-note'], addShoppingItem);
 }
 
