@@ -1377,6 +1377,46 @@
     </div>
   </div>
 
+  <!-- Edit purchase modal -->
+  <div id="edit-purchase-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto;">
+    <div style="background:#fff;border-radius:12px;padding:24px;max-width:400px;width:100%;max-height:92vh;overflow-y:auto;">
+      <div style="font-weight:700;font-size:16px;margin-bottom:16px;color:var(--primary);">✏️ تعديل بيانات الفاتورة</div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label>التاريخ</label>
+        <input type="date" id="edit-pur-date-val">
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label>رقم الفاتورة</label>
+        <input type="text" id="edit-pur-invoice-val" placeholder="رقم الفاتورة">
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label>المبلغ (دينار)</label>
+        <input type="number" id="edit-pur-amount-val" step="0.001">
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label>طريقة الدفع</label>
+        <select id="edit-pur-method-val"></select>
+      </div>
+      <div class="form-group hidden" id="edit-pur-supplier-wrap" style="margin-bottom:12px;">
+        <label>اسم المورد</label>
+        <select id="edit-pur-supplier-val"></select>
+      </div>
+      <div class="form-group hidden" id="edit-pur-due-wrap" style="margin-bottom:12px;">
+        <label>تاريخ الاستحقاق</label>
+        <input type="date" id="edit-pur-due-val">
+      </div>
+      <div class="form-group" style="margin-bottom:8px;">
+        <label>ملاحظات</label>
+        <input type="text" id="edit-pur-note-val" placeholder="اختياري">
+      </div>
+      <div id="edit-pur-paid-note" style="font-size:11.5px;color:var(--text-muted);margin-bottom:14px;line-height:1.6;"></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" onclick="saveEditPurchase()">حفظ</button>
+        <button class="btn" style="background:var(--bg);" onclick="closeEditPurchase()">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== SHOPPING / MISSING ITEMS LIST ===== -->
   <div id="page-shoppinglist" class="page">
     <div class="page-header">
@@ -4193,7 +4233,7 @@ function renderPurchaseTable() {
         <td>${r.supplier || '-'}</td>
         <td>${r.dueDate ? fmtDate(r.dueDate) : '-'}</td>
         <td>${statusBadge}</td>
-        <td><button class="btn-icon-delete" onclick="deletePurchase(${r.id})" title="حذف">🗑️</button></td>
+        <td><button class="btn-icon-edit" onclick="openEditPurchase(${r.id})" title="تعديل">✏️</button><button class="btn-icon-delete" onclick="deletePurchase(${r.id})" title="حذف">🗑️</button></td>
       </tr>`;
     }
 
@@ -4203,11 +4243,91 @@ function renderPurchaseTable() {
       <td style="font-weight:600;color:var(--primary)">${r.invoice || '-'}</td>
       <td>${fmtDate(r.date)}</td>
       <td style="font-weight:700;color:var(--accent)">${fmt(r.amount)} دينار</td>
-      <td><button class="btn-icon-delete" onclick="deletePurchase(${r.id})" title="حذف">🗑️</button></td>
+      <td><button class="btn-icon-edit" onclick="openEditPurchase(${r.id})" title="تعديل">✏️</button><button class="btn-icon-delete" onclick="deletePurchase(${r.id})" title="حذف">🗑️</button></td>
     </tr>`;
   }).join('') || `<tr><td colspan="${colCount}" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد بيانات</td></tr>`;
 
   document.getElementById('purchase-total').textContent = rows.length ? `الإجمالي: ${fmt(total)} دينار` : '';
+}
+
+let editingPurchaseId = null;
+function openEditPurchase(id) {
+  const r = data.purchases.find(x => x.id === id);
+  if (!r) return;
+  editingPurchaseId = id;
+
+  document.getElementById('edit-pur-date-val').value = r.date;
+  document.getElementById('edit-pur-invoice-val').value = r.invoice || '';
+  document.getElementById('edit-pur-amount-val').value = r.amount;
+  document.getElementById('edit-pur-method-val').innerHTML = data.paymentMethods.map(m => `<option value="${m}">${m}</option>`).join('');
+  document.getElementById('edit-pur-method-val').value = r.method;
+  document.getElementById('edit-pur-note-val').value = r.note || '';
+
+  const supplierWrap = document.getElementById('edit-pur-supplier-wrap');
+  const dueWrap = document.getElementById('edit-pur-due-wrap');
+  const paidNote = document.getElementById('edit-pur-paid-note');
+
+  if (r.payType === 'credit') {
+    supplierWrap.classList.remove('hidden');
+    dueWrap.classList.remove('hidden');
+    document.getElementById('edit-pur-supplier-val').innerHTML = data.suppliers.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+    document.getElementById('edit-pur-supplier-val').value = r.supplier;
+    document.getElementById('edit-pur-due-val').value = r.dueDate;
+    paidNote.textContent = parseFloat(r.paid) > 0
+      ? `💳 سُدِّد منها بالفعل ${fmt(r.paid)} دينار — لا يمكن إدخال مبلغ إجمالي أقل من هذا.`
+      : '';
+  } else {
+    supplierWrap.classList.add('hidden');
+    dueWrap.classList.add('hidden');
+    paidNote.textContent = '';
+  }
+
+  document.getElementById('edit-purchase-modal').classList.remove('hidden');
+  document.getElementById('edit-purchase-modal').style.display = 'flex';
+}
+
+async function saveEditPurchase() {
+  const date = document.getElementById('edit-pur-date-val').value;
+  const invoice = document.getElementById('edit-pur-invoice-val').value.trim();
+  const amount = parseFloat(document.getElementById('edit-pur-amount-val').value);
+  const method = document.getElementById('edit-pur-method-val').value;
+  const note = document.getElementById('edit-pur-note-val').value.trim();
+  if (!date || !amount || amount <= 0) { showToast('يرجى إدخال التاريخ والمبلغ', 'error'); return; }
+
+  const r = data.purchases.find(x => x.id === editingPurchaseId);
+  if (!r) { showToast('تعذّر العثور على السجل', 'error'); closeEditPurchase(); renderPurchaseTable(); return; }
+
+  let supplier = r.supplier, dueDate = r.dueDate;
+  if (r.payType === 'credit') {
+    supplier = document.getElementById('edit-pur-supplier-val').value;
+    dueDate = document.getElementById('edit-pur-due-val').value;
+    if (!supplier || !dueDate) { showToast('يرجى إدخال اسم المورد وتاريخ الاستحقاق', 'error'); return; }
+    const paidSoFar = parseFloat(r.paid);
+    if (amount < paidSoFar) { showToast(`لا يمكن أن يكون المبلغ أقل من المسدد فعلياً (${fmt(paidSoFar)} دينار)`, 'error'); return; }
+  }
+
+  if (!(await confirmOperation('تعديل بيانات الفاتورة', '✏️'))) return;
+
+  r.date = date; r.invoice = invoice; r.amount = amount; r.method = method; r.note = note;
+  if (r.payType === 'credit') {
+    r.supplier = supplier;
+    r.dueDate = dueDate;
+    r.remaining = amount - parseFloat(r.paid);
+  } else {
+    r.paid = amount;
+    r.remaining = 0;
+  }
+
+  saveData();
+  renderPurchaseTable();
+  if (document.getElementById('page-suppliers')?.classList.contains('active')) { renderSuppliersTable(); populateSuppliersFilterSelect(); populateBulkPaySupplierSelect(); }
+  if (document.getElementById('page-supplierstatement')?.classList.contains('active')) generateSupplierStatement();
+  closeEditPurchase();
+  showToast('تم تحديث بيانات الفاتورة بنجاح', 'success');
+}
+
+function closeEditPurchase() {
+  document.getElementById('edit-purchase-modal').style.display = 'none';
 }
 
 async function deletePurchase(id) {
