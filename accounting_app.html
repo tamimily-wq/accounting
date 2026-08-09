@@ -379,6 +379,23 @@
     line-height: 1;
   }
   .btn-icon-delete:hover { opacity: 0.85; }
+  .btn-icon-edit {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    width: 26px;
+    height: 26px;
+    font-size: 11px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    line-height: 1;
+    margin-left: 4px;
+  }
+  .btn-icon-edit:hover { opacity: 0.85; }
   .btn-icon-success {
     background: var(--success);
     color: #fff;
@@ -1046,6 +1063,33 @@
     </div>
   </div>
 
+  <!-- Edit income modal -->
+  <div id="edit-income-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto;">
+    <div style="background:#fff;border-radius:12px;padding:24px;max-width:380px;width:100%;max-height:92vh;overflow-y:auto;">
+      <div style="font-weight:700;font-size:16px;margin-bottom:16px;color:var(--primary);">✏️ تعديل بيانات الإيراد</div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label>التاريخ</label>
+        <input type="date" id="edit-income-date-val">
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label>طريقة الدفع</label>
+        <select id="edit-income-method-val"></select>
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label>المبلغ (دينار)</label>
+        <input type="number" id="edit-income-amount-val" step="0.001">
+      </div>
+      <div class="form-group" style="margin-bottom:18px;">
+        <label>ملاحظات</label>
+        <input type="text" id="edit-income-note-val" placeholder="اختياري">
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" onclick="saveEditIncome()">حفظ</button>
+        <button class="btn" style="background:var(--bg);" onclick="closeEditIncome()">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== EXPENSES ===== -->
   <div id="page-expenses" class="page">
     <div class="page-header">
@@ -1202,6 +1246,37 @@
         </div>
         <div id="ql-log-total" style="text-align:left;padding-top:12px;font-weight:700;color:var(--danger);font-size:15px;"></div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Quick List entry modal (dual-mode: expense or advance) -->
+  <div id="edit-ql-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto;">
+    <div style="background:#fff;border-radius:12px;padding:24px;max-width:380px;width:100%;max-height:92vh;overflow-y:auto;">
+      <div style="font-weight:700;font-size:16px;margin-bottom:16px;color:var(--primary);">✏️ تعديل بيانات السجل</div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label>التاريخ</label>
+        <input type="date" id="edit-ql-date-val">
+      </div>
+      <div class="form-group hidden" id="edit-ql-desc-wrap" style="margin-bottom:12px;">
+        <label>البند</label>
+        <select id="edit-ql-desc-val"></select>
+      </div>
+      <div class="form-group hidden" id="edit-ql-emp-wrap" style="margin-bottom:12px;">
+        <label>الموظف</label>
+        <select id="edit-ql-emp-val"></select>
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label>المبلغ (دينار)</label>
+        <input type="number" id="edit-ql-amount-val" step="0.001">
+      </div>
+      <div class="form-group" style="margin-bottom:18px;">
+        <label>ملاحظة</label>
+        <input type="text" id="edit-ql-note-val" placeholder="اختياري">
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" onclick="saveEditQuickListEntry()">حفظ</button>
+        <button class="btn" style="background:var(--bg);" onclick="closeEditQuickListEntry()">إلغاء</button>
       </div>
     </div>
   </div>
@@ -1437,6 +1512,18 @@
         </table>
       </div>
       </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📢 إرسال رسالة لجميع الموظفين</div>
+      <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;line-height:1.7;">
+        اكتب الرسالة مرة واحدة، ثم اضغط 📲/✉️ بجانب كل موظف لإرساله. المتصفح يمنع فتح عدة نوافذ إرسال دفعة واحدة تلقائياً، لذلك الإرسال يكون بضغطة لكل موظف على حدة (اسم المستلم يبقى نفسه في كل مرة).
+      </p>
+      <div class="form-group" style="margin-bottom:14px;">
+        <label>نص الرسالة</label>
+        <textarea id="broadcast-message" rows="4" placeholder="اكتب رسالتك هنا..." style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:'Tajawal',sans-serif;font-size:14px;resize:vertical;"></textarea>
+      </div>
+      <div id="broadcast-employee-list"></div>
     </div>
 
     <!-- Edit salary modal -->
@@ -3391,7 +3478,7 @@ function showPage(name, el) {
     const noPurchasersNote = document.getElementById('no-purchasers-note');
     if (noPurchasersNote) noPurchasersNote.classList.toggle('hidden', data.purchasers.length > 0);
   }
-  if (name === 'employees') renderEmployeesTable();
+  if (name === 'employees') { renderEmployeesTable(); renderBroadcastEmployeeList(); }
   if (name === 'salaries') { setDefaultSalPayDate(); setToday('adv-date'); setToday('ded-date'); renderSalPayTable(); renderAdvEmpSelect(); renderSalHistory(); }
   if (name === 'suppliers') { renderSuppliersTable(); populateBulkPaySupplierSelect(); }
   if (name === 'supplierstatement') { populateSupplierStatementSelect(); generateSupplierStatement(); }
@@ -3627,7 +3714,7 @@ function renderIncomeTable() {
         <td><span class="badge badge-info">${r.method || 'كاش'}</span></td>
         <td style="font-weight:700;color:var(--success)">${fmt(r.amount)} دينار</td>
         <td style="color:var(--text-muted)">${r.note || '-'}</td>
-        <td><button class="btn btn-danger btn-sm" onclick="deleteIncome(${r.id})">حذف</button></td>
+        <td><button class="btn btn-primary btn-sm" onclick="openEditIncome(${r.id})">تعديل</button> <button class="btn btn-danger btn-sm" onclick="deleteIncome(${r.id})">حذف</button></td>
       </tr>`;
     }
     return `
@@ -3635,11 +3722,51 @@ function renderIncomeTable() {
       <td>${i + 1}</td>
       <td>${fmtDate(r.date)}</td>
       <td style="font-weight:700;color:var(--success)">${fmt(r.amount)} دينار</td>
-      <td><button class="btn btn-danger btn-sm" onclick="deleteIncome(${r.id})">حذف</button></td>
+      <td><button class="btn btn-primary btn-sm" onclick="openEditIncome(${r.id})">تعديل</button> <button class="btn btn-danger btn-sm" onclick="deleteIncome(${r.id})">حذف</button></td>
     </tr>`;
   }).join('') || `<tr><td colspan="${colCount}" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد بيانات</td></tr>`;
 
   document.getElementById('income-total').textContent = rows.length ? `الإجمالي: ${fmt(total)} دينار` : '';
+}
+
+let editingIncomeId = null;
+function openEditIncome(id) {
+  const r = data.income.find(x => x.id === id);
+  if (!r) return;
+  editingIncomeId = id;
+  document.getElementById('edit-income-date-val').value = r.date;
+  document.getElementById('edit-income-method-val').innerHTML = data.paymentMethods.map(m => `<option value="${m}">${m}</option>`).join('');
+  document.getElementById('edit-income-method-val').value = r.method;
+  document.getElementById('edit-income-amount-val').value = r.amount;
+  document.getElementById('edit-income-note-val').value = r.note || '';
+  document.getElementById('edit-income-modal').classList.remove('hidden');
+  document.getElementById('edit-income-modal').style.display = 'flex';
+}
+
+async function saveEditIncome() {
+  const date = document.getElementById('edit-income-date-val').value;
+  const method = document.getElementById('edit-income-method-val').value;
+  const amount = parseFloat(document.getElementById('edit-income-amount-val').value);
+  const note = document.getElementById('edit-income-note-val').value.trim();
+
+  if (!date || !method || !amount || amount <= 0) { showToast('يرجى إدخال جميع الحقول', 'error'); return; }
+
+  const r = data.income.find(x => x.id === editingIncomeId);
+  if (!r) { showToast('تعذّر العثور على السجل', 'error'); closeEditIncome(); renderIncomeTable(); return; }
+
+  if (!(await confirmOperation('تعديل بيانات الإيراد', '✏️'))) return;
+
+  r.date = date; r.method = method; r.amount = amount; r.note = note;
+  saveData();
+  renderIncomeTable();
+  renderIncomeTodaySummary();
+  updateDashboard();
+  closeEditIncome();
+  showToast('تم تحديث بيانات الإيراد بنجاح', 'success');
+}
+
+function closeEditIncome() {
+  document.getElementById('edit-income-modal').style.display = 'none';
 }
 
 async function deleteIncome(id) {
@@ -3832,6 +3959,7 @@ function renderQuickListLog() {
       ? '<span class="badge badge-warning">مصروف</span>'
       : '<span class="badge badge-info">سلفة</span>';
     const deleteBtn = `<button class="btn-icon-delete" onclick="deleteQuickListEntry('${r.kind}', ${r.id})" title="حذف">🗑️</button>`;
+    const editBtn = `<button class="btn-icon-edit" onclick="openEditQuickListEntry('${r.kind}', ${r.id})" title="تعديل">✏️</button>`;
 
     if (isFull) {
       return `
@@ -3842,7 +3970,7 @@ function renderQuickListLog() {
         <td style="font-weight:600">${r.label}</td>
         <td style="font-weight:700;color:var(--danger)">${fmt(r.amount)} دينار</td>
         <td style="color:var(--text-muted)">${r.note || '-'}</td>
-        <td>${deleteBtn}</td>
+        <td>${editBtn}${deleteBtn}</td>
       </tr>`;
     }
     return `
@@ -3851,7 +3979,7 @@ function renderQuickListLog() {
       <td>${fmtDate(r.date)}</td>
       <td>${typeBadge}</td>
       <td style="font-weight:700;color:var(--danger)">${fmt(r.amount)} دينار</td>
-      <td>${deleteBtn}</td>
+      <td>${editBtn}${deleteBtn}</td>
     </tr>`;
   }).join('') || `<tr><td colspan="${colCount}" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد سجلات في القائمة السريعة بعد</td></tr>`;
 
@@ -3877,6 +4005,80 @@ async function deleteQuickListEntry(kind, id) {
   saveData();
   renderQuickListLog();
   showToast('تم حذف السجل بنجاح', 'success');
+}
+
+// تعديل سجل من القائمة السريعة — النافذة نفسها تتكيّف حسب النوع: تُظهر
+// "البند" لسجل المصروف، أو "الموظف" لسجل السلفة، وتُخفي الحقل الآخر.
+let editingQlKind = null;
+let editingQlId = null;
+
+function openEditQuickListEntry(kind, id) {
+  editingQlKind = kind;
+  editingQlId = id;
+  const descWrap = document.getElementById('edit-ql-desc-wrap');
+  const empWrap = document.getElementById('edit-ql-emp-wrap');
+
+  if (kind === 'expense') {
+    const r = data.expenses.find(x => x.id === id);
+    if (!r) return;
+    descWrap.classList.remove('hidden');
+    empWrap.classList.add('hidden');
+    document.getElementById('edit-ql-desc-val').innerHTML = data.expenseCategories.map(c => `<option value="${c}">${c}</option>`).join('');
+    document.getElementById('edit-ql-desc-val').value = r.desc;
+    document.getElementById('edit-ql-date-val').value = r.date;
+    document.getElementById('edit-ql-amount-val').value = r.amount;
+    document.getElementById('edit-ql-note-val').value = r.note || '';
+  } else {
+    const r = data.salaryHistory.find(x => x.id === id);
+    if (!r) return;
+    descWrap.classList.add('hidden');
+    empWrap.classList.remove('hidden');
+    document.getElementById('edit-ql-emp-val').innerHTML = data.employees.filter(e => e.status !== 'terminated').map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+    document.getElementById('edit-ql-emp-val').value = r.employeeId;
+    document.getElementById('edit-ql-date-val').value = r.date;
+    document.getElementById('edit-ql-amount-val').value = r.amount;
+    document.getElementById('edit-ql-note-val').value = r.note || '';
+  }
+
+  document.getElementById('edit-ql-modal').classList.remove('hidden');
+  document.getElementById('edit-ql-modal').style.display = 'flex';
+}
+
+async function saveEditQuickListEntry() {
+  const date = document.getElementById('edit-ql-date-val').value;
+  const amount = parseFloat(document.getElementById('edit-ql-amount-val').value);
+  const note = document.getElementById('edit-ql-note-val').value.trim();
+  if (!date || !amount || amount <= 0) { showToast('يرجى إدخال جميع الحقول', 'error'); return; }
+
+  if (editingQlKind === 'expense') {
+    const desc = document.getElementById('edit-ql-desc-val').value;
+    if (!desc) { showToast('يرجى اختيار البند', 'error'); return; }
+    const r = data.expenses.find(x => x.id === editingQlId);
+    if (!r) { showToast('تعذّر العثور على السجل', 'error'); closeEditQuickListEntry(); renderQuickListLog(); return; }
+    if (!(await confirmOperation('تعديل بيانات المصروف', '✏️'))) return;
+    r.date = date; r.desc = desc; r.amount = amount; r.note = note;
+  } else {
+    const empId = parseInt(document.getElementById('edit-ql-emp-val').value);
+    if (!empId) { showToast('يرجى اختيار الموظف', 'error'); return; }
+    const emp = data.employees.find(e => e.id === empId);
+    if (isDateBeforeEmployeeStart(emp, date)) { showToast(EMPLOYEE_START_DATE_ERROR, 'error'); return; }
+    const r = data.salaryHistory.find(x => x.id === editingQlId);
+    if (!r) { showToast('تعذّر العثور على السجل', 'error'); closeEditQuickListEntry(); renderQuickListLog(); return; }
+    if (!(await confirmOperation('تعديل بيانات السلفة', '✏️'))) return;
+    r.date = date; r.employeeId = empId; r.employeeName = emp.name; r.amount = amount; r.note = note;
+  }
+
+  saveData();
+  renderQuickListLog();
+  renderExpenseTable();
+  renderSalHistory();
+  updateDashboard();
+  closeEditQuickListEntry();
+  showToast('تم تحديث البيانات بنجاح', 'success');
+}
+
+function closeEditQuickListEntry() {
+  document.getElementById('edit-ql-modal').style.display = 'none';
 }
 
 // ============ PURCHASES ============
@@ -4224,6 +4426,43 @@ function toggleEmployeesView() {
   const btn = document.getElementById('emp-view-toggle-btn');
   if (btn) btn.textContent = employeesViewMode === 'compact' ? '📄 عرض كل التفاصيل' : '📋 عرض مختصر';
   renderEmployeesTable();
+}
+
+// ============ BROADCAST MESSAGE TO ALL EMPLOYEES (📢 إرسال رسالة لجميع الموظفين) ============
+// المتصفحات تمنع فتح أكثر من نافذة/رابط واتساب تلقائياً دفعة واحدة (تُحسب
+// إلا الأولى محاولة نوافذ منبثقة)، فما فيه "إرسال جماعي حقيقي" بضغطة واحدة
+// عبر wa.me/sms: بشكل موثوق. لذلك التصميم هنا: تُكتب الرسالة مرة واحدة،
+// وتبقى محفوظة أثناء الضغط على 📲/✉️ لكل موظف بدوره — كل ضغطة إرسال حقيقي
+// ومضمون (نفس آلية sendWhatsApp/sendSMS المستخدمة بكل مكان بالتطبيق).
+function renderBroadcastEmployeeList() {
+  const listEl = document.getElementById('broadcast-employee-list');
+  if (!listEl) return;
+  const activeEmps = data.employees.filter(e => e.status !== 'terminated');
+  if (!activeEmps.length) {
+    listEl.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">لا يوجد موظفون نشطون بعد.</p>';
+    return;
+  }
+  listEl.innerHTML = activeEmps.map(e => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">
+      <div>
+        <div style="font-weight:600;">${e.name}</div>
+        <div style="font-size:11px;color:var(--text-muted);">${e.phone || 'لا يوجد رقم هاتف مسجّل'}</div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-sm" style="background:#25D366;color:#fff;" onclick="sendBroadcastToEmployee(${e.id},'whatsapp')">📲</button>
+        <button class="btn btn-sm" style="background:#566573;color:#fff;" onclick="sendBroadcastToEmployee(${e.id},'sms')">✉️</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function sendBroadcastToEmployee(empId, channel) {
+  const message = document.getElementById('broadcast-message').value.trim();
+  if (!message) { showToast('يرجى كتابة نص الرسالة أولاً', 'error'); return; }
+  const emp = data.employees.find(e => e.id === empId);
+  if (!emp) return;
+  if (channel === 'whatsapp') sendWhatsApp(emp.phone, message);
+  else sendSMS(emp.phone, message);
 }
 
 function renderEmployeesTable() {
@@ -7309,7 +7548,7 @@ async function initApp() {
           quicklist: () => { populateQuickListSelects(); renderQuickListLog(); },
           purchases: () => { populateSupplierSelect(); renderPurchaseTable(); },
           shoppinglist: () => { renderShoppingList(); populatePurchaserSelect(); },
-          employees: renderEmployeesTable,
+          employees: () => { renderEmployeesTable(); renderBroadcastEmployeeList(); },
           salaries: () => { renderSalPayTable(); renderSalHistory(); },
           suppliers: () => { renderSuppliersTable(); populateBulkPaySupplierSelect(); },
           supplierstatement: () => { populateSupplierStatementSelect(); generateSupplierStatement(); },
