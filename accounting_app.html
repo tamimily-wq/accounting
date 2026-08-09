@@ -1826,6 +1826,17 @@
         <span>📋 الديون المستحقة</span>
         <button class="btn btn-sm" id="suppliers-view-toggle-btn" style="background:var(--bg);color:var(--primary);border:1px solid var(--border);" onclick="toggleSuppliersView()">📄 عرض كل التفاصيل</button>
       </div>
+      <div class="filter-row">
+        <div class="form-group">
+          <label>المورد</label>
+          <select id="suppliers-filter-name" onchange="renderSuppliersTable()">
+            <option value="">-- كل الموردين --</option>
+          </select>
+        </div>
+        <div class="form-group"><label>من</label><input type="date" id="suppliers-filter-from" onchange="renderSuppliersTable()"></div>
+        <div class="form-group"><label>إلى</label><input type="date" id="suppliers-filter-to" onchange="renderSuppliersTable()"></div>
+        <button class="btn btn-sm" style="background:var(--bg);color:var(--text-muted)" onclick="clearSuppliersFilter()">مسح</button>
+      </div>
       <div class="print-export-btns">
         <button class="btn" onclick="exportReportPrint('suppliers-export-area','ديون الموردين')">🖨️ طباعة / PDF</button>
         <button class="btn" onclick="exportReportImage('suppliers-export-area','ديون_الموردين')">🖼️ صورة</button>
@@ -3480,7 +3491,7 @@ function showPage(name, el) {
   }
   if (name === 'employees') { renderEmployeesTable(); renderBroadcastEmployeeList(); }
   if (name === 'salaries') { setDefaultSalPayDate(); setToday('adv-date'); setToday('ded-date'); renderSalPayTable(); renderAdvEmpSelect(); renderSalHistory(); }
-  if (name === 'suppliers') { renderSuppliersTable(); populateBulkPaySupplierSelect(); }
+  if (name === 'suppliers') { renderSuppliersTable(); populateBulkPaySupplierSelect(); populateSuppliersFilterSelect(); }
   if (name === 'supplierstatement') { populateSupplierStatementSelect(); generateSupplierStatement(); }
   if (name === 'settings') { renderMethodsTable(); loadOwnerPhoneField(); loadAppLinkField(); renderUsersTable(); populateEmployeeLinkSelect(); renderExpCatsTable(); renderPurchasersTable(); renderSuppliersManagementTable(); renderStorageModeUI(); updateInstallUI(); }
   if (name === 'mysalary') renderMySalaryPage();
@@ -5934,8 +5945,31 @@ function toggleSuppliersView() {
   renderSuppliersTable();
 }
 
+function populateSuppliersFilterSelect() {
+  const sel = document.getElementById('suppliers-filter-name');
+  if (!sel) return;
+  const current = sel.value;
+  const supplierNames = [...new Set(data.purchases.filter(p => p.payType === 'credit').map(p => p.supplier))];
+  sel.innerHTML = '<option value="">-- كل الموردين --</option>' + supplierNames.map(n => `<option value="${n}">${n}</option>`).join('');
+  if (supplierNames.includes(current)) sel.value = current;
+}
+
+function clearSuppliersFilter() {
+  document.getElementById('suppliers-filter-name').value = '';
+  document.getElementById('suppliers-filter-from').value = '';
+  document.getElementById('suppliers-filter-to').value = '';
+  renderSuppliersTable();
+}
+
 function renderSuppliersTable() {
-  const debts = data.purchases.filter(p => p.payType === 'credit');
+  const nameFilter = document.getElementById('suppliers-filter-name')?.value || '';
+  const fromFilter = document.getElementById('suppliers-filter-from')?.value || '';
+  const toFilter = document.getElementById('suppliers-filter-to')?.value || '';
+
+  let debts = data.purchases.filter(p => p.payType === 'credit');
+  if (nameFilter) debts = debts.filter(p => p.supplier === nameFilter);
+  if (fromFilter) debts = debts.filter(p => p.date >= fromFilter);
+  if (toFilter) debts = debts.filter(p => p.date <= toFilter);
 
   const isFull = suppliersViewMode === 'full';
   const tableEl = document.getElementById('suppliers-table');
@@ -7550,7 +7584,7 @@ async function initApp() {
           shoppinglist: () => { renderShoppingList(); populatePurchaserSelect(); },
           employees: () => { renderEmployeesTable(); renderBroadcastEmployeeList(); },
           salaries: () => { renderSalPayTable(); renderSalHistory(); },
-          suppliers: () => { renderSuppliersTable(); populateBulkPaySupplierSelect(); },
+          suppliers: () => { renderSuppliersTable(); populateBulkPaySupplierSelect(); populateSuppliersFilterSelect(); },
           supplierstatement: () => { populateSupplierStatementSelect(); generateSupplierStatement(); },
           settings: () => { renderMethodsTable(); loadOwnerPhoneField(); loadAppLinkField(); renderUsersTable(); populateEmployeeLinkSelect(); renderExpCatsTable(); renderPurchasersTable(); renderSuppliersManagementTable(); renderStorageModeUI(); },
           mysalary: renderMySalaryPage
