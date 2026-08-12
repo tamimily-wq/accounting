@@ -2056,6 +2056,7 @@
       <button class="tab" onclick="showReportTab('purchase-rep')">المشتريات</button>
       <button class="tab" onclick="showReportTab('salary-rep')">الرواتب</button>
       <button class="tab" onclick="showReportTab('payroll-statement')">كشف حساب الرواتب</button>
+      <button class="tab" onclick="showReportTab('user-activity')">👤 نشاط المستخدمين</button>
     </div>
 
     <!-- P&L -->
@@ -2211,6 +2212,33 @@
           </table>
         </div>
         <div id="payroll-stmt-totals" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);font-size:14px;font-weight:700;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- USER ACTIVITY (نشاط المستخدمين): من متصل الآن + تقرير الدخول اليومي -->
+    <div id="rep-tab-user-activity" class="hidden">
+      <div class="card">
+        <div class="card-title">🟢 المستخدمون المتصلون الآن</div>
+        <p style="font-size:11.5px;color:var(--text-muted);margin-bottom:12px;line-height:1.6;">
+          يُعتبر المستخدم "متصلاً" إذا كان يستخدم التطبيق فعلياً خلال آخر 3 دقائق.
+        </p>
+        <div id="online-users-list"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📊 تقرير الدخول اليومي</div>
+        <div class="filter-row">
+          <div class="form-group">
+            <label>التاريخ</label>
+            <input type="date" id="login-report-date" onchange="renderLoginReport()">
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>المستخدم</th><th>الدور</th><th>عدد مرات الدخول</th><th>آخر دخول</th></tr></thead>
+            <tbody id="login-report-tbody"></tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -3467,6 +3495,8 @@ function sanitizeData() {
   if (!data.employees) data.employees = [];
   if (!data.salaryHistory) data.salaryHistory = [];
   if (!data.shoppingList) data.shoppingList = [];
+  if (!data.userPresence) data.userPresence = {};
+  if (!data.loginHistory) data.loginHistory = [];
   if (data.purchaserPhone === undefined) data.purchaserPhone = '';
   if (!data.purchasers) data.purchasers = [];
   // One-time migration: if an old single purchaser phone exists but the new
@@ -6544,15 +6574,19 @@ function sendSupplierStatementSupplierSMS() {
 
 // ============ REPORTS ============
 function showReportTab(tab) {
-  ['pl', 'income-rep', 'purchase-rep', 'salary-rep', 'payroll-statement'].forEach(t => {
+  ['pl', 'income-rep', 'purchase-rep', 'salary-rep', 'payroll-statement', 'user-activity'].forEach(t => {
     document.getElementById('rep-tab-' + t).classList.toggle('hidden', t !== tab);
   });
   document.querySelectorAll('#page-reports .tab').forEach((el, i) => {
-    el.classList.toggle('active', ['pl', 'income-rep', 'purchase-rep', 'salary-rep', 'payroll-statement'][i] === tab);
+    el.classList.toggle('active', ['pl', 'income-rep', 'purchase-rep', 'salary-rep', 'payroll-statement', 'user-activity'][i] === tab);
   });
   if (tab === 'payroll-statement') {
     const monthInput = document.getElementById('payroll-stmt-month');
     if (monthInput && !monthInput.value) monthInput.value = today().slice(0, 7);
+  }
+  if (tab === 'user-activity') {
+    renderOnlineUsersList();
+    renderLoginReport();
   }
 }
 
@@ -7529,6 +7563,90 @@ function getSendablePassword(user) {
   return null;
 }
 
+// ============ USER ACTIVITY: PRESENCE (متصل الآن) + تقرير الدخول اليومي ============
+// Firestore ما فيه نظام "Presence" جاهز مثل Realtime Database، فبنيناه يدوياً:
+// كل مستخدم مسجّل دخول يحدّث "آخر ظهور" له كل دقيقتين (heartbeat) بالإضافة
+// لتحديث فوري عند الدخول، ونعتبره "متصل الآن" إذا كان آخر تحديث خلال آخر 3
+// دقائق. منفصل تماماً عن سجل الدخول (loginHistory) المستخدم لتقرير "كم مرة
+// دخل اليوم" — ذاك يُسجَّل مرة واحدة فقط عند كل تسجيل دخول فعلي بكلمة مرور
+// (مو عند استرجاع الجلسة بعد تحديث الصفحة)، بينما الحضور heartbeat مستمر.
+let presenceHeartbeatInterval = null;
+
+function startPresenceHeartbeat() {
+  updateMyPresence();
+  if (presenceHeartbeatInterval) clearInterval(presenceHeartbeatInterval);
+  presenceHeartbeatInterval = setInterval(updateMyPresence, 2 * 60 * 1000);
+}
+
+function stopPresenceHeartbeat() {
+  if (presenceHeartbeatInterval) { clearInterval(presenceHeartbeatInterval); presenceHeartbeatInterval = null; }
+}
+
+function updateMyPresence() {
+  if (!currentUser) return;
+  if (!data.userPresence) data.userPresence = {};
+  data.userPresence[currentUser.id] = new Date().toISOString();
+  saveData();
+}
+
+function isUserOnline(userId) {
+  if (!data.userPresence || !data.userPresence[userId]) return false;
+  const lastSeen = new Date(data.userPresence[userId]).getTime();
+  return (Date.now() - lastSeen) < (3 * 60 * 1000);
+}
+
+function fmtTime(isoString) {
+  const d = new Date(isoString);
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${hh}:${mm}`;
+}
+
+function renderOnlineUsersList() {
+  const listEl = document.getElementById('online-users-list');
+  if (!listEl) return;
+  const onlineUsers = data.users.filter(u => isUserOnline(u.id));
+  if (!onlineUsers.length) {
+    listEl.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">لا يوجد مستخدمون متصلون حالياً.</p>';
+    return;
+  }
+  listEl.innerHTML = onlineUsers.map(u => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+      <div style="font-weight:600;">🟢 ${u.username}</div>
+      <div style="font-size:11px;color:var(--text-muted);">${ROLE_LABELS[u.role] || u.role}</div>
+    </div>
+  `).join('');
+}
+
+function renderLoginReport() {
+  const dateInput = document.getElementById('login-report-date');
+  if (!dateInput) return;
+  if (!dateInput.value) dateInput.value = today();
+  const dateVal = dateInput.value;
+
+  const dayEntries = (data.loginHistory || []).filter(r => r.timestamp.slice(0, 10) === dateVal);
+  const countByUser = {};
+  dayEntries.forEach(r => {
+    if (!countByUser[r.userId]) countByUser[r.userId] = { username: r.username, count: 0, last: r.timestamp };
+    countByUser[r.userId].count++;
+    if (r.timestamp > countByUser[r.userId].last) countByUser[r.userId].last = r.timestamp;
+  });
+
+  const rows = Object.keys(countByUser).map(uid => {
+    const u = data.users.find(x => x.id === parseInt(uid));
+    const info = countByUser[uid];
+    return `<tr>
+      <td style="font-weight:600">${info.username}</td>
+      <td>${u ? (ROLE_LABELS[u.role] || u.role) : '-'}</td>
+      <td style="font-weight:700;color:var(--primary)">${info.count}</td>
+      <td>${fmtTime(info.last)}</td>
+    </tr>`;
+  });
+
+  document.getElementById('login-report-tbody').innerHTML = rows.join('') ||
+    '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;">لا يوجد دخول مسجّل بهذا التاريخ</td></tr>';
+}
+
 async function handleLogin() {
   const username = document.getElementById('login-username').value.trim();
   const password = document.getElementById('login-password').value;
@@ -7556,8 +7674,14 @@ async function handleLogin() {
   // ترقية صامتة لكلمة المرور من نص صريح إلى مُجزّأة أول دخول ناجح بعد التحديث
   if (!user.passwordHash) {
     await setUserPassword(user, password);
-    saveData();
   }
+
+  // سجل الدخول (لتقرير "كم مرة دخل المستخدم اليوم") + أول تحديث "متصل الآن"
+  if (!data.loginHistory) data.loginHistory = [];
+  data.loginHistory.push({ id: Date.now(), userId: user.id, username: user.username, timestamp: new Date().toISOString() });
+  if (!data.userPresence) data.userPresence = {};
+  data.userPresence[user.id] = new Date().toISOString();
+  saveData();
 
   currentUser = user;
   try { sessionStorage.setItem('current_user_id', String(user.id)); } catch(e) {}
@@ -7565,6 +7689,11 @@ async function handleLogin() {
 }
 
 function handleLogout() {
+  if (currentUser && data.userPresence && data.userPresence[currentUser.id]) {
+    delete data.userPresence[currentUser.id];
+    saveData();
+  }
+  stopPresenceHeartbeat();
   currentUser = null;
   try { sessionStorage.removeItem('current_user_id'); } catch(e) {}
   document.getElementById('app-shell').classList.add('hidden');
@@ -7580,6 +7709,7 @@ function showApp() {
   document.getElementById('current-user-role').textContent = ROLE_LABELS[currentUser.role] || '';
   applyRoleVisibility();
   wireAllFormNavigation();
+  startPresenceHeartbeat();
 
   // Land on an appropriate default page for the role
   if (currentUser.role === 'employee') {
@@ -7773,7 +7903,8 @@ async function initApp() {
           suppliers: () => { renderSuppliersTable(); populateBulkPaySupplierSelect(); populateSuppliersFilterSelect(); },
           supplierstatement: () => { populateSupplierStatementSelect(); generateSupplierStatement(); },
           settings: () => { renderMethodsTable(); loadOwnerPhoneField(); loadAppLinkField(); renderUsersTable(); populateEmployeeLinkSelect(); renderExpCatsTable(); renderPurchasersTable(); renderSuppliersManagementTable(); renderStorageModeUI(); },
-          mysalary: renderMySalaryPage
+          mysalary: renderMySalaryPage,
+          reports: renderOnlineUsersList
         };
         if (fns[id]) fns[id]();
         populateIncomeMethodSelect();
