@@ -2005,6 +2005,11 @@
           <span>📋 كل فواتير هذا المورد</span>
           <button class="btn btn-sm" id="stmt-view-toggle-btn" style="background:var(--bg);color:var(--primary);border:1px solid var(--border);" onclick="toggleSupplierStatementView()">📄 عرض كل التفاصيل</button>
         </div>
+        <div class="filter-row">
+          <div class="form-group"><label>من</label><input type="date" id="stmt-filter-from" onchange="generateSupplierStatement()"></div>
+          <div class="form-group"><label>إلى</label><input type="date" id="stmt-filter-to" onchange="generateSupplierStatement()"></div>
+          <button class="btn btn-sm" style="background:var(--bg);color:var(--text-muted)" onclick="clearSupplierStatementFilter()">مسح</button>
+        </div>
         <div class="print-export-btns">
           <button class="btn" onclick="exportReportPrint('stmt-export-area','كشف حساب المورد')">🖨️ طباعة / PDF</button>
           <button class="btn" onclick="exportReportImage('stmt-export-area','كشف_حساب_المورد')">🖼️ صورة</button>
@@ -2039,6 +2044,17 @@
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn" style="background:#25D366;color:#fff;" onclick="sendSupplierStatementSupplierWhatsApp()">📲 واتساب للمورد</button>
           <button class="btn" style="background:#566573;color:#fff;" onclick="sendSupplierStatementSupplierSMS()">✉️ SMS للمورد</button>
+        </div>
+      </div>
+
+      <div class="card" id="stmt-period-send-card">
+        <div class="card-title">📤 إشعار سداد لفترة محددة</div>
+        <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:16px;line-height:1.7;">
+          حدّد "من - إلى" أعلاه بالجدول، ثم أرسل للمورد ملخصاً خاصاً بهذه الفترة تحديداً: آخر سداد خلالها، وإجمالي ما سُدِّد خلالها — مع الرصيد المتبقي الحالي.
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn" style="background:#25D366;color:#fff;" onclick="sendSupplierPeriodStatementWhatsApp()">📲 واتساب للمورد (حسب الفترة)</button>
+          <button class="btn" style="background:#566573;color:#fff;" onclick="sendSupplierPeriodStatementSMS()">✉️ SMS للمورد (حسب الفترة)</button>
         </div>
       </div>
     </div>
@@ -6440,6 +6456,15 @@ function generateSupplierStatement() {
   remainingEl.textContent = fmt(totalRemaining);
   remainingEl.style.color = totalRemaining > 0 ? 'var(--danger)' : 'var(--success)';
 
+  // فلتر "من - إلى" يخص جدول الفواتير أدناه فقط — البطاقات أعلاه (إجمالي
+  // الفواتير/المسدد/المتبقي) تبقى دائماً إجمالي كل الفترة، بنفس مبدأ فلتر
+  // "راتبي وسلفي" سابقاً، حتى لا تصير "إجمالي" مضللة.
+  const fromFilter = document.getElementById('stmt-filter-from')?.value || '';
+  const toFilter = document.getElementById('stmt-filter-to')?.value || '';
+  let filteredInvoices = invoices;
+  if (fromFilter) filteredInvoices = filteredInvoices.filter(p => p.date >= fromFilter);
+  if (toFilter) filteredInvoices = filteredInvoices.filter(p => p.date <= toFilter);
+
   const isFull = supplierStatementViewMode === 'full';
   const tableEl = document.getElementById('stmt-table');
   if (tableEl) tableEl.classList.toggle('table-compact-font', isFull);
@@ -6452,7 +6477,7 @@ function generateSupplierStatement() {
   const colCount = isFull ? 8 : 4;
   const tbody = document.getElementById('stmt-tbody');
 
-  tbody.innerHTML = invoices.map((p, i) => {
+  tbody.innerHTML = filteredInvoices.map((p, i) => {
     const isPaid = p.remaining <= 0;
     const isOverdue = !isPaid && p.dueDate < today();
     const statusBadge = isPaid ? '<span class="badge badge-success">مسدد</span>' : isOverdue ? '<span class="badge badge-danger">متأخر</span>' : '<span class="badge badge-warning">معلق</span>';
@@ -6477,7 +6502,7 @@ function generateSupplierStatement() {
       <td style="font-weight:700;color:${isPaid ? 'var(--success)' : 'var(--danger)'}">${fmt(p.remaining)} دينار</td>
       <td>${statusBadge}</td>
     </tr>`;
-  }).join('') || `<tr><td colspan="${colCount}" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد فواتير آجلة لهذا المورد</td></tr>`;
+  }).join('') || `<tr><td colspan="${colCount}" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد فواتير آجلة${(fromFilter || toFilter) ? ' خلال هذه الفترة' : ' لهذا المورد'}</td></tr>`;
 
   // Supplier info card
   const supplier = data.suppliers.find(s => s.name === name);
@@ -6496,6 +6521,12 @@ function generateSupplierStatement() {
   } else {
     infoBox.innerHTML = '';
   }
+}
+
+function clearSupplierStatementFilter() {
+  document.getElementById('stmt-filter-from').value = '';
+  document.getElementById('stmt-filter-to').value = '';
+  generateSupplierStatement();
 }
 
 // ============ SUPPLIER STATEMENT: آخر دفعة + ملخص واتساب/SMS جاهز ============
@@ -6570,6 +6601,66 @@ function sendSupplierStatementSupplierSMS() {
   const supplier = data.suppliers.find(s => s.name === name);
   if (!supplier || !supplier.phone) { showToast('لا يوجد رقم هاتف مسجل لهذا المورد، أضفه من ⚙️ الإعدادات ← قائمة الموردين', 'error'); return; }
   sendSMS(supplier.phone, buildSupplierStatementMessageForSupplier(name, getSupplierStatementSummary(name)));
+}
+
+// ============ SUPPLIER STATEMENT: إشعار سداد لفترة محددة (من - إلى) ============
+// بعكس getSupplierStatementSummary (إجمالي كل الفترة)، هذا يحسب خصيصاً لما
+// حصل *خلال* الفترة المختارة: كل دفعة سُجّلت بتاريخ داخل الفترة (من أي فاتورة
+// لهذا المورد)، آخرها، ومجموعها — بينما "المتبقي" يبقى الرصيد الحالي الكلي،
+// لأنه مفهوم "لحظي" لا يُجزَّأ بفترة ماضية بدون تعقيد لا داعي له.
+function getSupplierPeriodPaymentSummary(supplierName, from, to) {
+  const invoices = data.purchases.filter(p => p.payType === 'credit' && p.supplier === supplierName);
+
+  let periodPayments = [];
+  invoices.forEach(inv => {
+    (inv.payments || []).forEach(pay => {
+      if (pay.date >= from && pay.date <= to) periodPayments.push(pay);
+    });
+  });
+  const totalPaidInPeriod = periodPayments.reduce((s, p) => s + parseFloat(p.amount), 0);
+
+  let lastPaymentInPeriod = null;
+  periodPayments.forEach(pay => {
+    if (!lastPaymentInPeriod || pay.date.localeCompare(lastPaymentInPeriod.date) > 0 ||
+        (pay.date === lastPaymentInPeriod.date && pay.id > lastPaymentInPeriod.id)) {
+      lastPaymentInPeriod = pay;
+    }
+  });
+
+  const totalRemaining = invoices.reduce((s, p) => s + parseFloat(p.remaining), 0);
+
+  return { totalPaidInPeriod, lastPaymentInPeriod, totalRemaining };
+}
+
+function buildSupplierPeriodStatementMessage(supplierName, from, to, summary) {
+  const lastLine = summary.lastPaymentInPeriod
+    ? `💳 آخر سداد خلال الفترة: ${fmt(summary.lastPaymentInPeriod.amount)} دينار بتاريخ ${fmtDate(summary.lastPaymentInPeriod.date)}`
+    : `💳 لا توجد أي دفعة مسجّلة خلال هذه الفترة`;
+  return `مرحباً ${supplierName} 🌹\n\nملخص السداد للفترة من ${fmtDate(from)} إلى ${fmtDate(to)}:\n\n${lastLine}\n✅ إجمالي المسدد خلال الفترة: ${fmt(summary.totalPaidInPeriod)} دينار\n⚠️ الرصيد المتبقي الحالي (إجمالي): ${fmt(summary.totalRemaining)} دينار\n\nشاكرين لكم حسن تعاملكم معنا 🙏\nمع خالص الشكر والتقدير 🌟`;
+}
+
+function sendSupplierPeriodStatementWhatsApp() {
+  const name = getSelectedStatementSupplierName();
+  if (!name) { showToast('يرجى اختيار مورد أولاً', 'error'); return; }
+  const from = document.getElementById('stmt-filter-from').value;
+  const to = document.getElementById('stmt-filter-to').value;
+  if (!from || !to) { showToast('يرجى تحديد الفترة (من - إلى) بجدول الفواتير أعلاه أولاً', 'error'); return; }
+  const supplier = data.suppliers.find(s => s.name === name);
+  if (!supplier || !supplier.phone) { showToast('لا يوجد رقم هاتف مسجل لهذا المورد، أضفه من ⚙️ الإعدادات ← قائمة الموردين', 'error'); return; }
+  const summary = getSupplierPeriodPaymentSummary(name, from, to);
+  sendWhatsApp(supplier.phone, buildSupplierPeriodStatementMessage(name, from, to, summary));
+}
+
+function sendSupplierPeriodStatementSMS() {
+  const name = getSelectedStatementSupplierName();
+  if (!name) { showToast('يرجى اختيار مورد أولاً', 'error'); return; }
+  const from = document.getElementById('stmt-filter-from').value;
+  const to = document.getElementById('stmt-filter-to').value;
+  if (!from || !to) { showToast('يرجى تحديد الفترة (من - إلى) بجدول الفواتير أعلاه أولاً', 'error'); return; }
+  const supplier = data.suppliers.find(s => s.name === name);
+  if (!supplier || !supplier.phone) { showToast('لا يوجد رقم هاتف مسجل لهذا المورد، أضفه من ⚙️ الإعدادات ← قائمة الموردين', 'error'); return; }
+  const summary = getSupplierPeriodPaymentSummary(name, from, to);
+  sendSMS(supplier.phone, buildSupplierPeriodStatementMessage(name, from, to, summary));
 }
 
 // ============ REPORTS ============
