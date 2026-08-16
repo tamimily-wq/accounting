@@ -3462,9 +3462,33 @@ function setSyncStatus(status) {
   else if (status === 'error')  { text = '❌ خطأ في الحفظ';   color = '#E74C3C'; }
   else if (status === 'synced') { text = '🔁 متزامن';          color = '#2ECC71'; }
   else if (status === 'offline'){ text = '💾 وضع محلي (بدون إنترنت)'; color = '#F39C12'; }
+  else if (status === 'network-down'){ text = '📡 لا يوجد اتصال بالإنترنت'; color = '#E74C3C'; }
   if (el)  { el.textContent = text;  el.style.color = color; }
   if (el2) { el2.textContent = text; el2.style.color = color; }
 }
+
+// ============ NETWORK CONNECTIVITY (تنبيه انقطاع/رجوع الشبكة) ============
+// يعتمد على navigator.onLine وأحداث online/offline القياسية بالمتصفح — تكتشف
+// فقدان/عودة اتصال الجهاز بالشبكة فعلياً (غير "الوضع المحلي" اليدوي أعلاه،
+// وهو اختيار الأدمن المتعمّد بغض النظر عن حالة الشبكة). عند عودة الاتصال، إذا
+// كان التطبيق بالوضع الأونلاين، نُطلق حفظاً فورياً لضمان مزامنة أي تعديل تراكم
+// أثناء الانقطاع بدل انتظار الحفظ التلقائي التالي.
+function checkNetworkStatus() {
+  if (!navigator.onLine && !isOfflineMode()) setSyncStatus('network-down');
+}
+
+window.addEventListener('offline', () => {
+  showToast('📡 انقطع الاتصال بالإنترنت — أي تعديل الآن يُحفظ محلياً وسيُزامن تلقائياً عند عودة الاتصال', 'error', 6000);
+  if (currentUser && !isOfflineMode()) setSyncStatus('network-down');
+});
+
+window.addEventListener('online', () => {
+  showToast('✅ عاد الاتصال بالإنترنت', 'success', 4000);
+  if (currentUser && !isOfflineMode()) {
+    setSyncStatus('saving');
+    saveData();
+  }
+});
 
 async function saveData() {
   if (isOfflineMode()) {
@@ -7801,6 +7825,7 @@ function showApp() {
   applyRoleVisibility();
   wireAllFormNavigation();
   startPresenceHeartbeat();
+  checkNetworkStatus();
 
   // Land on an appropriate default page for the role
   if (currentUser.role === 'employee') {
