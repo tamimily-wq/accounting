@@ -3757,8 +3757,7 @@ async function addIncome() {
   const note = document.getElementById('income-note').value;
   if (!date || !amount || amount <= 0) { showToast('يرجى إدخال التاريخ والمبلغ', 'error'); return; }
   if (!(await confirmOperation('تسجيل الإيراد', '💰'))) return;
-  data.income.push({ id: Date.now(), date, method, amount, note });
-  saveData();
+  await addRecordSafely('income', { id: Date.now(), date, method, amount, note });
   document.getElementById('income-amount').value = '';
   document.getElementById('income-note').value = '';
   renderIncomeTable();
@@ -3938,8 +3937,7 @@ async function addExpense() {
   const amount = parseFloat(document.getElementById('exp-amount').value);
   if (!date || !desc || !amount || amount <= 0) { showToast('يرجى إدخال جميع الحقول', 'error'); return; }
   if (!(await confirmOperation('تسجيل المصروف', '📤'))) return;
-  data.expenses.push({ id: Date.now(), date, desc, amount });
-  saveData();
+  await addRecordSafely('expenses', { id: Date.now(), date, desc, amount });
   document.getElementById('exp-desc').value = '';
   document.getElementById('exp-amount').value = '';
   renderExpenseTable();
@@ -4059,8 +4057,7 @@ async function addQuickListExpense() {
   const note = document.getElementById('ql-exp-note').value.trim();
   if (!date || !desc || !amount || amount <= 0) { showToast('يرجى إدخال جميع الحقول', 'error'); return; }
   if (!(await confirmOperation('تسجيل المصروف من الدرج', '💵'))) return;
-  data.expenses.push({ id: Date.now(), date, desc, amount, note, viaQuickList: true });
-  saveData();
+  await addRecordSafely('expenses', { id: Date.now(), date, desc, amount, note, viaQuickList: true });
   document.getElementById('ql-exp-amount').value = '';
   document.getElementById('ql-exp-note').value = '';
   showToast('تم تسجيل المصروف من الدرج بنجاح', 'success');
@@ -4081,9 +4078,8 @@ async function addQuickListAdvance() {
     id: Date.now(), date, employeeId: empId,
     employeeName: emp.name, type: 'سلفة', amount, note, viaQuickList: true
   };
-  data.salaryHistory.push(record);
+  await addRecordSafely('salaryHistory', record);
   lastAdvanceRecord = record;
-  saveData();
   document.getElementById('ql-adv-amount').value = '';
   document.getElementById('ql-adv-note').value = '';
   showToast('تم صرف السلفة من الدرج بنجاح', 'success');
@@ -4293,14 +4289,13 @@ async function addPurchase() {
 
   if (!(await confirmOperation('تسجيل فاتورة الشراء', '🛒'))) return;
 
-  data.purchases.push({
+  await addRecordSafely('purchases', {
     id: Date.now(), date, invoice, amount, payType: currentPayType, method,
     supplier, dueDate, note,
     paid: currentPayType === 'cash' ? amount : 0,
     remaining: currentPayType === 'cash' ? 0 : amount,
     payments: []
   });
-  saveData();
   document.getElementById('pur-invoice').value = '';
   document.getElementById('pur-amount').value = '';
   document.getElementById('pur-note').value = '';
@@ -7000,6 +6995,33 @@ async function refreshCriticalListsFromCloud() {
   } catch (e) {
     console.warn('Could not refresh critical lists from cloud before save:', e);
   }
+}
+
+// ============ SAFE RECORD ADDITION (يمنع فقدان بيانات بسبب نسخة محلية قديمة) ============
+// السبب الجذري لمشكلة "البيانات تختفي بعد إدخالها أكثر من مرة": لو جهاز أو
+// جلسة صار عندها نسخة محلية قديمة من data (مثلاً التطبيق كان بخلفية المتصفح/
+// الهاتف فترة، أو انقطع الاستماع اللحظي مؤقتاً)، وأضاف المستخدم سجلاً جديداً
+// بالاعتماد عليها، الحفظ العادي كان يكتب المستند كاملاً فوق السحابة — فيضيع
+// أي سجل أضافه جهاز أو جلسة أخرى بهذه الأثناء (مثلاً كاشير عالإيراد وأدمن
+// عالفواتير بنفس الوقت). هذه الدالة تجيب أحدث نسخة من *المصفوفة المحدّدة
+// تحديداً* من السحابة أولاً (نافذة قِصر ما يمكن)، تضيف السجل الجديد إليها،
+// ثم تحفظ — فما يضيع أي سجل موجود فعلاً بالسحابة حتى لو كانت النسخة المحلية
+// قديمة. لا تلمس أي حقل آخر بـ data (نفس مبدأ refreshCriticalListsFromCloud
+// أعلاه، بس لمصفوفات العمليات اليومية بدل القوائم المشتركة).
+async function addRecordSafely(arrayName, newRecord) {
+  if (!isOfflineMode() && window._fbLoadData) {
+    setSyncStatus('saving');
+    try {
+      const remote = await window._fbLoadData();
+      if (remote && Array.isArray(remote[arrayName])) {
+        data[arrayName] = remote[arrayName];
+      }
+    } catch (e) {
+      console.warn('Could not refresh ' + arrayName + ' before add — proceeding with local copy:', e);
+    }
+  }
+  data[arrayName].push(newRecord);
+  await saveData();
 }
 
 async function addPaymentMethod() {
