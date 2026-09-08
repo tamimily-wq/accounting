@@ -1024,7 +1024,16 @@
     </div>
 
     <div class="card">
-      <div class="card-title">📊 ملخص اليوم حسب طريقة الدفع</div>
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+        <span id="income-summary-title">📊 ملخص اليوم حسب طريقة الدفع</span>
+      </div>
+      <div class="filter-row" style="margin-bottom:14px;">
+        <div class="form-group">
+          <label>تاريخ الملخص</label>
+          <input type="date" id="income-summary-date" onchange="renderIncomeTodaySummary()">
+        </div>
+        <button class="btn btn-sm" style="background:var(--bg);color:var(--text-muted);align-self:flex-end;" onclick="resetIncomeSummaryToToday()">📅 اليوم</button>
+      </div>
       <div id="income-today-summary" class="report-grid" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;"></div>
       <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn" style="background:#25D366;color:#fff;" onclick="sendIncomeSummaryWhatsApp()">📲 إرسال لصاحب العمل (واتساب)</button>
@@ -3643,7 +3652,7 @@ function showPage(name, el) {
   if (target) target.classList.add('active');
 
   if (name === 'dashboard') updateDashboard();
-  if (name === 'income') { setToday('income-date'); setToday('income-filter-from'); setToday('income-filter-to'); renderIncomeTable(); renderIncomeTodaySummary(); }
+  if (name === 'income') { setToday('income-date'); setToday('income-filter-from'); setToday('income-filter-to'); setToday('income-summary-date'); renderIncomeTable(); renderIncomeTodaySummary(); }
   if (name === 'expenses') { setToday('exp-date'); populateExpenseCategorySelect(); renderExpenseTable(); }
   if (name === 'quicklist') { setToday('ql-exp-date'); setToday('ql-adv-date'); populateQuickListSelects(); renderQuickListLog(); }
   if (name === 'purchases') { setToday('pur-date'); populateSupplierSelect(); renderPurchaseTable(); }
@@ -3832,17 +3841,42 @@ function populateExpenseCategorySelect() {
   if (data.expenseCategories.includes(current)) sel.value = current;
 }
 
+function getIncomeSummaryDate() {
+  const el = document.getElementById('income-summary-date');
+  if (el && el.value) return el.value;
+  return today();
+}
+
+function resetIncomeSummaryToToday() {
+  const el = document.getElementById('income-summary-date');
+  if (el) el.value = today();
+  renderIncomeTodaySummary();
+}
+
 function renderIncomeTodaySummary() {
-  const t = today();
-  const todayRows = data.income.filter(r => r.date === t);
+  // تأكد أن حقل التاريخ موجود ومضبوط على اليوم إذا كان فارغاً
+  const dateEl = document.getElementById('income-summary-date');
+  if (dateEl && !dateEl.value) dateEl.value = today();
+
+  const t = getIncomeSummaryDate();
+  const isToday = (t === today());
+  const dayRows = data.income.filter(r => r.date === t);
   const box = document.getElementById('income-today-summary');
   if (!box) return;
 
-  // مصروفات وسلف "من الدرج" لليوم — تُخصم من الكاش لتوضيح الصافي لصاحب العمل
-  const qlExpenseToday = data.expenses
+  // تحديث عنوان البطاقة حسب التاريخ المختار
+  const titleEl = document.getElementById('income-summary-title');
+  if (titleEl) {
+    titleEl.textContent = isToday
+      ? '📊 ملخص اليوم حسب طريقة الدفع'
+      : '📊 ملخص يوم ' + fmtDate(t) + ' حسب طريقة الدفع';
+  }
+
+  // مصروفات وسلف "من الدرج" لنفس تاريخ الملخص — تُخصم من الكاش
+  const qlExpense = data.expenses
     .filter(e => e.viaQuickList && e.date === t)
     .reduce((s, e) => s + parseFloat(e.amount), 0);
-  const qlAdvanceToday = data.salaryHistory
+  const qlAdvance = data.salaryHistory
     .filter(r => r.viaQuickList && r.type === 'سلفة' && r.date === t)
     .reduce((s, r) => s + parseFloat(r.amount), 0);
 
@@ -3850,7 +3884,7 @@ function renderIncomeTodaySummary() {
   let cashGross = 0;
 
   const methodCards = data.paymentMethods.map(m => {
-    const sum = todayRows.filter(r => r.method === m).reduce((s, r) => s + parseFloat(r.amount), 0);
+    const sum = dayRows.filter(r => r.method === m).reduce((s, r) => s + parseFloat(r.amount), 0);
     total += sum;
     const isCash = (m === 'كاش' || m.toLowerCase() === 'cash');
     if (isCash) cashGross = sum;
@@ -3860,27 +3894,25 @@ function renderIncomeTodaySummary() {
     </div>`;
   }).join('');
 
-  // كرت مصروف من الدرج
   const expenseCard = `<div style="text-align:center;padding:12px;background:#FDEDEC;border-radius:10px;border:1px solid #F5B7B1;">
       <div style="font-size:11px;color:var(--danger);font-weight:600;margin-bottom:6px;">💵 مصروف من الدرج</div>
-      <div style="font-size:17px;font-weight:800;color:var(--danger);">− ${fmt(qlExpenseToday)}</div>
+      <div style="font-size:17px;font-weight:800;color:var(--danger);">− ${fmt(qlExpense)}</div>
     </div>`;
 
-  // كرت سلفة من الدرج (إن وُجدت)
   const advanceCard = `<div style="text-align:center;padding:12px;background:#FEF9E7;border-radius:10px;border:1px solid #F9E79F;">
       <div style="font-size:11px;color:#9A7D0A;font-weight:600;margin-bottom:6px;">💸 سلفة من الدرج</div>
-      <div style="font-size:17px;font-weight:800;color:#9A7D0A;">− ${fmt(qlAdvanceToday)}</div>
+      <div style="font-size:17px;font-weight:800;color:#9A7D0A;">− ${fmt(qlAdvance)}</div>
     </div>`;
 
-  // صافي الكاش = كاش − مصروف درج − سلفة درج
-  const netCash = cashGross - qlExpenseToday - qlAdvanceToday;
+  const netCash = cashGross - qlExpense - qlAdvance;
   const netCashCard = `<div style="text-align:center;padding:12px;background:#E8F8F5;border-radius:10px;border:1px solid #A3E4D7;">
       <div style="font-size:11px;color:var(--success);font-weight:600;margin-bottom:6px;">💵 صافي الكاش (بعد خصم الدرج)</div>
       <div style="font-size:17px;font-weight:800;color:var(--success);">${fmt(netCash)}</div>
     </div>`;
 
+  const totalLabel = isToday ? 'إجمالي إيراد اليوم' : 'إجمالي إيراد ' + fmtDate(t);
   const totalCard = `<div style="text-align:center;padding:12px;background:var(--primary);border-radius:10px;grid-column:1/-1;margin-top:4px;">
-      <div style="font-size:11px;color:rgba(255,255,255,0.8);font-weight:600;margin-bottom:4px;">إجمالي إيراد اليوم</div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.8);font-weight:600;margin-bottom:4px;">${totalLabel}</div>
       <div style="font-size:20px;font-weight:800;color:#fff;">${fmt(total)} دينار</div>
     </div>`;
 
@@ -6945,35 +6977,40 @@ function generatePayrollStatement() {
 }
 
 function buildIncomeSummaryMessage() {
-  const t = today();
-  const todayRows = data.income.filter(r => r.date === t);
+  const t = getIncomeSummaryDate();
+  const isToday = (t === today());
+  const dayRows = data.income.filter(r => r.date === t);
 
-  const qlExpenseToday = data.expenses
+  const qlExpense = data.expenses
     .filter(e => e.viaQuickList && e.date === t)
     .reduce((s, e) => s + parseFloat(e.amount), 0);
-  const qlAdvanceToday = data.salaryHistory
+  const qlAdvance = data.salaryHistory
     .filter(r => r.viaQuickList && r.type === 'سلفة' && r.date === t)
     .reduce((s, r) => s + parseFloat(r.amount), 0);
 
   let total = 0;
   let cashGross = 0;
   let lines = data.paymentMethods.map(m => {
-    const sum = todayRows.filter(r => r.method === m).reduce((s, r) => s + parseFloat(r.amount), 0);
+    const sum = dayRows.filter(r => r.method === m).reduce((s, r) => s + parseFloat(r.amount), 0);
     total += sum;
     if (m === 'كاش' || m.toLowerCase() === 'cash') cashGross = sum;
     return `${m}: ${fmt(sum)} دينار`;
   });
 
-  const netCash = cashGross - qlExpenseToday - qlAdvanceToday;
+  const netCash = cashGross - qlExpense - qlAdvance;
 
   lines.push('');
-  lines.push(`💵 مصروف من الدرج: − ${fmt(qlExpenseToday)} دينار`);
-  if (qlAdvanceToday > 0) {
-    lines.push(`💸 سلفة من الدرج: − ${fmt(qlAdvanceToday)} دينار`);
+  lines.push(`💵 مصروف من الدرج: − ${fmt(qlExpense)} دينار`);
+  if (qlAdvance > 0) {
+    lines.push(`💸 سلفة من الدرج: − ${fmt(qlAdvance)} دينار`);
   }
   lines.push(`💵 صافي الكاش (بعد خصم الدرج): ${fmt(netCash)} دينار`);
 
-  return `📊 ملخص إيراد اليوم (${fmtDate(t)})\n\n${lines.join('\n')}\n\n💰 إجمالي الإيراد: ${fmt(total)} دينار`;
+  const header = isToday
+    ? `📊 ملخص إيراد اليوم (${fmtDate(t)})`
+    : `📊 ملخص إيراد يوم ${fmtDate(t)}`;
+
+  return `${header}\n\n${lines.join('\n')}\n\n💰 إجمالي الإيراد: ${fmt(total)} دينار`;
 }
 
 function sendIncomeSummaryWhatsApp() {
