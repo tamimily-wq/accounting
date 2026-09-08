@@ -1025,7 +1025,7 @@
 
     <div class="card">
       <div class="card-title">📊 ملخص اليوم حسب طريقة الدفع</div>
-      <div id="income-today-summary" class="report-grid" style="grid-template-columns:repeat(4,1fr);gap:12px;"></div>
+      <div id="income-today-summary" class="report-grid" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;"></div>
       <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn" style="background:#25D366;color:#fff;" onclick="sendIncomeSummaryWhatsApp()">📲 إرسال لصاحب العمل (واتساب)</button>
         <button class="btn" style="background:#566573;color:#fff;" onclick="sendIncomeSummarySMS()">✉️ إرسال لصاحب العمل (SMS)</button>
@@ -3836,18 +3836,55 @@ function renderIncomeTodaySummary() {
   const t = today();
   const todayRows = data.income.filter(r => r.date === t);
   const box = document.getElementById('income-today-summary');
+  if (!box) return;
+
+  // مصروفات وسلف "من الدرج" لليوم — تُخصم من الكاش لتوضيح الصافي لصاحب العمل
+  const qlExpenseToday = data.expenses
+    .filter(e => e.viaQuickList && e.date === t)
+    .reduce((s, e) => s + parseFloat(e.amount), 0);
+  const qlAdvanceToday = data.salaryHistory
+    .filter(r => r.viaQuickList && r.type === 'سلفة' && r.date === t)
+    .reduce((s, r) => s + parseFloat(r.amount), 0);
+
   let total = 0;
-  box.innerHTML = data.paymentMethods.map(m => {
+  let cashGross = 0;
+
+  const methodCards = data.paymentMethods.map(m => {
     const sum = todayRows.filter(r => r.method === m).reduce((s, r) => s + parseFloat(r.amount), 0);
     total += sum;
+    const isCash = (m === 'كاش' || m.toLowerCase() === 'cash');
+    if (isCash) cashGross = sum;
     return `<div style="text-align:center;padding:12px;background:var(--bg);border-radius:10px;">
       <div style="font-size:11px;color:var(--text-muted);font-weight:600;margin-bottom:6px;">${m}</div>
       <div style="font-size:17px;font-weight:800;color:${methodColor(m)}">${fmt(sum)}</div>
     </div>`;
-  }).join('') + `<div style="text-align:center;padding:12px;background:var(--primary);border-radius:10px;grid-column:1/-1;margin-top:4px;">
+  }).join('');
+
+  // كرت مصروف من الدرج
+  const expenseCard = `<div style="text-align:center;padding:12px;background:#FDEDEC;border-radius:10px;border:1px solid #F5B7B1;">
+      <div style="font-size:11px;color:var(--danger);font-weight:600;margin-bottom:6px;">💵 مصروف من الدرج</div>
+      <div style="font-size:17px;font-weight:800;color:var(--danger);">− ${fmt(qlExpenseToday)}</div>
+    </div>`;
+
+  // كرت سلفة من الدرج (إن وُجدت)
+  const advanceCard = `<div style="text-align:center;padding:12px;background:#FEF9E7;border-radius:10px;border:1px solid #F9E79F;">
+      <div style="font-size:11px;color:#9A7D0A;font-weight:600;margin-bottom:6px;">💸 سلفة من الدرج</div>
+      <div style="font-size:17px;font-weight:800;color:#9A7D0A;">− ${fmt(qlAdvanceToday)}</div>
+    </div>`;
+
+  // صافي الكاش = كاش − مصروف درج − سلفة درج
+  const netCash = cashGross - qlExpenseToday - qlAdvanceToday;
+  const netCashCard = `<div style="text-align:center;padding:12px;background:#E8F8F5;border-radius:10px;border:1px solid #A3E4D7;">
+      <div style="font-size:11px;color:var(--success);font-weight:600;margin-bottom:6px;">💵 صافي الكاش (بعد خصم الدرج)</div>
+      <div style="font-size:17px;font-weight:800;color:var(--success);">${fmt(netCash)}</div>
+    </div>`;
+
+  const totalCard = `<div style="text-align:center;padding:12px;background:var(--primary);border-radius:10px;grid-column:1/-1;margin-top:4px;">
       <div style="font-size:11px;color:rgba(255,255,255,0.8);font-weight:600;margin-bottom:4px;">إجمالي إيراد اليوم</div>
       <div style="font-size:20px;font-weight:800;color:#fff;">${fmt(total)} دينار</div>
     </div>`;
+
+  box.innerHTML = methodCards + expenseCard + advanceCard + netCashCard + totalCard;
 }
 
 let incomeViewMode = 'compact'; // 'compact' | 'full'
@@ -4090,6 +4127,7 @@ async function addQuickListExpense() {
   showToast('تم تسجيل المصروف من الدرج بنجاح', 'success');
   renderExpenseTable();
   updateDashboard();
+  renderIncomeTodaySummary();
 }
 
 async function addQuickListAdvance() {
@@ -4112,6 +4150,7 @@ async function addQuickListAdvance() {
   showToast('تم صرف السلفة من الدرج بنجاح', 'success');
   renderSalHistory();
   updateDashboard();
+  renderIncomeTodaySummary();
 }
 
 let quickListViewMode = 'compact'; // 'compact' | 'full'
@@ -6908,13 +6947,33 @@ function generatePayrollStatement() {
 function buildIncomeSummaryMessage() {
   const t = today();
   const todayRows = data.income.filter(r => r.date === t);
+
+  const qlExpenseToday = data.expenses
+    .filter(e => e.viaQuickList && e.date === t)
+    .reduce((s, e) => s + parseFloat(e.amount), 0);
+  const qlAdvanceToday = data.salaryHistory
+    .filter(r => r.viaQuickList && r.type === 'سلفة' && r.date === t)
+    .reduce((s, r) => s + parseFloat(r.amount), 0);
+
   let total = 0;
+  let cashGross = 0;
   let lines = data.paymentMethods.map(m => {
     const sum = todayRows.filter(r => r.method === m).reduce((s, r) => s + parseFloat(r.amount), 0);
     total += sum;
+    if (m === 'كاش' || m.toLowerCase() === 'cash') cashGross = sum;
     return `${m}: ${fmt(sum)} دينار`;
   });
-  return `📊 ملخص إيراد اليوم (${fmtDate(t)})\n\n${lines.join('\n')}\n\n💰 الإجمالي: ${fmt(total)} دينار`;
+
+  const netCash = cashGross - qlExpenseToday - qlAdvanceToday;
+
+  lines.push('');
+  lines.push(`💵 مصروف من الدرج: − ${fmt(qlExpenseToday)} دينار`);
+  if (qlAdvanceToday > 0) {
+    lines.push(`💸 سلفة من الدرج: − ${fmt(qlAdvanceToday)} دينار`);
+  }
+  lines.push(`💵 صافي الكاش (بعد خصم الدرج): ${fmt(netCash)} دينار`);
+
+  return `📊 ملخص إيراد اليوم (${fmtDate(t)})\n\n${lines.join('\n')}\n\n💰 إجمالي الإيراد: ${fmt(total)} دينار`;
 }
 
 function sendIncomeSummaryWhatsApp() {
