@@ -77,6 +77,7 @@
         await setDoc(DATA_DOC, { payload: JSON.stringify(data) });
       } catch(e) {
         console.error("Firebase save error:", e);
+        throw e; // rethrow so saveData can detect failure and avoid silent data loss
       }
     };
 
@@ -95,8 +96,15 @@
       try {
         const snap = await getDoc(DATA_DOC);
         if (snap.exists()) return JSON.parse(snap.data().payload);
-      } catch(e) { console.error("Firebase load error:", e); }
-      return null;
+        return null;
+      } catch(e) {
+        console.error("Firebase load error:", e);
+        // Re-throw so loadData/initApp can distinguish real network/permission failure
+        if (e && (e.code === "permission-denied" || e.code === "unavailable" || (e.message && e.message.includes("network")))) {
+          throw e;
+        }
+        return null;
+      }
     };
 
     // ============ ANONYMOUS AUTH GATE (لتفعيل Firestore Rules الجديدة) ============
@@ -3506,6 +3514,7 @@ async function saveData() {
   try {
     if (window._fbSaveData) {
       await window._fbSaveData(data);
+      mirrorFullDataLocally(data); // نسخة محلية للطوارئ بعد كل حفظ ناجح
       setSyncStatus('saved');
     } else {
       // fallback localStorage
@@ -3588,23 +3597,41 @@ async function loadData() {
     }
     sanitizeData();
     setSyncStatus('offline');
-    return;
+    return true; // offline always "succeeds"
   }
 
+  let gotCloudData = false;
   try {
     if (window._fbLoadData) {
       const remote = await window._fbLoadData();
       if (remote) {
         data = remote;
+        gotCloudData = true;
       }
     } else {
       const saved = localStorage.getItem('accounting_data');
-      if (saved) data = JSON.parse(saved);
+      if (saved) { data = JSON.parse(saved); gotCloudData = true; }
     }
   } catch(e) {
     console.error('Load error:', e);
+    // Re-throw critical errors so initApp can show a clear warning
+    if (e && (e.code === 'permission-denied' || e.code === 'unavailable')) {
+      throw e;
+    }
   }
   sanitizeData();
+  return gotCloudData;
+}
+
+// يحفظ نسخة محلية كاملة بعد كل حفظ ناجح للسحابة — تُستخدم للاسترجاع
+// عند فشل التحميل لاحقاً حتى لا نكتب بيانات فارغة فوق السحابة.
+function mirrorFullDataLocally(sourceData) {
+  try {
+    localStorage.setItem('accounting_data_mirror', JSON.stringify({
+      savedAt: new Date().toISOString(),
+      data: sourceData || data
+    }));
+  } catch(e) { /* ignore quota errors */ }
 }
 
 // ============ NAVIGATION ============
@@ -8001,10 +8028,70 @@ document.getElementById('today-date').textContent = fmtDate(today());
 
 async function initApp() {
   setSyncStatus(isOfflineMode() ? 'offline' : 'saving');
-  await loadData();
-  // Persist any auto-repaired fields (e.g. missing users array) back to the cloud
-  // so the next real-time snapshot doesn't wipe them out again.
-  saveData();
+  let gotCloudData = false;
+  try {
+    gotCloudData = await loadData();
+  } catch (loadErr) {
+    console.error('initApp loadData failed:', loadErr);
+    gotCloudData = false;
+    if (!isOfflineMode()) {
+      setSyncStatus('error');
+      const code = loadErr && loadErr.code;
+      if (code === 'permission-denied') {
+        showToast('❌ رفض صلاحيات Firebase — تحقق من قواعد الأمان (Rules) في لوحة التحكم', 'error', 10000);
+      } else if (code === 'unavailable') {
+        showToast('❌ تعذّر الاتصال بالسحابة (انقطاع الشبكة). لن يتم حفظ أي بيانات فارغة.', 'error', 9000);
+      } else {
+        showToast('❌ تعذّر تحميل البيانات من السحابة. لن يتم الكتابة فوق بياناتك.', 'error', 8000);
+      }
+    }
+  }
+
+  // ── حماية من مسح البيانات ──────────────────────────────────────────────
+  // لا نحفظ أبداً على السحابة إذا فشل التحميل، لأن data حينها تكون
+  // افتراضية/فارغة وستمسح كل السجلات الحقيقية.
+  if (gotCloudData) {
+    // إصلاحات sanitizeData البسيطة فقط تُعاد للسحابة عندما نعرف أن البيانات حقيقية
+    saveData();
+  } else if (!isOfflineMode()) {
+    setSyncStatus('error');
+    // محاولة استرجاع آخر نسخة محلية ناجحة
+    const mirrorRaw = (() => { try { return localStorage.getItem('accounting_data_mirror'); } catch(e) { return null; } })();
+    if (mirrorRaw) {
+      try {
+        const mirror = JSON.parse(mirrorRaw);
+        if (mirror && mirror.data && (
+            (mirror.data.income && mirror.data.income.length) ||
+            (mirror.data.expenses && mirror.data.expenses.length) ||
+            (mirror.data.employees && mirror.data.employees.length) ||
+            (mirror.data.purchases && mirror.data.purchases.length) ||
+            (mirror.data.users && mirror.data.users.length)
+        )) {
+          data = mirror.data;
+          sanitizeData();
+          showToast(
+            '⚠️ تعذّر الاتصال بالسحابة — تم عرض آخر نسخة محلية محفوظة (' +
+            new Date(mirror.savedAt).toLocaleString('ar-SA') +
+            '). لن يتم مسح بياناتك. ستُزامَن تلقائياً عند عودة الاتصال.',
+            'info', 10000
+          );
+        } else {
+          showToast(
+            '⚠️ تعذّر الاتصال بالسحابة ولا توجد نسخة محلية كافية. لم يتم حفظ أي بيانات فارغة على السحابة — بياناتك الأصلية آمنة.',
+            'error', 10000
+          );
+        }
+      } catch(e) {
+        showToast('⚠️ تعذّر الاتصال بالسحابة. لم يتم الكتابة فوق بياناتك.', 'error', 8000);
+      }
+    } else {
+      showToast(
+        '⚠️ تعذّر الاتصال بالسحابة. لم يتم حفظ بيانات فارغة — بياناتك في السحابة لم تُمس.',
+        'error', 10000
+      );
+    }
+  }
+  // ──────────────────────────────────────────────────────────────────────
 
   populateIncomeMethodSelect();
   populateExpenseCategorySelect();
@@ -8024,6 +8111,11 @@ async function initApp() {
       if (isOfflineMode()) return; // extra guard in case mode changed after subscribing
       data = remoteData;
       sanitizeData();
+      // إذا كان الاتصال قد فشل سابقاً والآن عاد، أخبر المستخدم
+      const prevStatus = document.getElementById('sync-status')?.textContent || '';
+      if (prevStatus.includes('❌') || prevStatus.includes('خطأ')) {
+        showToast('✅ تم استعادة الاتصال بالسحابة — البيانات محدّثة', 'success', 4000);
+      }
       setSyncStatus('synced');
       // Refresh whatever page is currently active
       const activePage = document.querySelector('.page.active');
