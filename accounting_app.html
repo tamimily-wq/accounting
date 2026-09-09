@@ -1772,6 +1772,11 @@
           ℹ️ دورة 15 لا تُصرف إلا بتاريخ 15 من الشهر، ودورة 30 لا تُصرف إلا بتاريخ آخر يوم في الشهر. كما لا يمكن صرف دورة 30 قبل صرف دورة 15 لنفس الشهر.
         </div>
         <div id="sal-pay-date-warning" class="hidden" style="background:#F8D7DA;color:var(--danger);padding:10px 14px;border-radius:8px;font-size:12.5px;font-weight:700;margin-bottom:14px;"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center;">
+          <span style="font-size:12.5px;color:var(--text-muted);font-weight:600;">صرف؟</span>
+          <button type="button" class="btn btn-sm" style="background:var(--primary);color:#fff;" onclick="selectAllSalPay()">✔ تحديد الكل</button>
+          <button type="button" class="btn btn-sm" style="background:var(--bg);color:var(--text-muted);border:1px solid var(--border);" onclick="deselectAllSalPay()">✖ إلغاء التحديد</button>
+        </div>
         <div class="table-wrap">
           <table id="sal-pay-table">
             <thead id="sal-pay-thead"></thead>
@@ -5604,6 +5609,19 @@ function onSalPeriodChange() {
     dateInput.value = `${monthKey}-${String(getLastDayOfMonth(monthKey)).padStart(2, '0')}`;
   }
   renderSalPayTable();
+}
+
+function selectAllSalPay() {
+  // يحدد فقط مربعات "صرف؟" غير المعطّلة (الموظفون القابلون للصرف فعلياً)
+  document.querySelectorAll('#sal-pay-tbody input[type="checkbox"][id^="sal-chk-"]').forEach(chk => {
+    if (!chk.disabled) chk.checked = true;
+  });
+}
+
+function deselectAllSalPay() {
+  document.querySelectorAll('#sal-pay-tbody input[type="checkbox"][id^="sal-chk-"]').forEach(chk => {
+    if (!chk.disabled) chk.checked = false;
+  });
 }
 
 function renderSalPayTable() {
