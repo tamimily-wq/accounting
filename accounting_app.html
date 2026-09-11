@@ -3885,53 +3885,41 @@ function renderIncomeTodaySummary() {
     .filter(r => r.viaQuickList && r.type === 'سلفة' && r.date === t)
     .reduce((s, r) => s + parseFloat(r.amount), 0);
 
-  let total = 0;
+  let grossTotal = 0;
   let cashGross = 0;
 
-  const methodCards = data.paymentMethods.map(m => {
+  // كاش = القيمة الحقيقية الوحيدة (إيراد الكاش − خصم الدرج)
+  // باقي الطرق تبقى كما هي؛ لا نعرض كاش إجمالي وصافي منفصلين
+  data.paymentMethods.forEach(m => {
     const sum = dayRows.filter(r => r.method === m).reduce((s, r) => s + parseFloat(r.amount), 0);
-    total += sum;
+    grossTotal += sum;
+    if (m === 'كاش' || m.toLowerCase() === 'cash') cashGross = sum;
+  });
+  const netCash = cashGross - qlExpense - qlAdvance;
+  const netTotal = grossTotal - qlExpense - qlAdvance;
+
+  const methodCards = data.paymentMethods.map(m => {
     const isCash = (m === 'كاش' || m.toLowerCase() === 'cash');
-    if (isCash) cashGross = sum;
-    // بطاقة الكاش تبقى كمعلومة (إجمالي قبل خصم الدرج)
-    const cashNote = isCash
-      ? `<div style="font-size:10px;color:var(--text-muted);margin-top:4px;">إجمالي قبل خصم الدرج</div>`
+    const sum = isCash
+      ? netCash
+      : dayRows.filter(r => r.method === m).reduce((s, r) => s + parseFloat(r.amount), 0);
+    const deductNote = isCash && (qlExpense > 0 || qlAdvance > 0)
+      ? `<div style="font-size:10px;color:var(--text-muted);margin-top:4px;">بعد خصم الدرج</div>`
       : '';
-    return `<div style="text-align:center;padding:12px;background:var(--bg);border-radius:10px;">
+    return `<div style="text-align:center;padding:12px;background:var(--bg);border-radius:10px;${isCash ? 'border:1.5px solid var(--success);' : ''}">
       <div style="font-size:11px;color:var(--text-muted);font-weight:600;margin-bottom:6px;">${m}</div>
       <div style="font-size:17px;font-weight:800;color:${methodColor(m)}">${fmt(sum)}</div>
-      ${cashNote}
+      ${deductNote}
     </div>`;
   }).join('');
 
-  const expenseCard = `<div style="text-align:center;padding:12px;background:#FDEDEC;border-radius:10px;border:1px solid #F5B7B1;">
-      <div style="font-size:11px;color:var(--danger);font-weight:600;margin-bottom:6px;">💵 مصروف من الدرج</div>
-      <div style="font-size:17px;font-weight:800;color:var(--danger);">− ${fmt(qlExpense)}</div>
-    </div>`;
-
-  const advanceCard = `<div style="text-align:center;padding:12px;background:#FEF9E7;border-radius:10px;border:1px solid #F9E79F;">
-      <div style="font-size:11px;color:#9A7D0A;font-weight:600;margin-bottom:6px;">💸 سلفة من الدرج</div>
-      <div style="font-size:17px;font-weight:800;color:#9A7D0A;">− ${fmt(qlAdvance)}</div>
-    </div>`;
-
-  // صافي الكاش هو الأساس الصحيح للحسابات
-  const netCash = cashGross - qlExpense - qlAdvance;
-  const netCashCard = `<div style="text-align:center;padding:12px;background:#E8F8F5;border-radius:10px;border:1.5px solid var(--success);">
-      <div style="font-size:11px;color:var(--success);font-weight:700;margin-bottom:6px;">💵 صافي الكاش (بعد خصم الدرج)</div>
-      <div style="font-size:18px;font-weight:800;color:var(--success);">${fmt(netCash)}</div>
-    </div>`;
-
-  // الإجمالي الصحيح = (كل طرق الدفع) − مصروف الدرج − سلفة الدرج
-  // أي: استبدال الكاش الإجمالي بصافي الكاش
-  const netTotal = total - qlExpense - qlAdvance;
-  const totalLabel = isToday ? 'صافي إجمالي اليوم (بعد خصم الدرج)' : 'صافي إجمالي ' + fmtDate(t) + ' (بعد خصم الدرج)';
+  const totalLabel = isToday ? 'إجمالي إيراد اليوم' : 'إجمالي إيراد ' + fmtDate(t);
   const totalCard = `<div style="text-align:center;padding:14px;background:var(--primary);border-radius:10px;grid-column:1/-1;margin-top:4px;">
       <div style="font-size:12px;color:rgba(255,255,255,0.85);font-weight:700;margin-bottom:4px;">${totalLabel}</div>
       <div style="font-size:22px;font-weight:800;color:#fff;">${fmt(netTotal)} دينار</div>
-      <div style="font-size:11px;color:rgba(255,255,255,0.65);margin-top:6px;">إجمالي الإيراد قبل الخصم: ${fmt(total)} دينار</div>
     </div>`;
 
-  box.innerHTML = methodCards + expenseCard + advanceCard + netCashCard + totalCard;
+  box.innerHTML = methodCards + totalCard;
 }
 
 let incomeViewMode = 'compact'; // 'compact' | 'full'
@@ -4000,13 +3988,12 @@ function renderIncomeTable() {
     qlAdvance += parseFloat(r.amount) || 0;
   });
 
-  // كاش إجمالي (كما في الجدول) → صافي الكاش بعد خصم الدرج
+  // كاش = قيمة واحدة حقيقية بعد خصم الدرج
   const cashGross = rows
     .filter(r => r.method === 'كاش' || (r.method || '').toLowerCase() === 'cash')
     .reduce((s, r) => s + parseFloat(r.amount), 0);
-  const otherMethods = total - cashGross; // مجموع طرق الدفع الأخرى (فيزا، ماستركارد، ...)
+  const otherMethods = total - cashGross;
   const netCash = cashGross - qlExpense - qlAdvance;
-  // إجمالي الإيرادات = صافي الكاش + مجموع طرق الدفع الأخرى
   const netTotal = netCash + otherMethods;
 
   const totalEl = document.getElementById('income-total');
@@ -4014,14 +4001,9 @@ function renderIncomeTable() {
     totalEl.innerHTML = '';
   } else {
     totalEl.innerHTML = `
-      <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-start;background:var(--bg);padding:14px 16px;border-radius:10px;border:1px solid var(--border);">
-        <div style="font-size:13px;color:var(--text-muted);line-height:1.8;">
-          <div>كاش (كما في الجدول): <b style="color:var(--text)">${fmt(cashGross)}</b> دينار</div>
-          <div style="color:var(--danger);">− مصروف من الدرج: <b>${fmt(qlExpense)}</b> دينار${qlAdvance > 0 ? ` · − سلفة من الدرج: <b>${fmt(qlAdvance)}</b> دينار` : ''}</div>
-          <div style="color:var(--success);font-weight:700;">= صافي الكاش: <b>${fmt(netCash)}</b> دينار</div>
-        </div>
-        <div style="font-size:13px;color:var(--text-muted);line-height:1.8;border-top:1px dashed var(--border);padding-top:8px;width:100%;">
-          <div>صافي الكاش: <b style="color:var(--success)">${fmt(netCash)}</b></div>
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-start;background:var(--bg);padding:14px 16px;border-radius:10px;border:1px solid var(--border);">
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.9;">
+          <div>كاش: <b style="color:var(--success)">${fmt(netCash)}</b> دينار</div>
           <div>+ باقي طرق الدفع: <b style="color:var(--text)">${fmt(otherMethods)}</b> دينار</div>
         </div>
         <div style="font-size:16px;font-weight:800;color:var(--primary);border-top:1px solid var(--border);padding-top:8px;width:100%;">
@@ -7060,31 +7042,30 @@ function buildIncomeSummaryMessage() {
     .filter(r => r.viaQuickList && r.type === 'سلفة' && r.date === t)
     .reduce((s, r) => s + parseFloat(r.amount), 0);
 
-  let total = 0;
+  let grossTotal = 0;
   let cashGross = 0;
-  let lines = data.paymentMethods.map(m => {
+  data.paymentMethods.forEach(m => {
     const sum = dayRows.filter(r => r.method === m).reduce((s, r) => s + parseFloat(r.amount), 0);
-    total += sum;
+    grossTotal += sum;
     if (m === 'كاش' || m.toLowerCase() === 'cash') cashGross = sum;
+  });
+  const netCash = cashGross - qlExpense - qlAdvance;
+  const netTotal = grossTotal - qlExpense - qlAdvance;
+
+  // كاش = القيمة الحقيقية فقط (بعد خصم الدرج)
+  let lines = data.paymentMethods.map(m => {
+    const isCash = (m === 'كاش' || m.toLowerCase() === 'cash');
+    const sum = isCash
+      ? netCash
+      : dayRows.filter(r => r.method === m).reduce((s, r) => s + parseFloat(r.amount), 0);
     return `${m}: ${fmt(sum)} دينار`;
   });
-
-  const netCash = cashGross - qlExpense - qlAdvance;
-  // الإجمالي الصحيح يستبدل الكاش بصافي الكاش بعد خصم الدرج
-  const netTotal = total - qlExpense - qlAdvance;
-
-  lines.push('');
-  lines.push(`💵 مصروف من الدرج: − ${fmt(qlExpense)} دينار`);
-  if (qlAdvance > 0) {
-    lines.push(`💸 سلفة من الدرج: − ${fmt(qlAdvance)} دينار`);
-  }
-  lines.push(`💵 صافي الكاش (بعد خصم الدرج): ${fmt(netCash)} دينار`);
 
   const header = isToday
     ? `📊 ملخص إيراد اليوم (${fmtDate(t)})`
     : `📊 ملخص إيراد يوم ${fmtDate(t)}`;
 
-  return `${header}\n\n${lines.join('\n')}\n\n💰 صافي الإجمالي (بعد خصم الدرج): ${fmt(netTotal)} دينار\n(إجمالي الإيراد قبل الخصم: ${fmt(total)} دينار)`;
+  return `${header}\n\n${lines.join('\n')}\n\n💰 الإجمالي: ${fmt(netTotal)} دينار`;
 }
 
 function sendIncomeSummaryWhatsApp() {
