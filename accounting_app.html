@@ -3888,8 +3888,7 @@ function renderIncomeTodaySummary() {
   let grossTotal = 0;
   let cashGross = 0;
 
-  // كاش = القيمة الحقيقية الوحيدة (إيراد الكاش − خصم الدرج)
-  // باقي الطرق تبقى كما هي؛ لا نعرض كاش إجمالي وصافي منفصلين
+  // كاش المعروض = القيمة الحقيقية بعد خصم الدرج (رقم واحد)
   data.paymentMethods.forEach(m => {
     const sum = dayRows.filter(r => r.method === m).reduce((s, r) => s + parseFloat(r.amount), 0);
     grossTotal += sum;
@@ -3913,13 +3912,23 @@ function renderIncomeTodaySummary() {
     </div>`;
   }).join('');
 
+  // بطاقات مصروف/سلفة من الدرج — للوضوح في الملخص والإشعارات
+  const expenseCard = `<div style="text-align:center;padding:12px;background:#FDEDEC;border-radius:10px;border:1px solid #F5B7B1;">
+      <div style="font-size:11px;color:var(--danger);font-weight:600;margin-bottom:6px;">💵 مصروف من الدرج</div>
+      <div style="font-size:17px;font-weight:800;color:var(--danger);">− ${fmt(qlExpense)}</div>
+    </div>`;
+  const advanceCard = `<div style="text-align:center;padding:12px;background:#FEF9E7;border-radius:10px;border:1px solid #F9E79F;">
+      <div style="font-size:11px;color:#9A7D0A;font-weight:600;margin-bottom:6px;">💸 سلفة من الدرج</div>
+      <div style="font-size:17px;font-weight:800;color:#9A7D0A;">− ${fmt(qlAdvance)}</div>
+    </div>`;
+
   const totalLabel = isToday ? 'إجمالي إيراد اليوم' : 'إجمالي إيراد ' + fmtDate(t);
   const totalCard = `<div style="text-align:center;padding:14px;background:var(--primary);border-radius:10px;grid-column:1/-1;margin-top:4px;">
       <div style="font-size:12px;color:rgba(255,255,255,0.85);font-weight:700;margin-bottom:4px;">${totalLabel}</div>
       <div style="font-size:22px;font-weight:800;color:#fff;">${fmt(netTotal)} دينار</div>
     </div>`;
 
-  box.innerHTML = methodCards + totalCard;
+  box.innerHTML = methodCards + expenseCard + advanceCard + totalCard;
 }
 
 let incomeViewMode = 'compact'; // 'compact' | 'full'
@@ -7052,7 +7061,7 @@ function buildIncomeSummaryMessage() {
   const netCash = cashGross - qlExpense - qlAdvance;
   const netTotal = grossTotal - qlExpense - qlAdvance;
 
-  // كاش = القيمة الحقيقية فقط (بعد خصم الدرج)
+  // كاش = القيمة الحقيقية بعد خصم الدرج + إظهار مصروف/سلفة الدرج
   let lines = data.paymentMethods.map(m => {
     const isCash = (m === 'كاش' || m.toLowerCase() === 'cash');
     const sum = isCash
@@ -7060,6 +7069,10 @@ function buildIncomeSummaryMessage() {
       : dayRows.filter(r => r.method === m).reduce((s, r) => s + parseFloat(r.amount), 0);
     return `${m}: ${fmt(sum)} دينار`;
   });
+
+  lines.push('');
+  lines.push(`💵 مصروف من الدرج: − ${fmt(qlExpense)} دينار`);
+  lines.push(`💸 سلفة من الدرج: − ${fmt(qlAdvance)} دينار`);
 
   const header = isToday
     ? `📊 ملخص إيراد اليوم (${fmtDate(t)})`
