@@ -3984,7 +3984,49 @@ function renderIncomeTable() {
     </tr>`;
   }).join('') || `<tr><td colspan="${colCount}" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد بيانات</td></tr>`;
 
-  document.getElementById('income-total').textContent = rows.length ? `الإجمالي: ${fmt(total)} دينار` : '';
+  // خصم مصروفات/سلف الدرج ضمن نفس فترة الفلتر حتى يظهر الصافي الصحيح
+  let qlExpense = 0;
+  let qlAdvance = 0;
+  data.expenses.forEach(e => {
+    if (!e.viaQuickList) return;
+    if (from && e.date < from) return;
+    if (to && e.date > to) return;
+    qlExpense += parseFloat(e.amount) || 0;
+  });
+  data.salaryHistory.forEach(r => {
+    if (!r.viaQuickList || r.type !== 'سلفة') return;
+    if (from && r.date < from) return;
+    if (to && r.date > to) return;
+    qlAdvance += parseFloat(r.amount) || 0;
+  });
+  const netTotal = total - qlExpense - qlAdvance;
+
+  // تفصيل الكاش ضمن الفترة (معلومة) وصافيه بعد خصم الدرج
+  const cashGross = rows
+    .filter(r => r.method === 'كاش' || (r.method || '').toLowerCase() === 'cash')
+    .reduce((s, r) => s + parseFloat(r.amount), 0);
+  const netCash = cashGross - qlExpense - qlAdvance;
+
+  const totalEl = document.getElementById('income-total');
+  if (!rows.length && qlExpense === 0 && qlAdvance === 0) {
+    totalEl.innerHTML = '';
+  } else {
+    totalEl.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-start;">
+        <div style="font-size:13px;color:var(--text-muted);font-weight:600;">
+          إجمالي الإيراد قبل الخصم: <span style="color:var(--text)">${fmt(total)} دينار</span>
+          ${cashGross > 0 ? ` · كاش: ${fmt(cashGross)} دينار` : ''}
+        </div>
+        ${(qlExpense > 0 || qlAdvance > 0) ? `
+        <div style="font-size:13px;color:var(--danger);font-weight:600;">
+          خصم الدرج: مصروف −${fmt(qlExpense)}${qlAdvance > 0 ? ` · سلفة −${fmt(qlAdvance)}` : ''}
+          ${cashGross > 0 ? ` · <span style="color:var(--success)">صافي الكاش: ${fmt(netCash)} دينار</span>` : ''}
+        </div>` : ''}
+        <div style="font-size:16px;font-weight:800;color:var(--success);">
+          صافي الإجمالي (بعد خصم الدرج): ${fmt(netTotal)} دينار
+        </div>
+      </div>`;
+  }
 }
 
 let editingIncomeId = null;
