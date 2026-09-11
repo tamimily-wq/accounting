@@ -1611,63 +1611,75 @@
       <div class="page-title">👥 الموظفون</div>
     </div>
 
-    <div class="card">
-      <div class="card-title">➕ إضافة موظف</div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>الاسم</label>
-          <input type="text" id="emp-name" placeholder="اسم الموظف">
-        </div>
-        <div class="form-group">
-          <label>التخصص / الوظيفة</label>
-          <input type="text" id="emp-role" placeholder="مثال: محاسب، كاشير...">
-        </div>
-        <div class="form-group">
-          <label>الراتب الأساسي (دينار)</label>
-          <input type="number" id="emp-salary" placeholder="0.00" step="0.001">
-        </div>
-        <div class="form-group">
-          <label>تاريخ التعيين</label>
-          <input type="date" id="emp-join">
-        </div>
-        <div class="form-group">
-          <label>رقم الهاتف (مع رمز الدولة)</label>
-          <input type="tel" id="emp-phone" placeholder="9665XXXXXXXX">
-        </div>
-      </div>
-      <button class="btn btn-primary" onclick="addEmployee()">✔ إضافة الموظف</button>
+    <div class="tabs">
+      <button class="tab active" onclick="showEmployeeTab('add')">➕ إضافة</button>
+      <button class="tab" onclick="showEmployeeTab('list')">📋 القائمة</button>
+      <button class="tab" onclick="showEmployeeTab('broadcast')">📢 رسائل</button>
     </div>
 
-    <div class="card">
-      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-        <span>📋 قائمة الموظفين</span>
-        <button class="btn btn-sm" id="emp-view-toggle-btn" style="background:var(--bg);color:var(--primary);border:1px solid var(--border);" onclick="toggleEmployeesView()">📄 عرض كل التفاصيل</button>
-      </div>
-      <div class="print-export-btns">
-        <button class="btn" onclick="exportReportPrint('employees-export-area','قائمة الموظفين')">🖨️ طباعة / PDF</button>
-        <button class="btn" onclick="exportReportImage('employees-export-area','قائمة_الموظفين')">🖼️ صورة</button>
-        <button class="btn" onclick="exportEmployeesExcel()">📊 Excel</button>
-      </div>
-      <div id="employees-export-area">
-      <div class="table-wrap">
-        <table id="employees-table">
-          <thead id="employees-thead"></thead>
-          <tbody id="employees-tbody"></tbody>
-        </table>
-      </div>
+    <div id="emp-tab-add">
+      <div class="card">
+        <div class="card-title">➕ إضافة موظف</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>الاسم</label>
+            <input type="text" id="emp-name" placeholder="اسم الموظف">
+          </div>
+          <div class="form-group">
+            <label>التخصص / الوظيفة</label>
+            <input type="text" id="emp-role" placeholder="مثال: محاسب، كاشير...">
+          </div>
+          <div class="form-group">
+            <label>الراتب الأساسي (دينار)</label>
+            <input type="number" id="emp-salary" placeholder="0.00" step="0.001">
+          </div>
+          <div class="form-group">
+            <label>تاريخ التعيين</label>
+            <input type="date" id="emp-join">
+          </div>
+          <div class="form-group">
+            <label>رقم الهاتف (مع رمز الدولة)</label>
+            <input type="tel" id="emp-phone" placeholder="9665XXXXXXXX">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="addEmployee()">✔ إضافة الموظف</button>
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-title">📢 إرسال رسالة لجميع الموظفين</div>
-      <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;line-height:1.7;">
-        اكتب الرسالة مرة واحدة، ثم اضغط 📲/✉️ بجانب كل موظف لإرساله. المتصفح يمنع فتح عدة نوافذ إرسال دفعة واحدة تلقائياً، لذلك الإرسال يكون بضغطة لكل موظف على حدة (اسم المستلم يبقى نفسه في كل مرة).
-      </p>
-      <div class="form-group" style="margin-bottom:14px;">
-        <label>نص الرسالة</label>
-        <textarea id="broadcast-message" rows="4" placeholder="اكتب رسالتك هنا..." style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:'Tajawal',sans-serif;font-size:14px;resize:vertical;"></textarea>
+    <div id="emp-tab-list" class="hidden">
+      <div class="card">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+          <span>📋 قائمة الموظفين</span>
+          <button class="btn btn-sm" id="emp-view-toggle-btn" style="background:var(--bg);color:var(--primary);border:1px solid var(--border);" onclick="toggleEmployeesView()">📄 عرض كل التفاصيل</button>
+        </div>
+        <div class="print-export-btns">
+          <button class="btn" onclick="exportReportPrint('employees-export-area','قائمة الموظفين')">🖨️ طباعة / PDF</button>
+          <button class="btn" onclick="exportReportImage('employees-export-area','قائمة_الموظفين')">🖼️ صورة</button>
+          <button class="btn" onclick="exportEmployeesExcel()">📊 Excel</button>
+        </div>
+        <div id="employees-export-area">
+        <div class="table-wrap">
+          <table id="employees-table">
+            <thead id="employees-thead"></thead>
+            <tbody id="employees-tbody"></tbody>
+          </table>
+        </div>
+        </div>
       </div>
-      <div id="broadcast-employee-list"></div>
+    </div>
+
+    <div id="emp-tab-broadcast" class="hidden">
+      <div class="card">
+        <div class="card-title">📢 إرسال رسالة لجميع الموظفين</div>
+        <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;line-height:1.7;">
+          اكتب الرسالة مرة واحدة، ثم اضغط 📲/✉️ بجانب كل موظف لإرساله. المتصفح يمنع فتح عدة نوافذ إرسال دفعة واحدة تلقائياً، لذلك الإرسال يكون بضغطة لكل موظف على حدة (اسم المستلم يبقى نفسه في كل مرة).
+        </p>
+        <div class="form-group" style="margin-bottom:14px;">
+          <label>نص الرسالة</label>
+          <textarea id="broadcast-message" rows="4" placeholder="اكتب رسالتك هنا..." style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:'Tajawal',sans-serif;font-size:14px;resize:vertical;"></textarea>
+        </div>
+        <div id="broadcast-employee-list"></div>
+      </div>
     </div>
 
     <!-- Edit salary modal -->
@@ -2389,6 +2401,14 @@
       <div class="page-title">⚙️ الإعدادات</div>
     </div>
 
+    <div class="tabs">
+      <button class="tab active" onclick="showSettingsTab('general')">🌐 عام</button>
+      <button class="tab" onclick="showSettingsTab('account')">👤 الحساب</button>
+      <button class="tab" onclick="showSettingsTab('contact')">📱 التواصل</button>
+      <button class="tab" onclick="showSettingsTab('lists')">📋 القوائم</button>
+    </div>
+
+    <div id="settings-tab-general">
     <div class="card">
       <div class="card-title">📲 تثبيت التطبيق على الجهاز</div>
       <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;line-height:1.7;">
@@ -2474,7 +2494,9 @@
       </p>
       <button class="btn btn-danger" style="font-size:14px;padding:10px 20px;" onclick="resetDatabase()">🗑️ تصفير قاعدة البيانات (للتجارب)</button>
     </div>
+    </div><!-- /settings-tab-general -->
 
+    <div id="settings-tab-account" class="hidden">
     <div class="card">
       <div class="card-title">🔒 تغيير كلمة المرور الخاصة بي</div>
       <div class="form-row">
@@ -2536,6 +2558,9 @@
       </div>
     </div>
 
+    </div><!-- /settings-tab-account -->
+
+    <div id="settings-tab-contact" class="hidden">
     <div class="card">
       <div class="card-title">📱 رقم صاحب العمل (لإرسال ملخص الإيراد اليومي)</div>
       <div class="form-row">
@@ -2561,6 +2586,9 @@
       <button class="btn btn-primary" onclick="saveAppLink()">✔ حفظ الرابط</button>
     </div>
 
+    </div><!-- /settings-tab-contact -->
+
+    <div id="settings-tab-lists" class="hidden">
     <div class="card" id="payment-methods-card">
       <div class="card-title">💳 طرق الدفع (الإيرادات)</div>
       <div class="form-row">
@@ -2650,6 +2678,7 @@
         </table>
       </div>
     </div>
+    </div><!-- /settings-tab-lists -->
   </div>
 
 </main>
@@ -3709,6 +3738,25 @@ function mirrorFullDataLocally(sourceData) {
 }
 
 // ============ NAVIGATION ============
+function showSettingsTab(tab) {
+  ['general', 'account', 'contact', 'lists'].forEach(t => {
+    const el = document.getElementById('settings-tab-' + t);
+    if (el) el.classList.toggle('hidden', t !== tab);
+  });
+  document.querySelectorAll('#page-settings > .tabs .tab').forEach((el, i) => {
+    el.classList.toggle('active', ['general', 'account', 'contact', 'lists'][i] === tab);
+  });
+  if (tab === 'general') { renderStorageModeUI(); updateInstallUI(); }
+  if (tab === 'account') { renderUsersTable(); populateEmployeeLinkSelect(); }
+  if (tab === 'contact') { loadOwnerPhoneField(); loadAppLinkField(); }
+  if (tab === 'lists') {
+    renderMethodsTable();
+    renderExpCatsTable();
+    renderPurchasersTable();
+    renderSuppliersManagementTable();
+  }
+}
+
 function showPage(name, el) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -4999,6 +5047,18 @@ function sendShoppingListSMS() {
 }
 
 // ============ EMPLOYEES ============
+function showEmployeeTab(tab) {
+  ['add', 'list', 'broadcast'].forEach(t => {
+    const el = document.getElementById('emp-tab-' + t);
+    if (el) el.classList.toggle('hidden', t !== tab);
+  });
+  document.querySelectorAll('#page-employees > .tabs .tab').forEach((el, i) => {
+    el.classList.toggle('active', ['add', 'list', 'broadcast'][i] === tab);
+  });
+  if (tab === 'list') renderEmployeesTable();
+  if (tab === 'broadcast') renderBroadcastEmployeeList();
+}
+
 async function addEmployee() {
   const name = document.getElementById('emp-name').value.trim();
   const role = document.getElementById('emp-role').value.trim();
