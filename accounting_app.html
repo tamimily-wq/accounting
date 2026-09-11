@@ -883,7 +883,7 @@
       <span class="icon">📤</span> المصروفات
     </div>
     <div class="nav-item" data-page="quicklist" id="nav-quicklist">
-      <span class="icon">⚡</span> القائمة السريعة
+      <span class="icon">💵</span> مصروفات من الدرج
     </div>
     <div class="nav-item" data-page="purchases" id="nav-purchases">
       <span class="icon">🛒</span> المشتريات
@@ -1189,7 +1189,7 @@
   <!-- ===== QUICK LIST (القائمة السريعة) — صلاحية كاشير: مصروفات وسلف تُسحب من الدرج مباشرة ===== -->
   <div id="page-quicklist" class="page">
     <div class="page-header">
-      <div class="page-title">⚡ القائمة السريعة</div>
+      <div class="page-title">💵 مصروفات من الدرج</div>
     </div>
 
     <div class="card" style="background:#FFF3CD;border:1px solid #F0D68A;">
@@ -1286,7 +1286,7 @@
     <div id="ql-tab-log" class="hidden">
       <div class="card">
         <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-          <span>📋 سجل القائمة السريعة</span>
+          <span>📋 سجل مصروفات من الدرج</span>
           <button class="btn btn-sm" id="ql-log-view-toggle-btn" style="background:var(--bg);color:var(--primary);border:1px solid var(--border);" onclick="toggleQuickListView()">📄 عرض كل التفاصيل</button>
         </div>
         <div class="filter-row">
@@ -1304,8 +1304,8 @@
           <button class="btn btn-sm" style="background:var(--bg);color:var(--text-muted)" onclick="clearQuickListFilter()">مسح</button>
         </div>
         <div class="print-export-btns">
-          <button class="btn" onclick="exportReportPrint('ql-log-export-area','سجل القائمة السريعة')">🖨️ طباعة / PDF</button>
-          <button class="btn" onclick="exportReportImage('ql-log-export-area','سجل_القائمة_السريعة')">🖼️ صورة</button>
+          <button class="btn" onclick="exportReportPrint('ql-log-export-area','سجل مصروفات من الدرج')">🖨️ طباعة / PDF</button>
+          <button class="btn" onclick="exportReportImage('ql-log-export-area','سجل_مصروفات_من_الدرج')">🖼️ صورة</button>
           <button class="btn" onclick="exportQuickListExcel()">📊 Excel</button>
         </div>
         <div id="ql-log-export-area">
@@ -4406,7 +4406,7 @@ function renderQuickListLog() {
       <td style="font-weight:700;color:var(--danger)">${fmt(r.amount)} دينار</td>
       <td>${editBtn}${deleteBtn}</td>
     </tr>`;
-  }).join('') || `<tr><td colspan="${colCount}" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد سجلات في القائمة السريعة بعد</td></tr>`;
+  }).join('') || `<tr><td colspan="${colCount}" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد سجلات في مصروفات من الدرج بعد</td></tr>`;
 
   document.getElementById('ql-log-total').textContent = rows.length ? `الإجمالي: ${fmt(total)} دينار` : '';
 }
@@ -4416,11 +4416,11 @@ function exportQuickListExcel() {
   const headers = isFull
     ? ['#', 'التاريخ', 'النوع', 'البيان', 'المبلغ', 'ملاحظة']
     : ['#', 'التاريخ', 'النوع', 'المبلغ'];
-  exportTableExcel('ql-log-tbody', headers, 'سجل_القائمة_السريعة');
+  exportTableExcel('ql-log-tbody', headers, 'سجل_مصروفات_من_الدرج');
 }
 
 async function deleteQuickListEntry(kind, id) {
-  const ok = await showConfirm('هل تريد حذف هذا السجل؟', { title: 'حذف من القائمة السريعة', icon: '🗑️' });
+  const ok = await showConfirm('هل تريد حذف هذا السجل؟', { title: 'حذف من مصروفات من الدرج', icon: '🗑️' });
   if (!ok) return;
   if (kind === 'expense') {
     data.expenses = data.expenses.filter(r => r.id !== id);
