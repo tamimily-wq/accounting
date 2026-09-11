@@ -3984,7 +3984,7 @@ function renderIncomeTable() {
     </tr>`;
   }).join('') || `<tr><td colspan="${colCount}" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد بيانات</td></tr>`;
 
-  // خصم مصروفات/سلف الدرج ضمن نفس فترة الفلتر حتى يظهر الصافي الصحيح
+  // خصم مصروفات/سلف الدرج ضمن نفس فترة الفلتر
   let qlExpense = 0;
   let qlAdvance = 0;
   data.expenses.forEach(e => {
@@ -3999,31 +3999,33 @@ function renderIncomeTable() {
     if (to && r.date > to) return;
     qlAdvance += parseFloat(r.amount) || 0;
   });
-  const netTotal = total - qlExpense - qlAdvance;
 
-  // تفصيل الكاش ضمن الفترة (معلومة) وصافيه بعد خصم الدرج
+  // كاش إجمالي (كما في الجدول) → صافي الكاش بعد خصم الدرج
   const cashGross = rows
     .filter(r => r.method === 'كاش' || (r.method || '').toLowerCase() === 'cash')
     .reduce((s, r) => s + parseFloat(r.amount), 0);
+  const otherMethods = total - cashGross; // مجموع طرق الدفع الأخرى (فيزا، ماستركارد، ...)
   const netCash = cashGross - qlExpense - qlAdvance;
+  // إجمالي الإيرادات = صافي الكاش + مجموع طرق الدفع الأخرى
+  const netTotal = netCash + otherMethods;
 
   const totalEl = document.getElementById('income-total');
   if (!rows.length && qlExpense === 0 && qlAdvance === 0) {
     totalEl.innerHTML = '';
   } else {
     totalEl.innerHTML = `
-      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-start;">
-        <div style="font-size:13px;color:var(--text-muted);font-weight:600;">
-          إجمالي الإيراد قبل الخصم: <span style="color:var(--text)">${fmt(total)} دينار</span>
-          ${cashGross > 0 ? ` · كاش: ${fmt(cashGross)} دينار` : ''}
+      <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-start;background:var(--bg);padding:14px 16px;border-radius:10px;border:1px solid var(--border);">
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.8;">
+          <div>كاش (كما في الجدول): <b style="color:var(--text)">${fmt(cashGross)}</b> دينار</div>
+          <div style="color:var(--danger);">− مصروف من الدرج: <b>${fmt(qlExpense)}</b> دينار${qlAdvance > 0 ? ` · − سلفة من الدرج: <b>${fmt(qlAdvance)}</b> دينار` : ''}</div>
+          <div style="color:var(--success);font-weight:700;">= صافي الكاش: <b>${fmt(netCash)}</b> دينار</div>
         </div>
-        ${(qlExpense > 0 || qlAdvance > 0) ? `
-        <div style="font-size:13px;color:var(--danger);font-weight:600;">
-          خصم الدرج: مصروف −${fmt(qlExpense)}${qlAdvance > 0 ? ` · سلفة −${fmt(qlAdvance)}` : ''}
-          ${cashGross > 0 ? ` · <span style="color:var(--success)">صافي الكاش: ${fmt(netCash)} دينار</span>` : ''}
-        </div>` : ''}
-        <div style="font-size:16px;font-weight:800;color:var(--success);">
-          صافي الإجمالي (بعد خصم الدرج): ${fmt(netTotal)} دينار
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.8;border-top:1px dashed var(--border);padding-top:8px;width:100%;">
+          <div>صافي الكاش: <b style="color:var(--success)">${fmt(netCash)}</b></div>
+          <div>+ باقي طرق الدفع: <b style="color:var(--text)">${fmt(otherMethods)}</b> دينار</div>
+        </div>
+        <div style="font-size:16px;font-weight:800;color:var(--primary);border-top:1px solid var(--border);padding-top:8px;width:100%;">
+          إجمالي الإيرادات = ${fmt(netTotal)} دينار
         </div>
       </div>`;
   }
