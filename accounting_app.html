@@ -1024,32 +1024,6 @@
     </div>
 
     <div class="card">
-      <div class="card-title">↩️ تسجيل مرتجع مبيعات</div>
-      <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;line-height:1.6;">
-        لطلبات أُلغيت أو رُفضت (تأخير، نفاد كمية، خطأ كاشير...). يخصم من الكاش ومن إجمالي إيراد اليوم.
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>التاريخ</label>
-          <input type="date" id="return-date">
-        </div>
-        <div class="form-group">
-          <label>طريقة الإرجاع</label>
-          <select id="return-method"></select>
-        </div>
-        <div class="form-group">
-          <label>المبلغ (دينار)</label>
-          <input type="number" id="return-amount" placeholder="0.00" step="0.001">
-        </div>
-        <div class="form-group">
-          <label>السبب / ملاحظات</label>
-          <input type="text" id="return-note" placeholder="مثال: نفاد الكمية، تأخير...">
-        </div>
-      </div>
-      <button class="btn btn-danger" onclick="addIncomeReturn()">✔ تسجيل المرتجع</button>
-    </div>
-
-    <div class="card">
       <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
         <span id="income-summary-title">📊 ملخص اليوم حسب طريقة الدفع</span>
       </div>
@@ -1220,13 +1194,14 @@
 
     <div class="card" style="background:#FFF3CD;border:1px solid #F0D68A;">
       <p style="font-size:12.5px;color:#856404;line-height:1.7;margin:0;">
-        ℹ️ لتسجيل أي مبلغ يُسحب من درج الكاش مباشرة — سواء مصروف فوري أو سلفة لموظف — بسرعة وبدون الحاجة للدخول لصفحات الموظفين أو المصروفات الكاملة.
+        ℹ️ لتسجيل أي مبلغ يُسحب من درج الكاش مباشرة — مصروف، سلفة موظف، أو مرتجع مبيعات — بسرعة وبدون الحاجة للدخول لصفحات أخرى.
       </p>
     </div>
 
     <div class="tabs">
       <button class="tab active" onclick="showQuickListTab('expense')">💵 مصروف من الدرج</button>
       <button class="tab" onclick="showQuickListTab('advance')">💸 سلفة من الدرج</button>
+      <button class="tab" onclick="showQuickListTab('return')">↩️ مرتجع مبيعات</button>
       <button class="tab" onclick="showQuickListTab('log')">📋 السجل</button>
     </div>
 
@@ -1282,6 +1257,31 @@
       </div>
     </div>
 
+    <!-- RETURN FROM DRAWER (مرتجع مبيعات) -->
+    <div id="ql-tab-return" class="hidden">
+      <div class="card">
+        <div class="card-title">↩️ مرتجع مبيعات من الدرج</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;line-height:1.6;">
+          لإلغاء طلب / إرجاع مبلغ للزبون (تأخير، نفاد كمية، خطأ...). يُسحب من الدرج ويُخصم من إيراد اليوم.
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>التاريخ</label>
+            <input type="date" id="ql-ret-date">
+          </div>
+          <div class="form-group">
+            <label>المبلغ (دينار)</label>
+            <input type="number" id="ql-ret-amount" placeholder="0.00" step="0.001">
+          </div>
+          <div class="form-group">
+            <label>السبب / ملاحظة</label>
+            <input type="text" id="ql-ret-note" placeholder="مثال: نفاد الكمية، تأخير غير عادي...">
+          </div>
+        </div>
+        <button class="btn btn-danger" style="font-size:14px;padding:9px 20px;" onclick="addQuickListReturn()">✔ تسجيل المرتجع من الدرج</button>
+      </div>
+    </div>
+
     <!-- LOG -->
     <div id="ql-tab-log" class="hidden">
       <div class="card">
@@ -1296,6 +1296,7 @@
               <option value="">-- الكل --</option>
               <option value="expense">مصروفات</option>
               <option value="advance">سلف</option>
+              <option value="return">مرتجعات</option>
             </select>
           </div>
           <div class="form-group"><label>من</label><input type="date" id="ql-log-filter-from" onchange="renderQuickListLog()"></div>
@@ -3683,9 +3684,9 @@ function showPage(name, el) {
   if (target) target.classList.add('active');
 
   if (name === 'dashboard') updateDashboard();
-  if (name === 'income') { setToday('income-date'); setToday('return-date'); setToday('income-filter-from'); setToday('income-filter-to'); setToday('income-summary-date'); populateIncomeMethodSelect(); renderIncomeTable(); renderIncomeTodaySummary(); }
+  if (name === 'income') { setToday('income-date'); setToday('income-filter-from'); setToday('income-filter-to'); setToday('income-summary-date'); populateIncomeMethodSelect(); renderIncomeTable(); renderIncomeTodaySummary(); }
   if (name === 'expenses') { setToday('exp-date'); populateExpenseCategorySelect(); renderExpenseTable(); }
-  if (name === 'quicklist') { setToday('ql-exp-date'); setToday('ql-adv-date'); populateQuickListSelects(); renderQuickListLog(); }
+  if (name === 'quicklist') { setToday('ql-exp-date'); setToday('ql-adv-date'); setToday('ql-ret-date'); populateQuickListSelects(); renderQuickListLog(); }
   if (name === 'purchases') { setToday('pur-date'); populateSupplierSelect(); renderPurchaseTable(); }
   if (name === 'shoppinglist') {
     renderShoppingList();
@@ -3835,23 +3836,29 @@ async function addIncome() {
   showToast('تم تسجيل الإيراد بنجاح', 'success');
 }
 
-async function addIncomeReturn() {
-  const date = document.getElementById('return-date').value;
-  const method = document.getElementById('return-method').value;
-  const amount = parseFloat(document.getElementById('return-amount').value);
-  const note = document.getElementById('return-note').value.trim();
-  if (!date || !method || !amount || amount <= 0) { showToast('يرجى إدخال التاريخ والمبلغ وطريقة الإرجاع', 'error'); return; }
-  if (!(await confirmOperation('تسجيل مرتجع مبيعات', '↩️'))) return;
+async function addQuickListReturn() {
+  const date = document.getElementById('ql-ret-date').value;
+  const amount = parseFloat(document.getElementById('ql-ret-amount').value);
+  const note = document.getElementById('ql-ret-note').value.trim();
+  if (!date || !amount || amount <= 0) { showToast('يرجى إدخال التاريخ والمبلغ', 'error'); return; }
+  if (!(await confirmOperation('تسجيل مرتجع مبيعات من الدرج', '↩️'))) return;
+  // مرتجع من الدرج = سحب كاش + خصم من إيراد اليوم
   await addRecordSafely('income', {
-    id: Date.now(), date, method, amount, note,
-    isReturn: true
+    id: Date.now(),
+    date,
+    method: 'كاش',
+    amount,
+    note,
+    isReturn: true,
+    viaQuickList: true
   });
-  document.getElementById('return-amount').value = '';
-  document.getElementById('return-note').value = '';
+  document.getElementById('ql-ret-amount').value = '';
+  document.getElementById('ql-ret-note').value = '';
+  showToast('تم تسجيل المرتجع من الدرج — خُصم من الإيراد والكاش', 'success');
   renderIncomeTable();
   renderIncomeTodaySummary();
   updateDashboard();
-  showToast('تم تسجيل المرتجع — خُصم من الإيراد والكاش', 'success');
+  renderQuickListLog();
 }
 
 const methodColorPalette = ['var(--success)', 'var(--primary-light)', 'var(--accent)', '#8E44AD', '#16A085', '#D35400', '#2C3E50', '#C0392B'];
@@ -3867,14 +3874,6 @@ function populateIncomeMethodSelect() {
     sel.innerHTML = data.paymentMethods.map(m => `<option value="${m}">${m}</option>`).join('');
     if (data.paymentMethods.includes(current)) sel.value = current;
   }
-  const retSel = document.getElementById('return-method');
-  if (retSel) {
-    const cur = retSel.value;
-    retSel.innerHTML = data.paymentMethods.map(m => `<option value="${m}">${m}</option>`).join('');
-    if (data.paymentMethods.includes(cur)) retSel.value = cur;
-    else if (data.paymentMethods.includes('كاش')) retSel.value = 'كاش';
-  }
-
   const purSel = document.getElementById('pur-method');
   if (purSel) {
     const purCurrent = purSel.value;
@@ -4259,13 +4258,15 @@ function clearExpFilter() {
 // مخصص وفلترة حسب النوع هنا في هذه الصفحة، دون التأثير على أي حساب آخر.
 
 function showQuickListTab(tab) {
-  ['expense', 'advance', 'log'].forEach(t => {
-    document.getElementById('ql-tab-' + t).classList.toggle('hidden', t !== tab);
+  ['expense', 'advance', 'return', 'log'].forEach(t => {
+    const el = document.getElementById('ql-tab-' + t);
+    if (el) el.classList.toggle('hidden', t !== tab);
   });
   document.querySelectorAll('#page-quicklist .tab').forEach((el, i) => {
-    el.classList.toggle('active', ['expense', 'advance', 'log'][i] === tab);
+    el.classList.toggle('active', ['expense', 'advance', 'return', 'log'][i] === tab);
   });
   if (tab === 'expense' || tab === 'advance') populateQuickListSelects();
+  if (tab === 'return') setToday('ql-ret-date');
   if (tab === 'log') renderQuickListLog();
 }
 
@@ -4353,8 +4354,11 @@ function renderQuickListLog() {
   const advanceRows = data.salaryHistory
     .filter(r => r.viaQuickList && r.type === 'سلفة')
     .map(r => ({ kind: 'advance', id: r.id, date: r.date, label: r.employeeName, amount: r.amount, note: r.note || '' }));
+  const returnRows = data.income
+    .filter(r => r.viaQuickList && r.isReturn)
+    .map(r => ({ kind: 'return', id: r.id, date: r.date, label: r.note || 'مرتجع مبيعات', amount: r.amount, note: r.note || '' }));
 
-  let rows = [...expenseRows, ...advanceRows].sort((a, b) => b.date.localeCompare(a.date));
+  let rows = [...expenseRows, ...advanceRows, ...returnRows].sort((a, b) => b.date.localeCompare(a.date));
   if (typeFilter) rows = rows.filter(r => r.kind === typeFilter);
   if (from) rows = rows.filter(r => r.date >= from);
   if (to) rows = rows.filter(r => r.date <= to);
@@ -4376,7 +4380,9 @@ function renderQuickListLog() {
   tbody.innerHTML = rows.map((r, i) => {
     const typeBadge = r.kind === 'expense'
       ? '<span class="badge badge-warning">مصروف</span>'
-      : '<span class="badge badge-info">سلفة</span>';
+      : r.kind === 'advance'
+        ? '<span class="badge badge-info">سلفة</span>'
+        : '<span class="badge badge-danger">مرتجع</span>';
     const deleteBtn = `<button class="btn-icon-delete" onclick="deleteQuickListEntry('${r.kind}', ${r.id})" title="حذف">🗑️</button>`;
     const editBtn = `<button class="btn-icon-edit" onclick="openEditQuickListEntry('${r.kind}', ${r.id})" title="تعديل">✏️</button>`;
 
@@ -4418,11 +4424,18 @@ async function deleteQuickListEntry(kind, id) {
   if (!ok) return;
   if (kind === 'expense') {
     data.expenses = data.expenses.filter(r => r.id !== id);
-  } else {
+  } else if (kind === 'advance') {
     data.salaryHistory = data.salaryHistory.filter(r => r.id !== id);
+  } else if (kind === 'return') {
+    data.income = data.income.filter(r => r.id !== id);
   }
   saveData();
   renderQuickListLog();
+  renderIncomeTable();
+  renderIncomeTodaySummary();
+  renderExpenseTable();
+  renderSalHistory();
+  updateDashboard();
   showToast('تم حذف السجل بنجاح', 'success');
 }
 
@@ -4447,13 +4460,21 @@ function openEditQuickListEntry(kind, id) {
     document.getElementById('edit-ql-date-val').value = r.date;
     document.getElementById('edit-ql-amount-val').value = r.amount;
     document.getElementById('edit-ql-note-val').value = r.note || '';
-  } else {
+  } else if (kind === 'advance') {
     const r = data.salaryHistory.find(x => x.id === id);
     if (!r) return;
     descWrap.classList.add('hidden');
     empWrap.classList.remove('hidden');
     document.getElementById('edit-ql-emp-val').innerHTML = data.employees.filter(e => e.status !== 'terminated').map(e => `<option value="${e.id}">${e.name}</option>`).join('');
     document.getElementById('edit-ql-emp-val').value = r.employeeId;
+    document.getElementById('edit-ql-date-val').value = r.date;
+    document.getElementById('edit-ql-amount-val').value = r.amount;
+    document.getElementById('edit-ql-note-val').value = r.note || '';
+  } else if (kind === 'return') {
+    const r = data.income.find(x => x.id === id);
+    if (!r) return;
+    descWrap.classList.add('hidden');
+    empWrap.classList.add('hidden');
     document.getElementById('edit-ql-date-val').value = r.date;
     document.getElementById('edit-ql-amount-val').value = r.amount;
     document.getElementById('edit-ql-note-val').value = r.note || '';
@@ -4476,7 +4497,7 @@ async function saveEditQuickListEntry() {
     if (!r) { showToast('تعذّر العثور على السجل', 'error'); closeEditQuickListEntry(); renderQuickListLog(); return; }
     if (!(await confirmOperation('تعديل بيانات المصروف', '✏️'))) return;
     r.date = date; r.desc = desc; r.amount = amount; r.note = note;
-  } else {
+  } else if (editingQlKind === 'advance') {
     const empId = parseInt(document.getElementById('edit-ql-emp-val').value);
     if (!empId) { showToast('يرجى اختيار الموظف', 'error'); return; }
     const emp = data.employees.find(e => e.id === empId);
@@ -4485,12 +4506,19 @@ async function saveEditQuickListEntry() {
     if (!r) { showToast('تعذّر العثور على السجل', 'error'); closeEditQuickListEntry(); renderQuickListLog(); return; }
     if (!(await confirmOperation('تعديل بيانات السلفة', '✏️'))) return;
     r.date = date; r.employeeId = empId; r.employeeName = emp.name; r.amount = amount; r.note = note;
+  } else if (editingQlKind === 'return') {
+    const r = data.income.find(x => x.id === editingQlId);
+    if (!r) { showToast('تعذّر العثور على السجل', 'error'); closeEditQuickListEntry(); renderQuickListLog(); return; }
+    if (!(await confirmOperation('تعديل بيانات المرتجع', '✏️'))) return;
+    r.date = date; r.amount = amount; r.note = note; r.method = 'كاش';
   }
 
   saveData();
   renderQuickListLog();
   renderExpenseTable();
   renderSalHistory();
+  renderIncomeTable();
+  renderIncomeTodaySummary();
   updateDashboard();
   closeEditQuickListEntry();
   showToast('تم تحديث البيانات بنجاح', 'success');
@@ -8371,8 +8399,7 @@ async function initApp() {
   populateExpenseCategorySelect();
   populateSupplierSelect();
   setToday('income-date');
-  setToday('return-date');
-  setToday('exp-date');
+    setToday('exp-date');
   setToday('pur-date');
   updateDashboard();
   renderIncomeTodaySummary();
@@ -8429,6 +8456,7 @@ function wireAllFormNavigation() {
   enableEnterNavigation(['exp-date', 'exp-desc', 'exp-amount'], addExpense);
 
   enableEnterNavigation(['ql-exp-date', 'ql-exp-desc', 'ql-exp-amount', 'ql-exp-note'], addQuickListExpense);
+  enableEnterNavigation(['ql-ret-date', 'ql-ret-amount', 'ql-ret-note'], addQuickListReturn);
   enableEnterNavigation(['ql-adv-emp', 'ql-adv-amount', 'ql-adv-date', 'ql-adv-note'], addQuickListAdvance);
 
   enableEnterNavigation(
