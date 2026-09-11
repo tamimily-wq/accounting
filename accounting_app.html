@@ -1128,48 +1128,57 @@
       <div class="page-title">📤 المصروفات اليومية</div>
     </div>
 
-    <div class="card">
-      <div class="card-title">➕ تسجيل مصروف</div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>التاريخ</label>
-          <input type="date" id="exp-date">
-        </div>
-        <div class="form-group">
-          <label>البند</label>
-          <select id="exp-desc"></select>
-        </div>
-        <div class="form-group">
-          <label>المبلغ (دينار)</label>
-          <input type="number" id="exp-amount" placeholder="0.00" step="0.001">
-        </div>
-      </div>
-      <button class="btn btn-danger" style="font-size:14px;padding:9px 20px;" onclick="addExpense()">✔ تسجيل المصروف</button>
+    <div class="tabs">
+      <button class="tab active" onclick="showExpenseTab('add')">➕ تسجيل</button>
+      <button class="tab" onclick="showExpenseTab('log')">📋 السجل</button>
     </div>
 
-    <div class="card">
-      <div class="card-title">📋 سجل المصروفات</div>
-      <div class="filter-row">
-        <div class="form-group"><label>من</label><input type="date" id="exp-filter-from"></div>
-        <div class="form-group"><label>إلى</label><input type="date" id="exp-filter-to"></div>
-        <button class="btn btn-primary btn-sm" onclick="renderExpenseTable()">🔍 بحث</button>
-        <button class="btn btn-sm" style="background:var(--bg);color:var(--text-muted)" onclick="clearExpFilter()">مسح</button>
-        <div class="form-group"><label>الشهر المحاسبي</label><input type="month" id="exp-filter-month"></div>
-        <button class="btn btn-accent btn-sm" onclick="searchExpenseByMonth()">📅 بحث بالشهر</button>
+    <div id="expense-tab-add">
+      <div class="card">
+        <div class="card-title">➕ تسجيل مصروف</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>التاريخ</label>
+            <input type="date" id="exp-date">
+          </div>
+          <div class="form-group">
+            <label>البند</label>
+            <select id="exp-desc"></select>
+          </div>
+          <div class="form-group">
+            <label>المبلغ (دينار)</label>
+            <input type="number" id="exp-amount" placeholder="0.00" step="0.001">
+          </div>
+        </div>
+        <button class="btn btn-danger" style="font-size:14px;padding:9px 20px;" onclick="addExpense()">✔ تسجيل المصروف</button>
       </div>
-      <div class="print-export-btns">
-        <button class="btn" onclick="exportReportPrint('expense-export-area','سجل المصروفات')">🖨️ طباعة / PDF</button>
-        <button class="btn" onclick="exportReportImage('expense-export-area','سجل_المصروفات')">🖼️ صورة</button>
-        <button class="btn" onclick="exportTableExcel('expense-tbody', ['#','التاريخ','البند','المبلغ'], 'سجل_المصروفات')">📊 Excel</button>
-      </div>
-      <div id="expense-export-area">
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>#</th><th>التاريخ</th><th>البند</th><th>المبلغ</th><th></th></tr></thead>
-          <tbody id="expense-tbody"></tbody>
-        </table>
-      </div>
-      <div id="expense-total" style="text-align:left;padding-top:12px;font-weight:700;color:var(--danger);font-size:15px;"></div>
+    </div>
+
+    <div id="expense-tab-log" class="hidden">
+      <div class="card">
+        <div class="card-title">📋 سجل المصروفات</div>
+        <div class="filter-row">
+          <div class="form-group"><label>من</label><input type="date" id="exp-filter-from"></div>
+          <div class="form-group"><label>إلى</label><input type="date" id="exp-filter-to"></div>
+          <button class="btn btn-primary btn-sm" onclick="renderExpenseTable()">🔍 بحث</button>
+          <button class="btn btn-sm" style="background:var(--bg);color:var(--text-muted)" onclick="clearExpFilter()">مسح</button>
+          <div class="form-group"><label>الشهر المحاسبي</label><input type="month" id="exp-filter-month"></div>
+          <button class="btn btn-accent btn-sm" onclick="searchExpenseByMonth()">📅 بحث بالشهر</button>
+        </div>
+        <div class="print-export-btns">
+          <button class="btn" onclick="exportReportPrint('expense-export-area','سجل المصروفات')">🖨️ طباعة / PDF</button>
+          <button class="btn" onclick="exportReportImage('expense-export-area','سجل_المصروفات')">🖼️ صورة</button>
+          <button class="btn" onclick="exportTableExcel('expense-tbody', ['#','التاريخ','البند','المبلغ'], 'سجل_المصروفات')">📊 Excel</button>
+        </div>
+        <div id="expense-export-area">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>التاريخ</th><th>البند</th><th>المبلغ</th><th></th></tr></thead>
+            <tbody id="expense-tbody"></tbody>
+          </table>
+        </div>
+        <div id="expense-total" style="text-align:left;padding-top:12px;font-weight:700;color:var(--danger);font-size:15px;"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -1373,92 +1382,101 @@
       <div class="page-title">🛒 المشتريات</div>
     </div>
 
-    <div class="card">
-      <div class="card-title">➕ تسجيل فاتورة شراء</div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>التاريخ</label>
-          <input type="date" id="pur-date">
-        </div>
-        <div class="form-group">
-          <label>رقم الفاتورة</label>
-          <input type="text" id="pur-invoice" placeholder="رقم الفاتورة">
-        </div>
-        <div class="form-group">
-          <label>المبلغ (دينار)</label>
-          <input type="number" id="pur-amount" placeholder="0.00" step="0.001">
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label>نوع الدفع</label>
-          <select id="pay-type-select" onchange="setPayType(this.value)">
-            <option value="cash">نقدي</option>
-            <option value="credit">آجل</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>طريقة الدفع</label>
-          <select id="pur-method"></select>
-        </div>
-      </div>
-
-      <div id="credit-fields" class="form-row hidden">
-        <div class="form-group">
-          <label>اسم المورد</label>
-          <select id="pur-supplier"></select>
-        </div>
-        <div class="form-group">
-          <label>تاريخ الاستحقاق</label>
-          <input type="date" id="pur-due">
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label>ملاحظات</label>
-          <input type="text" id="pur-note" placeholder="اختياري">
-        </div>
-      </div>
-      <button class="btn btn-accent" onclick="addPurchase()">✔ تسجيل الفاتورة</button>
+    <div class="tabs">
+      <button class="tab active" onclick="showPurchaseTab('add')">➕ تسجيل</button>
+      <button class="tab" onclick="showPurchaseTab('log')">📋 السجل</button>
     </div>
 
-    <div class="card">
-      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-        <span>📋 سجل المشتريات</span>
-        <button class="btn btn-sm" id="pur-view-toggle-btn" style="background:var(--bg);color:var(--primary);border:1px solid var(--border);" onclick="togglePurchaseView()">📄 عرض كل التفاصيل</button>
-      </div>
-      <div class="filter-row">
-        <div class="form-group"><label>من</label><input type="date" id="pur-filter-from"></div>
-        <div class="form-group"><label>إلى</label><input type="date" id="pur-filter-to"></div>
-        <button class="btn btn-primary btn-sm" onclick="renderPurchaseTable()">🔍 بحث</button>
-        <button class="btn btn-sm" style="background:var(--bg);color:var(--text-muted)" onclick="clearPurFilter()">مسح</button>
-        <div class="form-group"><label>الشهر المحاسبي</label><input type="month" id="pur-filter-month"></div>
-        <button class="btn btn-accent btn-sm" onclick="searchPurchaseByMonth()">📅 بحث بالشهر</button>
-        <div class="form-group">
-          <label>الحالة</label>
-          <select id="pur-filter-status" onchange="renderPurchaseTable()">
-            <option value="">-- عرض الكل --</option>
-            <option value="paid">مسدد</option>
-            <option value="overdue">متأخر</option>
-            <option value="pending">معلق</option>
-          </select>
+    <div id="purchase-tab-add">
+      <div class="card">
+        <div class="card-title">➕ تسجيل فاتورة شراء</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>التاريخ</label>
+            <input type="date" id="pur-date">
+          </div>
+          <div class="form-group">
+            <label>رقم الفاتورة</label>
+            <input type="text" id="pur-invoice" placeholder="رقم الفاتورة">
+          </div>
+          <div class="form-group">
+            <label>المبلغ (دينار)</label>
+            <input type="number" id="pur-amount" placeholder="0.00" step="0.001">
+          </div>
         </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>نوع الدفع</label>
+            <select id="pay-type-select" onchange="setPayType(this.value)">
+              <option value="cash">نقدي</option>
+              <option value="credit">آجل</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>طريقة الدفع</label>
+            <select id="pur-method"></select>
+          </div>
+        </div>
+
+        <div id="credit-fields" class="form-row hidden">
+          <div class="form-group">
+            <label>اسم المورد</label>
+            <select id="pur-supplier"></select>
+          </div>
+          <div class="form-group">
+            <label>تاريخ الاستحقاق</label>
+            <input type="date" id="pur-due">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>ملاحظات</label>
+            <input type="text" id="pur-note" placeholder="اختياري">
+          </div>
+        </div>
+        <button class="btn btn-accent" onclick="addPurchase()">✔ تسجيل الفاتورة</button>
       </div>
-      <div class="print-export-btns">
-        <button class="btn" onclick="exportReportPrint('purchase-export-area','سجل المشتريات')">🖨️ طباعة / PDF</button>
-        <button class="btn" onclick="exportReportImage('purchase-export-area','سجل_المشتريات')">🖼️ صورة</button>
-        <button class="btn" onclick="exportPurchaseTableExcel()">📊 Excel</button>
-      </div>
-      <div id="purchase-export-area">
-      <div class="table-wrap">
-        <table id="purchase-table">
-          <thead id="purchase-thead"></thead>
-          <tbody id="purchase-tbody"></tbody>
-        </table>
-      </div>
-      <div id="purchase-total" style="text-align:left;padding-top:12px;font-weight:700;color:var(--accent);font-size:15px;"></div>
+    </div>
+
+    <div id="purchase-tab-log" class="hidden">
+      <div class="card">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+          <span>📋 سجل المشتريات</span>
+          <button class="btn btn-sm" id="pur-view-toggle-btn" style="background:var(--bg);color:var(--primary);border:1px solid var(--border);" onclick="togglePurchaseView()">📄 عرض كل التفاصيل</button>
+        </div>
+        <div class="filter-row">
+          <div class="form-group"><label>من</label><input type="date" id="pur-filter-from"></div>
+          <div class="form-group"><label>إلى</label><input type="date" id="pur-filter-to"></div>
+          <button class="btn btn-primary btn-sm" onclick="renderPurchaseTable()">🔍 بحث</button>
+          <button class="btn btn-sm" style="background:var(--bg);color:var(--text-muted)" onclick="clearPurFilter()">مسح</button>
+          <div class="form-group"><label>الشهر المحاسبي</label><input type="month" id="pur-filter-month"></div>
+          <button class="btn btn-accent btn-sm" onclick="searchPurchaseByMonth()">📅 بحث بالشهر</button>
+          <div class="form-group">
+            <label>الحالة</label>
+            <select id="pur-filter-status" onchange="renderPurchaseTable()">
+              <option value="">-- عرض الكل --</option>
+              <option value="paid">مسدد</option>
+              <option value="overdue">متأخر</option>
+              <option value="pending">معلق</option>
+            </select>
+          </div>
+        </div>
+        <div class="print-export-btns">
+          <button class="btn" onclick="exportReportPrint('purchase-export-area','سجل المشتريات')">🖨️ طباعة / PDF</button>
+          <button class="btn" onclick="exportReportImage('purchase-export-area','سجل_المشتريات')">🖼️ صورة</button>
+          <button class="btn" onclick="exportPurchaseTableExcel()">📊 Excel</button>
+        </div>
+        <div id="purchase-export-area">
+        <div class="table-wrap">
+          <table id="purchase-table">
+            <thead id="purchase-thead"></thead>
+            <tbody id="purchase-tbody"></tbody>
+          </table>
+        </div>
+        <div id="purchase-total" style="text-align:left;padding-top:12px;font-weight:700;color:var(--accent);font-size:15px;"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -4192,6 +4210,18 @@ function clearIncomeFilter() {
 }
 
 // ============ EXPENSES ============
+function showExpenseTab(tab) {
+  ['add', 'log'].forEach(t => {
+    const el = document.getElementById('expense-tab-' + t);
+    if (el) el.classList.toggle('hidden', t !== tab);
+  });
+  document.querySelectorAll('#page-expenses .tab').forEach((el, i) => {
+    el.classList.toggle('active', ['add', 'log'][i] === tab);
+  });
+  if (tab === 'add') populateExpenseCategorySelect();
+  if (tab === 'log') renderExpenseTable();
+}
+
 async function addExpense() {
   const date = document.getElementById('exp-date').value;
   const desc = document.getElementById('exp-desc').value;
@@ -4557,6 +4587,21 @@ function closeEditQuickListEntry() {
 }
 
 // ============ PURCHASES ============
+function showPurchaseTab(tab) {
+  ['add', 'log'].forEach(t => {
+    const el = document.getElementById('purchase-tab-' + t);
+    if (el) el.classList.toggle('hidden', t !== tab);
+  });
+  document.querySelectorAll('#page-purchases .tab').forEach((el, i) => {
+    el.classList.toggle('active', ['add', 'log'][i] === tab);
+  });
+  if (tab === 'add') {
+    populateIncomeMethodSelect();
+    populateSupplierSelect();
+  }
+  if (tab === 'log') renderPurchaseTable();
+}
+
 let currentPayType = 'cash';
 
 function setPayType(type) {
