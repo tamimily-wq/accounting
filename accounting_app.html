@@ -1160,6 +1160,12 @@
         <div class="filter-row">
           <div class="form-group"><label>من</label><input type="date" id="exp-filter-from"></div>
           <div class="form-group"><label>إلى</label><input type="date" id="exp-filter-to"></div>
+          <div class="form-group">
+            <label>البند</label>
+            <select id="exp-filter-desc" onchange="renderExpenseTable()">
+              <option value="">-- الكل --</option>
+            </select>
+          </div>
           <button class="btn btn-primary btn-sm" onclick="renderExpenseTable()">🔍 بحث</button>
           <button class="btn btn-sm" style="background:var(--bg);color:var(--text-muted)" onclick="clearExpFilter()">مسح</button>
           <div class="form-group"><label>الشهر المحاسبي</label><input type="month" id="exp-filter-month"></div>
@@ -3991,9 +3997,18 @@ function populateSupplierSelect() {
 
 function populateExpenseCategorySelect() {
   const sel = document.getElementById('exp-desc');
-  const current = sel.value;
-  sel.innerHTML = data.expenseCategories.map(c => `<option value="${c}">${c}</option>`).join('');
-  if (data.expenseCategories.includes(current)) sel.value = current;
+  if (sel) {
+    const current = sel.value;
+    sel.innerHTML = data.expenseCategories.map(c => `<option value="${c}">${c}</option>`).join('');
+    if (data.expenseCategories.includes(current)) sel.value = current;
+  }
+  const filterSel = document.getElementById('exp-filter-desc');
+  if (filterSel) {
+    const cur = filterSel.value;
+    filterSel.innerHTML = '<option value="">-- الكل --</option>' +
+      data.expenseCategories.map(c => `<option value="${c}">${c}</option>`).join('');
+    if (cur && data.expenseCategories.includes(cur)) filterSel.value = cur;
+  }
 }
 
 function getIncomeSummaryDate() {
@@ -4286,9 +4301,12 @@ async function addExpense() {
 function renderExpenseTable() {
   const from = document.getElementById('exp-filter-from').value;
   const to = document.getElementById('exp-filter-to').value;
+  const descFilterEl = document.getElementById('exp-filter-desc');
+  const descFilter = descFilterEl ? descFilterEl.value : '';
   let rows = [...data.expenses].sort((a, b) => b.date.localeCompare(a.date));
   if (from) rows = rows.filter(r => r.date >= from);
   if (to) rows = rows.filter(r => r.date <= to);
+  if (descFilter) rows = rows.filter(r => r.desc === descFilter);
   const total = rows.reduce((s, r) => s + parseFloat(r.amount), 0);
   const tbody = document.getElementById('expense-tbody');
   tbody.innerHTML = rows.map((r, i) => `
@@ -4353,6 +4371,10 @@ async function deleteExpense(id) {
 function clearExpFilter() {
   document.getElementById('exp-filter-from').value = '';
   document.getElementById('exp-filter-to').value = '';
+  const descEl = document.getElementById('exp-filter-desc');
+  if (descEl) descEl.value = '';
+  const monthEl = document.getElementById('exp-filter-month');
+  if (monthEl) monthEl.value = '';
   renderExpenseTable();
 }
 
